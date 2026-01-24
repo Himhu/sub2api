@@ -711,10 +711,8 @@ func createOpenAITestPayload(modelID string, isOAuth bool) map[string]any {
 		"stream": true,
 	}
 
-	// OAuth accounts using ChatGPT internal API require store: false
-	if isOAuth {
-		payload["store"] = false
-	}
+	// All Responses API calls require store: false
+	payload["store"] = false
 
 	// All accounts require instructions for Responses API
 	payload["instructions"] = openai.DefaultInstructions
