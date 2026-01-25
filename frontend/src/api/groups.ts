@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './client'
-import type { Group } from '@/types'
+import type { Group, GroupModelsResponse } from '@/types'
 
 /**
  * Get available groups that the current user can bind to API keys
@@ -18,8 +18,19 @@ export async function getAvailable(): Promise<Group[]> {
   return data
 }
 
+/**
+ * Get available models for a specific group
+ * @param groupId - Group ID
+ * @returns Available models for the group
+ */
+export async function getAvailableModels(groupId: number): Promise<GroupModelsResponse> {
+  const { data } = await apiClient.get<GroupModelsResponse>(`/groups/${groupId}/models`)
+  return data
+}
+
 export const userGroupsAPI = {
-  getAvailable
+  getAvailable,
+  getAvailableModels
 }
 
 export default userGroupsAPI

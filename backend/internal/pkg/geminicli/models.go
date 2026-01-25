@@ -20,3 +20,12 @@ var DefaultModels = []Model{
 
 // DefaultTestModel is the default model to preselect in test flows.
 const DefaultTestModel = "gemini-2.0-flash"
+
+// DefaultModelIDs returns the default model ID list
+func DefaultModelIDs() []string {
+	ids := make([]string, len(DefaultModels))
+	for i, m := range DefaultModels {
+		ids[i] = m.ID
+	}
+	return ids
+}

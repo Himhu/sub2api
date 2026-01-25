@@ -2,9 +2,14 @@
 package handler
 
 import (
+	"sort"
 	"strconv"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -15,13 +20,15 @@ import (
 
 // APIKeyHandler handles API key-related requests
 type APIKeyHandler struct {
-	apiKeyService *service.APIKeyService
+	apiKeyService  *service.APIKeyService
+	gatewayService *service.GatewayService
 }
 
 // NewAPIKeyHandler creates a new APIKeyHandler
-func NewAPIKeyHandler(apiKeyService *service.APIKeyService) *APIKeyHandler {
+func NewAPIKeyHandler(apiKeyService *service.APIKeyService, gatewayService *service.GatewayService) *APIKeyHandler {
 	return &APIKeyHandler{
-		apiKeyService: apiKeyService,
+		apiKeyService:  apiKeyService,
+		gatewayService: gatewayService,
 	}
 }
 
@@ -215,4 +222,84 @@ func (h *APIKeyHandler) GetAvailableGroups(c *gin.Context) {
 		out = append(out, *dto.GroupFromService(&groups[i]))
 	}
 	response.Success(c, out)
+}
+
+// GroupAvailableModelsResponse represents available models for a group
+type GroupAvailableModelsResponse struct {
+	GroupID  int64    `json:"group_id"`
+	Platform string   `json:"platform"`
+	Source   string   `json:"source"` // "mapping" or "default"
+	Models   []string `json:"models"`
+}
+
+// GetGroupAvailableModels handles getting available models for a group
+// GET /api/v1/groups/:id/models
+func (h *APIKeyHandler) GetGroupAvailableModels(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid group ID")
+		return
+	}
+
+	// Get user's available groups to verify access
+	groups, err := h.apiKeyService.GetAvailableGroups(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	// Find the target group
+	var target *service.Group
+	for i := range groups {
+		if groups[i].ID == groupID {
+			target = &groups[i]
+			break
+		}
+	}
+
+	if target == nil {
+		response.Forbidden(c, "Not authorized to access this group")
+		return
+	}
+
+	// Get available models for this group with source information
+	result := h.gatewayService.GetAvailableModelsWithSource(c.Request.Context(), &groupID, target.Platform)
+	models := result.Models
+	if models == nil {
+		models = []string{}
+	} else {
+		sort.Strings(models)
+	}
+
+	response.Success(c, GroupAvailableModelsResponse{
+		GroupID:  groupID,
+		Platform: target.Platform,
+		Source:   result.Source,
+		Models:   models,
+	})
+}
+
+// defaultModelsForPlatform returns default model IDs for a platform
+func defaultModelsForPlatform(platform string) []string {
+	switch platform {
+	case service.PlatformOpenAI:
+		return openai.DefaultModelIDs()
+	case service.PlatformGemini:
+		return geminicli.DefaultModelIDs()
+	case service.PlatformAntigravity:
+		defaults := antigravity.DefaultModels()
+		models := make([]string, 0, len(defaults))
+		for _, model := range defaults {
+			models = append(models, model.ID)
+		}
+		return models
+	default: // anthropic
+		return claude.DefaultModelIDs()
+	}
 }

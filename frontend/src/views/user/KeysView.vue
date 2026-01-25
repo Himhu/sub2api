@@ -131,6 +131,15 @@
                 <Icon name="terminal" size="sm" />
                 <span class="text-xs">{{ t('keys.useKey') }}</span>
               </button>
+              <!-- View Models Button -->
+              <button
+                v-if="row.group"
+                @click="openModelsModal(row)"
+                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20 dark:hover:text-purple-400"
+              >
+                <Icon name="cube" size="sm" />
+                <span class="text-xs">{{ t('keys.viewModels') }}</span>
+              </button>
               <!-- Import to CC Switch Button -->
               <button
                 v-if="!publicSettings?.hide_ccs_import_button"
@@ -245,6 +254,57 @@
               />
             </template>
           </Select>
+        </div>
+
+        <!-- Available Models Panel -->
+        <div
+          v-if="formData.group_id !== null"
+          class="rounded-lg border border-gray-200 bg-gray-50/60 p-3 dark:border-dark-600 dark:bg-dark-800/40"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">
+              {{ t('keys.availableModels') }}
+            </span>
+            <span v-if="selectedGroupModelSource" class="text-xs text-gray-500 dark:text-dark-400">
+              {{
+                selectedGroupModelSource === 'mapping'
+                  ? t('keys.modelsSourceMapping')
+                  : t('keys.modelsSourceDefault')
+              }}
+            </span>
+          </div>
+
+          <div
+            v-if="groupModelsLoading"
+            class="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-dark-400"
+          >
+            <Icon name="refresh" size="sm" class="animate-spin" />
+            <span>{{ t('keys.modelsLoading') }}</span>
+          </div>
+
+          <div
+            v-else-if="groupModelsError"
+            class="mt-2 flex items-center justify-between text-xs text-red-600 dark:text-red-400"
+          >
+            <span>{{ groupModelsError }}</span>
+            <button
+              type="button"
+              class="text-xs font-medium text-primary-600 hover:text-primary-700"
+              @click="refreshGroupModels"
+            >
+              {{ t('keys.modelsRetry') }}
+            </button>
+          </div>
+
+          <div v-else-if="selectedGroupModels.length === 0" class="mt-2 text-xs text-gray-500 dark:text-dark-400">
+            {{ t('keys.modelsEmpty') }}
+          </div>
+
+          <div v-else class="mt-2 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+            <span v-for="model in selectedGroupModels" :key="model" class="badge badge-gray text-xs">
+              {{ model }}
+            </span>
+          </div>
         </div>
 
         <!-- Custom Key Section (only for create) -->
@@ -400,6 +460,112 @@
       @close="closeUseKeyModal"
     />
 
+    <!-- View Models Modal -->
+    <BaseDialog
+      :show="showModelsModal"
+      :title="t('keys.availableModels')"
+      width="narrow"
+      @close="closeModelsModal"
+    >
+      <div class="space-y-4">
+        <!-- Group Info -->
+        <div v-if="modelsModalKey?.group" class="flex items-center gap-2">
+          <GroupBadge
+            :name="modelsModalKey.group.name"
+            :platform="modelsModalKey.group.platform"
+            :subscription-type="modelsModalKey.group.subscription_type"
+            :rate-multiplier="modelsModalKey.group.rate_multiplier"
+          />
+          <span
+            v-if="modelsModalData"
+            class="text-xs px-2 py-0.5 rounded-full"
+            :class="modelsModalData.source === 'mapping'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : modelsModalData.source === 'unlimited'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-gray-100 text-gray-600 dark:bg-dark-600 dark:text-gray-400'"
+          >
+            {{ modelsModalData.source === 'mapping' ? t('keys.modelsSourceMapping') : modelsModalData.source === 'unlimited' ? t('keys.modelsSourceUnlimited') : t('keys.modelsSourceDefault') }}
+          </span>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="modelsModalLoading" class="flex items-center justify-center py-8">
+          <Icon name="refresh" size="lg" class="animate-spin text-gray-400" />
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="modelsModalError" class="text-center py-6">
+          <p class="text-sm text-red-500 dark:text-red-400">{{ modelsModalError }}</p>
+          <button @click="fetchModelsForModal" class="mt-2 text-sm text-primary-600 hover:underline">
+            {{ t('keys.modelsRetry') }}
+          </button>
+        </div>
+
+        <!-- Models List -->
+        <div v-else-if="modelsModalData?.models?.length" class="max-h-80 overflow-y-auto">
+          <div class="grid gap-1.5">
+            <button
+              v-for="model in modelsModalData.models"
+              :key="model"
+              @click="copyModelName(model)"
+              class="group flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-dark-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors cursor-pointer text-left w-full"
+              :title="t('keys.clickToCopyModel')"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <Icon name="cube" size="sm" class="text-gray-400 group-hover:text-primary-500 flex-shrink-0" />
+                <code class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 truncate">{{ model }}</code>
+              </div>
+              <Icon
+                v-if="copiedModel === model"
+                name="check"
+                size="sm"
+                class="text-green-500 flex-shrink-0"
+              />
+              <Icon
+                v-else
+                name="clipboard"
+                size="sm"
+                class="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+              />
+            </button>
+          </div>
+        </div>
+
+        <!-- Unlimited State -->
+        <div v-else-if="modelsModalData?.source === 'unlimited'" class="text-center py-6">
+          <Icon name="checkCircle" size="xl" class="text-green-500 mx-auto mb-2" />
+          <p class="text-sm text-green-600 dark:text-green-400 font-medium">{{ t('keys.modelsUnlimited') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('keys.modelsUnlimitedDesc') }}</p>
+        </div>
+
+        <!-- No Accounts State -->
+        <div v-else-if="modelsModalData?.source === 'no_accounts'" class="text-center py-6">
+          <Icon name="xCircle" size="xl" class="text-red-500 mx-auto mb-2" />
+          <p class="text-sm text-red-600 dark:text-red-400 font-medium">{{ t('keys.modelsNoAccounts') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('keys.modelsNoAccountsDesc') }}</p>
+        </div>
+
+        <!-- All Paused State -->
+        <div v-else-if="modelsModalData?.source === 'all_paused'" class="text-center py-6">
+          <Icon name="ban" size="xl" class="text-yellow-500 mx-auto mb-2" />
+          <p class="text-sm text-yellow-600 dark:text-yellow-400 font-medium">{{ t('keys.modelsAllPaused') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('keys.modelsAllPausedDesc') }}</p>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="text-center py-6">
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('keys.modelsEmpty') }}</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <button @click="closeModelsModal" class="btn btn-secondary">
+          {{ t('common.close') }}
+        </button>
+      </template>
+    </BaseDialog>
+
     <!-- CCS Client Selection Dialog for Antigravity -->
     <BaseDialog
       :show="showCcsClientSelect"
@@ -489,7 +655,7 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, computed, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
+	import { ref, computed, onMounted, onUnmounted, watch, type ComponentPublicInstance } from 'vue'
 	import { useI18n } from 'vue-i18n'
 	import { useAppStore } from '@/stores/app'
 	import { useOnboardingStore } from '@/stores/onboarding'
@@ -509,7 +675,7 @@ import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 	import UseKeyModal from '@/components/keys/UseKeyModal.vue'
 	import GroupBadge from '@/components/common/GroupBadge.vue'
 	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
-	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform } from '@/types'
+	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, GroupModelsResponse } from '@/types'
 import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
 import { formatDateTime } from '@/utils/format'
@@ -555,11 +721,22 @@ const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showUseKeyModal = ref(false)
 const showCcsClientSelect = ref(false)
+const showModelsModal = ref(false)
 const pendingCcsRow = ref<ApiKey | null>(null)
 const selectedKey = ref<ApiKey | null>(null)
+const modelsModalKey = ref<ApiKey | null>(null)
+const modelsModalData = ref<GroupModelsResponse | null>(null)
+const modelsModalLoading = ref(false)
+const modelsModalError = ref('')
 const copiedKeyId = ref<number | null>(null)
+const copiedModel = ref<string | null>(null)
 const groupSelectorKeyId = ref<number | null>(null)
 const publicSettings = ref<PublicSettings | null>(null)
+// 分组可用模型相关状态
+const groupModelsCache = ref<Map<number, GroupModelsResponse>>(new Map())
+const groupModelsLoading = ref(false)
+const groupModelsError = ref('')
+const groupModelsRequestId = ref(0)
 const dropdownRef = ref<HTMLElement | null>(null)
 const dropdownPosition = ref<{ top: number; left: number } | null>(null)
 const groupButtonRefs = ref<Map<number, HTMLElement>>(new Map())
@@ -623,6 +800,16 @@ const groupOptions = computed(() =>
   }))
 )
 
+// 分组可用模型计算属性
+const selectedGroupModelInfo = computed(() => {
+  const groupId = formData.value.group_id
+  if (groupId === null) return null
+  return groupModelsCache.value.get(groupId) || null
+})
+
+const selectedGroupModels = computed(() => selectedGroupModelInfo.value?.models ?? [])
+const selectedGroupModelSource = computed(() => selectedGroupModelInfo.value?.source ?? null)
+
 const maskKey = (key: string): string => {
   if (key.length <= 12) return key
   return `${key.slice(0, 8)}...${key.slice(-4)}`
@@ -634,6 +821,16 @@ const copyToClipboard = async (text: string, keyId: number) => {
     copiedKeyId.value = keyId
     setTimeout(() => {
       copiedKeyId.value = null
+    }, 800)
+  }
+}
+
+const copyModelName = async (model: string) => {
+  const success = await clipboardCopy(model, t('keys.modelCopied'))
+  if (success) {
+    copiedModel.value = model
+    setTimeout(() => {
+      copiedModel.value = null
     }, 800)
   }
 }
@@ -700,6 +897,46 @@ const loadPublicSettings = async () => {
   }
 }
 
+// 获取分组可用模型
+const fetchGroupModels = async (groupId: number, requestId: number) => {
+  if (groupModelsCache.value.has(groupId)) return
+  groupModelsLoading.value = true
+  groupModelsError.value = ''
+  try {
+    const data = await userGroupsAPI.getAvailableModels(groupId)
+    if (requestId !== groupModelsRequestId.value) return
+    groupModelsCache.value.set(groupId, data)
+  } catch (error) {
+    if (requestId !== groupModelsRequestId.value) return
+    groupModelsError.value = t('keys.modelsLoadFailed')
+  } finally {
+    if (requestId === groupModelsRequestId.value) {
+      groupModelsLoading.value = false
+    }
+  }
+}
+
+const refreshGroupModels = async () => {
+  if (formData.value.group_id === null) return
+  const groupId = formData.value.group_id
+  groupModelsCache.value.delete(groupId)
+  groupModelsError.value = ''
+  groupModelsRequestId.value += 1
+  await fetchGroupModels(groupId, groupModelsRequestId.value)
+}
+
+// 监听分组变化，自动获取模型
+watch(
+  () => formData.value.group_id,
+  (groupId) => {
+    groupModelsRequestId.value += 1
+    groupModelsError.value = ''
+    groupModelsLoading.value = false
+    if (groupId === null) return
+    fetchGroupModels(groupId, groupModelsRequestId.value)
+  }
+)
+
 const openUseKeyModal = (key: ApiKey) => {
   selectedKey.value = key
   showUseKeyModal.value = true
@@ -708,6 +945,42 @@ const openUseKeyModal = (key: ApiKey) => {
 const closeUseKeyModal = () => {
   showUseKeyModal.value = false
   selectedKey.value = null
+}
+
+// Models Modal methods
+const openModelsModal = (key: ApiKey) => {
+  modelsModalKey.value = key
+  modelsModalData.value = null
+  modelsModalError.value = ''
+  showModelsModal.value = true
+  fetchModelsForModal()
+}
+
+const closeModelsModal = () => {
+  showModelsModal.value = false
+  modelsModalKey.value = null
+  modelsModalData.value = null
+  modelsModalError.value = ''
+}
+
+const fetchModelsForModal = async () => {
+  if (!modelsModalKey.value?.group?.id) return
+
+  const groupId = modelsModalKey.value.group.id
+
+  // Always fetch fresh data for modal (no cache)
+  modelsModalLoading.value = true
+  modelsModalError.value = ''
+
+  try {
+    const data = await userGroupsAPI.getAvailableModels(groupId)
+    groupModelsCache.value.set(groupId, data)
+    modelsModalData.value = data
+  } catch (err: any) {
+    modelsModalError.value = err.message || t('keys.modelsLoadFailed')
+  } finally {
+    modelsModalLoading.value = false
+  }
 }
 
 const handlePageChange = (page: number) => {

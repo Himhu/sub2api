@@ -3833,20 +3833,32 @@ func (s *GatewayService) validateUpstreamBaseURL(raw string) (string, error) {
 	return normalized, nil
 }
 
+// AvailableModelsResult represents the result of GetAvailableModelsWithSource
+type AvailableModelsResult struct {
+	Models []string
+	Source string // "mapping", "unlimited", "no_accounts", "all_paused"
+}
+
 // GetAvailableModels returns the list of models available for a group
-// It aggregates model_mapping keys from all schedulable accounts in the group
+// It aggregates model_mapping keys from all active accounts in the group
 func (s *GatewayService) GetAvailableModels(ctx context.Context, groupID *int64, platform string) []string {
+	result := s.GetAvailableModelsWithSource(ctx, groupID, platform)
+	return result.Models
+}
+
+// GetAvailableModelsWithSource returns available models with source information
+func (s *GatewayService) GetAvailableModelsWithSource(ctx context.Context, groupID *int64, platform string) AvailableModelsResult {
 	var accounts []Account
 	var err error
 
 	if groupID != nil {
-		accounts, err = s.accountRepo.ListSchedulableByGroupID(ctx, *groupID)
+		accounts, err = s.accountRepo.ListByGroup(ctx, *groupID)
 	} else {
-		accounts, err = s.accountRepo.ListSchedulable(ctx)
+		accounts, err = s.accountRepo.ListActive(ctx)
 	}
 
 	if err != nil || len(accounts) == 0 {
-		return nil
+		return AvailableModelsResult{Models: nil, Source: "no_accounts"}
 	}
 
 	// Filter by platform if specified
@@ -3858,6 +3870,21 @@ func (s *GatewayService) GetAvailableModels(ctx context.Context, groupID *int64,
 			}
 		}
 		accounts = filtered
+		if len(accounts) == 0 {
+			return AvailableModelsResult{Models: nil, Source: "no_accounts"}
+		}
+	}
+
+	// Check if all accounts are paused (not schedulable)
+	hasSchedulable := false
+	for _, acc := range accounts {
+		if acc.Schedulable {
+			hasSchedulable = true
+			break
+		}
+	}
+	if !hasSchedulable {
+		return AvailableModelsResult{Models: nil, Source: "all_paused"}
 	}
 
 	// Collect unique models from all accounts
@@ -3874,9 +3901,9 @@ func (s *GatewayService) GetAvailableModels(ctx context.Context, groupID *int64,
 		}
 	}
 
-	// If no account has model_mapping, return nil (use default)
+	// If no account has model_mapping, return unlimited (all models supported)
 	if !hasAnyMapping {
-		return nil
+		return AvailableModelsResult{Models: nil, Source: "unlimited"}
 	}
 
 	// Convert to slice
@@ -3885,5 +3912,5 @@ func (s *GatewayService) GetAvailableModels(ctx context.Context, groupID *int64,
 		models = append(models, model)
 	}
 
-	return models
+	return AvailableModelsResult{Models: models, Source: "mapping"}
 }

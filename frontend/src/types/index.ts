@@ -279,6 +279,16 @@ export interface Group {
   updated_at: string
 }
 
+// 分组可用模型响应
+export type GroupModelsSource = 'mapping' | 'default' | 'unlimited' | 'no_accounts' | 'all_paused'
+
+export interface GroupModelsResponse {
+  group_id: number
+  platform: GroupPlatform
+  source: GroupModelsSource
+  models: string[]
+}
+
 export interface AdminGroup extends Group {
   // 模型路由配置（仅管理员可见，内部信息）
   model_routing: Record<string, number[]> | null

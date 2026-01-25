@@ -38,6 +38,7 @@ func RegisterUserRoutes(
 		groups := authenticated.Group("/groups")
 		{
 			groups.GET("/available", h.APIKey.GetAvailableGroups)
+			groups.GET("/:id/models", h.APIKey.GetGroupAvailableModels)
 		}
 
 		// 使用记录
