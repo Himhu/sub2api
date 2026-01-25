@@ -85,6 +85,10 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*service.User, 
 	}
 
 	out := userEntityToService(m)
+
+	// 注意：订阅数据不再在此处加载，使用 LoadSubscriptions 方法按需加载
+	// 这样可以避免每次认证请求都执行额外的数据库查询
+
 	groups, err := r.loadAllowedGroups(ctx, []int64{id})
 	if err != nil {
 		return nil, err
@@ -395,6 +399,26 @@ func (r *userRepository) GetFirstAdmin(ctx context.Context) (*service.User, erro
 		out.AllowedGroups = v
 	}
 	return out, nil
+}
+
+// LoadSubscriptions 加载用户的活跃订阅（按需调用，避免 GetByID 性能问题）
+func (r *userRepository) LoadSubscriptions(ctx context.Context, userID int64) ([]service.UserSubscription, error) {
+	subs, err := r.client.UserSubscription.Query().
+		Where(
+			usersubscription.UserIDEQ(userID),
+			usersubscription.StatusEQ(service.SubscriptionStatusActive),
+		).
+		WithGroup().
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]service.UserSubscription, 0, len(subs))
+	for i := range subs {
+		result = append(result, *userSubscriptionEntityToService(subs[i]))
+	}
+	return result, nil
 }
 
 func (r *userRepository) loadAllowedGroups(ctx context.Context, userIDs []int64) (map[int64][]int64, error) {

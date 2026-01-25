@@ -160,7 +160,9 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	// 使用 GetByIDWithSubscriptions 加载完整用户数据（含订阅信息）
+	// 仅此端点需要订阅数据，其他认证场景使用 GetByID 以提升性能
+	user, err := h.userService.GetByIDWithSubscriptions(c.Request.Context(), subject.UserID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

@@ -19,7 +19,7 @@
       </template>
 
       <template #table>
-        <DataTable :columns="columns" :data="apiKeys" :loading="loading">
+        <DataTable :columns="columns" :data="apiKeys" :loading="loading" :expanded-row-keys="expandedKeyIds" row-key="id">
           <template #cell-key="{ value, row }">
             <div class="flex items-center gap-2">
               <code class="code text-xs">
@@ -117,10 +117,6 @@
             </span>
           </template>
 
-          <template #cell-created_at="{ value }">
-            <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatDateTime(value) }}</span>
-          </template>
-
           <template #cell-actions="{ row }">
             <div class="flex items-center gap-1">
               <!-- Use Key Button -->
@@ -130,15 +126,6 @@
               >
                 <Icon name="terminal" size="sm" />
                 <span class="text-xs">{{ t('keys.useKey') }}</span>
-              </button>
-              <!-- View Models Button -->
-              <button
-                v-if="row.group"
-                @click="openModelsModal(row)"
-                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20 dark:hover:text-purple-400"
-              >
-                <Icon name="cube" size="sm" />
-                <span class="text-xs">{{ t('keys.viewModels') }}</span>
               </button>
               <!-- Import to CC Switch Button -->
               <button
@@ -179,6 +166,127 @@
                 <Icon name="trash" size="sm" />
                 <span class="text-xs">{{ t('common.delete') }}</span>
               </button>
+            </div>
+          </template>
+
+          <!-- Row Expand Trigger: Click to expand models -->
+          <template #row-expand-trigger="{ row, expanded }">
+            <button
+              v-if="row.group"
+              @click="toggleModelsExpand(row)"
+              class="px-3 py-1 flex items-center gap-4 text-xs text-gray-400 dark:text-dark-500 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors cursor-pointer"
+            >
+              <Icon
+                :name="expanded ? 'chevronDown' : 'chevronRight'"
+                size="xs"
+                :class="expanded ? 'text-primary-500' : 'text-gray-400'"
+              />
+              <span>{{ expanded ? t('keys.hideModels') : t('keys.expandModels') }}</span>
+              <span class="text-gray-300 dark:text-dark-600">{{ getModelsCountText(row.id) }}</span>
+              <span v-if="getEstimatedQuota(row)" class="text-gray-500 dark:text-dark-400">
+                {{ t('keys.estimatedQuota') }}: {{ getEstimatedQuota(row) }}
+              </span>
+            </button>
+          </template>
+
+          <!-- Row Expand: Models List -->
+          <template #row-expand="{ row }">
+            <div class="px-4 py-3 bg-gray-50 dark:bg-dark-800">
+              <!-- Loading State -->
+              <div v-if="isExpandedLoading(row.id)" class="flex items-center gap-2 text-sm text-gray-500">
+                <Icon name="refresh" size="sm" class="animate-spin" />
+                <span>{{ t('keys.modelsLoading') }}</span>
+              </div>
+
+              <!-- Error State -->
+              <div v-else-if="getExpandedError(row.id)" class="flex items-center justify-between">
+                <span class="text-sm text-red-500">{{ getExpandedError(row.id) }}</span>
+                <button
+                  @click="retryFetchModelsForExpand(row)"
+                  class="text-sm text-primary-600 hover:underline"
+                >
+                  {{ t('keys.modelsRetry') }}
+                </button>
+              </div>
+
+              <!-- Models Content -->
+              <div v-else-if="getExpandedModels(row.id)" class="w-full space-y-2">
+                <!-- Header with source info -->
+                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span class="font-medium">{{ t('keys.availableModels') }}</span>
+                  <span
+                    class="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    :class="getExpandedModels(row.id)?.source === 'mapping'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : getExpandedModels(row.id)?.source === 'unlimited'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-600 dark:bg-dark-600 dark:text-gray-400'"
+                  >
+                    {{
+                      getExpandedModels(row.id)?.source === 'mapping'
+                        ? t('keys.modelsSourceMapping')
+                        : getExpandedModels(row.id)?.source === 'unlimited'
+                          ? t('keys.modelsSourceUnlimited')
+                          : t('keys.modelsSourceDefault')
+                    }}
+                  </span>
+                </div>
+
+                <!-- Unlimited State -->
+                <div v-if="getExpandedModels(row.id)?.source === 'unlimited'" class="flex items-center gap-2 py-2">
+                  <Icon name="checkCircle" size="sm" class="text-green-500" />
+                  <span class="text-sm text-green-600 dark:text-green-400">{{ t('keys.modelsUnlimited') }}</span>
+                </div>
+
+                <!-- No Accounts State -->
+                <div v-else-if="getExpandedModels(row.id)?.source === 'no_accounts'" class="flex items-center gap-2 py-2">
+                  <Icon name="xCircle" size="sm" class="text-red-500" />
+                  <span class="text-sm text-red-600 dark:text-red-400">{{ t('keys.modelsNoAccounts') }}</span>
+                </div>
+
+                <!-- All Paused State -->
+                <div v-else-if="getExpandedModels(row.id)?.source === 'all_paused'" class="flex items-center gap-2 py-2">
+                  <Icon name="ban" size="sm" class="text-yellow-500" />
+                  <span class="text-sm text-yellow-600 dark:text-yellow-400">{{ t('keys.modelsAllPaused') }}</span>
+                </div>
+
+                <!-- Models List -->
+                <div v-else-if="getExpandedModels(row.id)?.models?.length" class="w-full">
+                  <!-- Mobile: Compact scrollable list -->
+                  <div class="md:hidden w-full max-h-32 overflow-y-auto rounded-lg bg-white dark:bg-dark-700 border border-gray-200 dark:border-dark-600 p-2">
+                    <div class="flex flex-wrap gap-1">
+                      <span
+                        v-for="(model, idx) in getExpandedModels(row.id)?.models"
+                        :key="model"
+                        @click="copyModelName(model)"
+                        class="text-xs text-gray-600 dark:text-gray-300 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
+                        :class="{ 'text-green-500 dark:text-green-400': copiedModel === model }"
+                      >{{ model }}{{ idx < (getExpandedModels(row.id)?.models?.length || 0) - 1 ? ',' : '' }}</span>
+                    </div>
+                  </div>
+                  <!-- Desktop: Compact tag style with scroll -->
+                  <div class="hidden md:block w-full max-h-28 overflow-y-auto rounded-lg border border-gray-200 dark:border-dark-600 bg-white/50 dark:bg-dark-700/50 p-2">
+                    <div class="flex flex-wrap gap-1">
+                      <span
+                        v-for="model in getExpandedModels(row.id)?.models"
+                        :key="model"
+                        @click="copyModelName(model)"
+                        class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-mono cursor-pointer transition-colors bg-gray-100 dark:bg-dark-600 text-gray-700 dark:text-gray-300 hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-primary-900/30 dark:hover:text-primary-400"
+                        :class="{ '!bg-green-100 !text-green-700 dark:!bg-green-900/30 dark:!text-green-400': copiedModel === model }"
+                        :title="t('keys.clickToCopyModel')"
+                      >
+                        {{ model }}
+                        <Icon v-if="copiedModel === model" name="check" size="xs" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else class="text-sm text-gray-500 dark:text-gray-400 py-2">
+                  {{ t('keys.modelsEmpty') }}
+                </div>
+              </div>
             </div>
           </template>
 
@@ -655,9 +763,10 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, computed, onMounted, onUnmounted, watch, type ComponentPublicInstance } from 'vue'
+	import { ref, computed, onMounted, onUnmounted, watch, nextTick, type ComponentPublicInstance } from 'vue'
 	import { useI18n } from 'vue-i18n'
 	import { useAppStore } from '@/stores/app'
+	import { useAuthStore } from '@/stores/auth'
 	import { useOnboardingStore } from '@/stores/onboarding'
 	import { useClipboard } from '@/composables/useClipboard'
 
@@ -678,7 +787,6 @@ import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, GroupModelsResponse } from '@/types'
 import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
-import { formatDateTime } from '@/utils/format'
 
 interface GroupOption {
   value: number
@@ -690,6 +798,7 @@ interface GroupOption {
 }
 
 const appStore = useAppStore()
+const authStore = useAuthStore()
 const onboardingStore = useOnboardingStore()
 const { copyToClipboard: clipboardCopy } = useClipboard()
 
@@ -699,7 +808,6 @@ const columns = computed<Column[]>(() => [
   { key: 'group', label: t('keys.group'), sortable: false },
   { key: 'usage', label: t('keys.usage'), sortable: false },
   { key: 'status', label: t('common.status'), sortable: true },
-  { key: 'created_at', label: t('keys.created'), sortable: true },
   { key: 'actions', label: t('common.actions'), sortable: false }
 ])
 
@@ -732,6 +840,12 @@ const copiedKeyId = ref<number | null>(null)
 const copiedModel = ref<string | null>(null)
 const groupSelectorKeyId = ref<number | null>(null)
 const publicSettings = ref<PublicSettings | null>(null)
+// 展开行状态 - 用于显示模型列表
+const expandedKeyIds = ref<number[]>([])
+// 展开行的模型数据缓存
+const expandedModelsData = ref<Map<number, GroupModelsResponse>>(new Map())
+const expandedModelsLoading = ref<Set<number>>(new Set())
+const expandedModelsError = ref<Map<number, string>>(new Map())
 // 分组可用模型相关状态
 const groupModelsCache = ref<Map<number, GroupModelsResponse>>(new Map())
 const groupModelsLoading = ref(false)
@@ -947,14 +1061,7 @@ const closeUseKeyModal = () => {
   selectedKey.value = null
 }
 
-// Models Modal methods
-const openModelsModal = (key: ApiKey) => {
-  modelsModalKey.value = key
-  modelsModalData.value = null
-  modelsModalError.value = ''
-  showModelsModal.value = true
-  fetchModelsForModal()
-}
+// Models Modal methods (closeModelsModal still used by modal template)
 
 const closeModelsModal = () => {
   showModelsModal.value = false
@@ -981,6 +1088,139 @@ const fetchModelsForModal = async () => {
   } finally {
     modelsModalLoading.value = false
   }
+}
+
+// 展开行方法 - 切换模型列表展开/收起
+const toggleModelsExpand = (key: ApiKey) => {
+  const keyId = key.id
+  const index = expandedKeyIds.value.indexOf(keyId)
+
+  // 保存当前滚动位置，防止展开/收起时页面自动滚动
+  const tableWrapper = document.querySelector('.table-wrapper') as HTMLElement | null
+  const scrollLeft = tableWrapper?.scrollLeft ?? 0
+  const scrollTop = window.scrollY // 保存垂直滚动位置（移动端）
+
+  // 恢复滚动位置的辅助函数
+  const restoreScrollPosition = () => {
+    if (tableWrapper) {
+      tableWrapper.scrollLeft = scrollLeft
+    }
+    window.scrollTo({ top: scrollTop, behavior: 'instant' })
+  }
+
+  if (index > -1) {
+    // 收起
+    expandedKeyIds.value.splice(index, 1)
+  } else {
+    // 展开并加载数据
+    expandedKeyIds.value.push(keyId)
+    if (key.group?.id && !expandedModelsData.value.has(keyId)) {
+      fetchModelsForExpand(key)
+    }
+    // 刷新用户数据以获取最新的订阅使用量（用于计算预计可用额度）
+    authStore.refreshUser().catch(() => {
+      // 静默处理刷新失败，不影响主流程
+    })
+  }
+
+  // 多次恢复滚动位置，确保在各种时机都能正确恢复
+  // 1. DOM 更新后立即恢复
+  nextTick(restoreScrollPosition)
+  // 2. 渲染帧后恢复
+  requestAnimationFrame(restoreScrollPosition)
+  // 3. 延迟恢复，处理异步渲染
+  setTimeout(restoreScrollPosition, 50)
+  setTimeout(restoreScrollPosition, 100)
+}
+
+// 获取展开行的模型数据
+const fetchModelsForExpand = async (key: ApiKey) => {
+  if (!key.group?.id) return
+
+  const keyId = key.id
+  const groupId = key.group.id
+
+  expandedModelsLoading.value.add(keyId)
+  expandedModelsError.value.delete(keyId)
+
+  try {
+    const data = await userGroupsAPI.getAvailableModels(groupId)
+    expandedModelsData.value.set(keyId, data)
+  } catch (err: any) {
+    expandedModelsError.value.set(keyId, err.message || t('keys.modelsLoadFailed'))
+  } finally {
+    expandedModelsLoading.value.delete(keyId)
+  }
+}
+
+// 重试加载展开行的模型
+const retryFetchModelsForExpand = (key: ApiKey) => {
+  fetchModelsForExpand(key)
+}
+
+// 获取展开行的模型数据
+const getExpandedModels = (keyId: number) => expandedModelsData.value.get(keyId)
+
+// 检查展开行是否正在加载
+const isExpandedLoading = (keyId: number) => expandedModelsLoading.value.has(keyId)
+
+// 获取展开行的错误信息
+const getExpandedError = (keyId: number) => expandedModelsError.value.get(keyId)
+
+// 获取模型数量文本
+const getModelsCountText = (keyId: number) => {
+  const data = expandedModelsData.value.get(keyId)
+  if (!data) return ''
+  if (data.source === 'unlimited') return t('keys.modelsUnlimitedShort')
+  if (data.source === 'no_accounts' || data.source === 'all_paused') return ''
+  const count = data.models?.length ?? 0
+  return t('keys.modelsCount', { count })
+}
+
+// 计算预计可用额度
+const getEstimatedQuota = (row: ApiKey): string | null => {
+  const group = row.group
+  if (!group) return null
+
+  const rateMultiplier = group.rate_multiplier || 1
+  const user = authStore.user
+
+  // 订阅类型分组：从用户订阅中获取剩余额度
+  if (group.subscription_type === 'subscription') {
+    const subscription = user?.subscriptions?.find(s => s.group_id === group.id && s.status === 'active')
+    if (!subscription) return null
+
+    // 计算最小剩余额度（日/周/月限制中取最小值）
+    let minRemaining: number | null = null
+
+    if (group.daily_limit_usd != null) {
+      const remaining = group.daily_limit_usd - (subscription.daily_usage_usd || 0)
+      if (minRemaining === null || remaining < minRemaining) {
+        minRemaining = remaining
+      }
+    }
+    if (group.weekly_limit_usd != null) {
+      const remaining = group.weekly_limit_usd - (subscription.weekly_usage_usd || 0)
+      if (minRemaining === null || remaining < minRemaining) {
+        minRemaining = remaining
+      }
+    }
+    if (group.monthly_limit_usd != null) {
+      const remaining = group.monthly_limit_usd - (subscription.monthly_usage_usd || 0)
+      if (minRemaining === null || remaining < minRemaining) {
+        minRemaining = remaining
+      }
+    }
+
+    if (minRemaining === null) return null
+    const quota = Math.max(0, minRemaining) / rateMultiplier
+    return `$${quota.toFixed(2)}`
+  }
+
+  // 标准类型分组：从用户余额计算（balance 为 null 时视为 0）
+  const balance = user?.balance ?? 0
+  const quota = balance / rateMultiplier
+  return `$${quota.toFixed(2)}`
 }
 
 const handlePageChange = (page: number) => {

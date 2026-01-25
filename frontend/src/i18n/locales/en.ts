@@ -348,6 +348,9 @@ export default {
     modelsSourceDefault: 'Default models',
     modelsSourceUnlimited: 'Unlimited',
     modelsUnlimited: 'All models available',
+    modelsUnlimitedShort: 'Unlimited',
+    modelsCount: '{count} models',
+    expandModels: 'Expand to view models',
     modelsUnlimitedDesc: 'No model restriction configured, all models are supported',
     modelsNoAccounts: 'No accounts available',
     modelsNoAccountsDesc: 'No accounts are bound to this group, please contact administrator',
@@ -382,6 +385,8 @@ export default {
     total: 'Total',
     useKey: 'Use Key',
     viewModels: 'Models',
+    hideModels: 'Hide',
+    estimatedQuota: 'Est. Quota',
     useKeyModal: {
       title: 'Use API Key',
       description:

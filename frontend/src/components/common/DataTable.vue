@@ -55,6 +55,14 @@
           <div v-if="hasActionsColumn" class="border-t border-gray-200 pt-3 dark:border-dark-700">
             <slot name="cell-actions" :row="row" :value="row['actions']" :expanded="actionsExpanded"></slot>
           </div>
+          <!-- Mobile: Row expand trigger -->
+          <div v-if="$slots['row-expand-trigger']" class="border-t border-gray-200 dark:border-dark-700">
+            <slot name="row-expand-trigger" :row="row" :index="index" :expanded="isRowExpanded(row, index)"></slot>
+          </div>
+          <!-- Mobile: Row expand content -->
+          <div v-if="isRowExpanded(row, index)" class="border-t border-gray-200 dark:border-dark-700">
+            <slot name="row-expand" :row="row" :index="index"></slot>
+          </div>
         </div>
       </div>
     </template>
@@ -147,27 +155,40 @@
           </td>
         </tr>
 
-        <!-- Data rows -->
-        <tr
+        <!-- Data rows with optional expand row -->
+        <template
           v-else
           v-for="(row, index) in sortedData"
           :key="resolveRowKey(row, index)"
-          class="hover:bg-gray-50 dark:hover:bg-dark-800"
         >
-          <td
-            v-for="(column, colIndex) in columns"
-            :key="column.key"
-            :class="[
-              'whitespace-nowrap py-4 text-sm text-gray-900 dark:text-gray-100',
-              getAdaptivePaddingClass(),
-              getStickyColumnClass(column, colIndex)
-            ]"
-          >
-            <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]" :expanded="actionsExpanded">
-              {{ column.formatter ? column.formatter(row[column.key], row) : row[column.key] }}
-            </slot>
-          </td>
-        </tr>
+          <tr class="hover:bg-gray-50 dark:hover:bg-dark-800">
+            <td
+              v-for="(column, colIndex) in columns"
+              :key="column.key"
+              :class="[
+                'whitespace-nowrap py-4 text-sm text-gray-900 dark:text-gray-100',
+                getAdaptivePaddingClass(),
+                getStickyColumnClass(column, colIndex)
+              ]"
+            >
+              <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]" :expanded="actionsExpanded">
+                {{ column.formatter ? column.formatter(row[column.key], row) : row[column.key] }}
+              </slot>
+            </td>
+          </tr>
+          <!-- Expand trigger row -->
+          <tr v-if="$slots['row-expand-trigger']" class="expand-trigger-row">
+            <td :colspan="columns.length" class="p-0">
+              <slot name="row-expand-trigger" :row="row" :index="index" :expanded="isRowExpanded(row, index)"></slot>
+            </td>
+          </tr>
+          <!-- Expand content row -->
+          <tr v-if="isRowExpanded(row, index)" class="expand-row">
+            <td :colspan="columns.length" class="p-0">
+              <slot name="row-expand" :row="row" :index="index"></slot>
+            </td>
+          </tr>
+        </template>
       </tbody>
     </table>
   </div>
@@ -289,6 +310,10 @@ interface Props {
    * If provided, DataTable will load the stored sort state on mount.
    */
   sortStorageKey?: string
+  /**
+   * Keys of rows that are currently expanded (for row-expand slot)
+   */
+  expandedRowKeys?: (string | number)[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -296,8 +321,15 @@ const props = withDefaults(defineProps<Props>(), {
   stickyFirstColumn: true,
   stickyActionsColumn: true,
   expandableActions: true,
-  defaultSortOrder: 'asc'
+  defaultSortOrder: 'asc',
+  expandedRowKeys: () => []
 })
+
+// Check if a row is expanded
+const isRowExpanded = (row: any, index: number) => {
+  const key = resolveRowKey(row, index)
+  return props.expandedRowKeys.includes(key)
+}
 
 const sortKey = ref<string>('')
 const sortOrder = ref<'asc' | 'desc'>('asc')
@@ -578,6 +610,7 @@ watch(
   position: relative;
   overflow-x: auto;
   isolation: isolate;
+  overflow-anchor: none; /* 防止浏览器在内容变化时自动滚动 */
 }
 
 /* 表头容器，确保在滚动时覆盖表体内容 */
@@ -707,5 +740,55 @@ tbody tr:hover .sticky-col {
 
 .dark .is-scrollable .sticky-col-right::before {
   background: linear-gradient(to left, rgba(0, 0, 0, 0.2), transparent);
+}
+
+/* 展开触发行样式 */
+.expand-trigger-row {
+  background-color: rgb(249 250 251);
+}
+
+.dark .expand-trigger-row {
+  background-color: rgb(31 41 55);
+}
+
+.expand-trigger-row td {
+  position: sticky;
+  left: 0;
+  border-top: 1px dashed rgb(229 231 235);
+  background-color: rgb(249 250 251);
+  z-index: 10;
+}
+
+.dark .expand-trigger-row td {
+  border-top: 1px dashed rgb(55 65 81);
+  background-color: rgb(31 41 55);
+}
+
+/* 展开行样式 */
+.expand-row {
+  background-color: rgb(249 250 251);
+}
+
+.dark .expand-row {
+  background-color: rgb(31 41 55);
+}
+
+/* 展开行内容 - 使用 sticky 固定在左侧，宽度等于可视区域 */
+.expand-row td {
+  position: sticky;
+  left: 0;
+  white-space: normal;
+  border-top: 1px solid rgb(229 231 235);
+  background-color: rgb(249 250 251);
+  /* 宽度设置为表格容器的可视宽度 */
+  width: 100%;
+  min-width: 0;
+  max-width: calc(100vw - 2rem);
+  box-sizing: border-box;
+}
+
+.dark .expand-row td {
+  border-top: 1px solid rgb(55 65 81);
+  background-color: rgb(31 41 55);
 }
 </style>

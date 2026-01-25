@@ -345,6 +345,9 @@ export default {
     modelsSourceDefault: '默认模型',
     modelsSourceUnlimited: '无限制',
     modelsUnlimited: '所有模型可用',
+    modelsUnlimitedShort: '无限制',
+    modelsCount: '{count}个模型',
+    expandModels: '展开查看模型',
     modelsUnlimitedDesc: '该分组未配置模型限制，支持所有模型',
     modelsNoAccounts: '没有可用账号',
     modelsNoAccountsDesc: '该分组未绑定任何账号，请联系管理员',
@@ -379,6 +382,8 @@ export default {
     total: '累计',
     useKey: '使用密钥',
     viewModels: '查看模型',
+    hideModels: '收起模型',
+    estimatedQuota: '预计可用额度',
     useKeyModal: {
       title: '使用 API 密钥',
       description: '将以下环境变量添加到您的终端配置文件或直接在终端中运行。',

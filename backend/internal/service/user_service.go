@@ -38,6 +38,9 @@ type UserRepository interface {
 	UpdateConcurrency(ctx context.Context, id int64, amount int) error
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 	RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error)
+
+	// LoadSubscriptions 加载用户的活跃订阅（仅在需要时调用，避免 GetByID 性能问题）
+	LoadSubscriptions(ctx context.Context, userID int64) ([]UserSubscription, error)
 }
 
 // UpdateProfileRequest 更新用户资料请求
@@ -152,12 +155,29 @@ func (s *UserService) ChangePassword(ctx context.Context, userID int64, req Chan
 	return nil
 }
 
-// GetByID 根据ID获取用户（管理员功能）
+// GetByID 根据ID获取用户（不含订阅数据，适用于大多数场景）
 func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
+	return user, nil
+}
+
+// GetByIDWithSubscriptions 根据ID获取用户并加载订阅数据（仅用于需要订阅信息的场景，如 /api/auth/me）
+func (s *UserService) GetByIDWithSubscriptions(ctx context.Context, id int64) (*User, error) {
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
+	// 单独加载订阅数据
+	subs, err := s.userRepo.LoadSubscriptions(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("load subscriptions: %w", err)
+	}
+	user.Subscriptions = subs
+
 	return user, nil
 }
 
