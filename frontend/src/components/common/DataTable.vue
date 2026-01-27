@@ -202,6 +202,10 @@ import Icon from '@/components/icons/Icon.vue'
 
 const { t } = useI18n()
 
+const emit = defineEmits<{
+  sort: [key: string, order: 'asc' | 'desc']
+}>()
+
 // 表格容器引用
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const isScrollable = ref(false)
@@ -314,6 +318,11 @@ interface Props {
    * Keys of rows that are currently expanded (for row-expand slot)
    */
   expandedRowKeys?: (string | number)[]
+  /**
+   * Enable server-side sorting mode. When true, clicking sort headers
+   * will emit 'sort' events instead of performing client-side sorting.
+   */
+  serverSideSort?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -322,7 +331,8 @@ const props = withDefaults(defineProps<Props>(), {
   stickyActionsColumn: true,
   expandableActions: true,
   defaultSortOrder: 'asc',
-  expandedRowKeys: () => []
+  expandedRowKeys: () => [],
+  serverSideSort: false
 })
 
 // Check if a row is expanded
@@ -480,16 +490,26 @@ watch(actionsExpanded, async () => {
 })
 
 const handleSort = (key: string) => {
+  let newOrder: 'asc' | 'desc' = 'asc'
   if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
-  } else {
+    newOrder = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  }
+
+  if (props.serverSideSort) {
+    // Server-side sort mode: emit event and update internal state for UI feedback
     sortKey.value = key
-    sortOrder.value = 'asc'
+    sortOrder.value = newOrder
+    emit('sort', key, newOrder)
+  } else {
+    // Client-side sort mode: just update internal state
+    sortKey.value = key
+    sortOrder.value = newOrder
   }
 }
 
 const sortedData = computed(() => {
-  if (!sortKey.value || !props.data) return props.data
+  // Server-side sort mode: return data as-is (server handles sorting)
+  if (props.serverSideSort || !sortKey.value || !props.data) return props.data
 
   const key = sortKey.value
   const order = sortOrder.value
