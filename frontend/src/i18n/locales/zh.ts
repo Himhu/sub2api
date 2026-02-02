@@ -66,7 +66,9 @@ export default {
       port: '端口',
       password: '密码（可选）',
       database: '数据库',
-      passwordPlaceholder: '密码'
+      passwordPlaceholder: '密码',
+      enableTls: '启用 TLS',
+      enableTlsHint: '连接 Redis 时使用 TLS（公共 CA 证书）'
     },
     admin: {
       title: '管理员账户',
@@ -186,6 +188,7 @@ export default {
   // Navigation
   nav: {
     dashboard: '仪表盘',
+    announcements: '公告',
     apiKeys: 'API 密钥',
     usage: '使用记录',
     redeem: '卡密兑换',
@@ -2967,7 +2970,9 @@ export default {
         ignoreContextCanceled: '忽略客户端断连错误',
         ignoreContextCanceledHint: '启用后，客户端主动断开连接（context canceled）的错误将不会写入错误日志。',
         ignoreNoAvailableAccounts: '忽略无可用账号错误',
-        ignoreNoAvailableAccountsHint: '启用后，“No available accounts” 错误将不会写入错误日志（不推荐，这通常是配置问题）。',
+        ignoreNoAvailableAccountsHint: '启用后，"No available accounts" 错误将不会写入错误日志（不推荐，这通常是配置问题）。',
+        ignoreInvalidApiKeyErrors: '忽略无效 API Key 错误',
+        ignoreInvalidApiKeyErrorsHint: '启用后，无效或缺失 API Key 的错误（INVALID_API_KEY、API_KEY_REQUIRED）将不会写入错误日志。',
         autoRefresh: '自动刷新',
         enableAutoRefresh: '启用自动刷新',
         enableAutoRefreshHint: '自动刷新仪表板数据，启用后会定期拉取最新数据。',
@@ -3307,6 +3312,30 @@ export default {
     notEnabledDesc: '管理员暂未开启购买订阅入口，请联系管理员。',
     notConfiguredTitle: '购买链接未配置',
     notConfiguredDesc: '管理员已开启入口，但尚未配置购买订阅链接，请联系管理员。'
+  },
+
+  // Announcements Page
+  announcements: {
+    title: '公告',
+    description: '查看系统公告',
+    unreadOnly: '仅显示未读',
+    markRead: '标记已读',
+    markAllRead: '全部已读',
+    viewAll: '查看全部公告',
+    markedAsRead: '已标记为已读',
+    allMarkedAsRead: '所有公告已标记为已读',
+    newCount: '有 {count} 条新公告',
+    readAt: '已读时间',
+    read: '已读',
+    unread: '未读',
+    startsAt: '开始时间',
+    endsAt: '结束时间',
+    empty: '暂无公告',
+    emptyUnread: '暂无未读公告',
+    total: '条公告',
+    emptyDescription: '暂时没有任何系统公告',
+    readStatus: '您已阅读此公告',
+    markReadHint: '点击"已读"标记此公告'
   },
 
   // User Subscriptions Page

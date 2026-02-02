@@ -69,7 +69,9 @@ export default {
       port: 'Port',
       password: 'Password (optional)',
       database: 'Database',
-      passwordPlaceholder: 'Password'
+      passwordPlaceholder: 'Password',
+      enableTls: 'Enable TLS',
+      enableTlsHint: 'Use TLS when connecting to Redis (public CA certs)'
     },
     admin: {
       title: 'Admin Account',
@@ -189,6 +191,7 @@ export default {
   // Navigation
   nav: {
     dashboard: 'Dashboard',
+    announcements: 'Announcements',
     apiKeys: 'API Keys',
     usage: 'Usage',
     redeem: 'Redeem',
@@ -2815,6 +2818,8 @@ export default {
         ignoreContextCanceledHint: 'When enabled, client disconnect (context canceled) errors will not be written to the error log.',
         ignoreNoAvailableAccounts: 'Ignore no available accounts errors',
         ignoreNoAvailableAccountsHint: 'When enabled, "No available accounts" errors will not be written to the error log (not recommended; usually a config issue).',
+        ignoreInvalidApiKeyErrors: 'Ignore invalid API key errors',
+        ignoreInvalidApiKeyErrorsHint: 'When enabled, invalid or missing API key errors (INVALID_API_KEY, API_KEY_REQUIRED) will not be written to the error log.',
         autoRefresh: 'Auto Refresh',
         enableAutoRefresh: 'Enable auto refresh',
         enableAutoRefreshHint: 'Automatically refresh dashboard data at a fixed interval.',
@@ -3158,6 +3163,30 @@ export default {
     notConfiguredTitle: 'Purchase URL not configured',
     notConfiguredDesc:
       'The administrator enabled the entry but has not configured a purchase URL. Please contact admin.'
+  },
+
+  // Announcements Page
+  announcements: {
+    title: 'Announcements',
+    description: 'View system announcements',
+    unreadOnly: 'Show unread only',
+    markRead: 'Mark as read',
+    markAllRead: 'Mark all as read',
+    viewAll: 'View all announcements',
+    markedAsRead: 'Marked as read',
+    allMarkedAsRead: 'All announcements marked as read',
+    newCount: '{count} new announcement | {count} new announcements',
+    readAt: 'Read at',
+    read: 'Read',
+    unread: 'Unread',
+    startsAt: 'Starts at',
+    endsAt: 'Ends at',
+    empty: 'No announcements',
+    emptyUnread: 'No unread announcements',
+    total: 'announcements',
+    emptyDescription: 'There are no system announcements at this time',
+    readStatus: 'You have read this announcement',
+    markReadHint: 'Click "Mark as read" to mark this announcement'
   },
 
   // User Subscriptions Page
