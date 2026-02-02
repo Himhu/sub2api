@@ -142,24 +142,34 @@ func (h *AgentHandler) GetMyAgentContact(c *gin.Context) {
 		return
 	}
 
-	// Check if user has an assigned agent
-	if user.BelongAgentID == nil || *user.BelongAgentID == 0 {
-		response.Success(c, map[string]interface{}{
-			"has_agent": false,
-			"agent":     nil,
-		})
-		return
+	// Determine which contact to show: agent or admin
+	var contactUserID int64
+	var isAgent bool
+
+	if user.BelongAgentID != nil && *user.BelongAgentID != 0 {
+		// User has an assigned agent
+		contactUserID = *user.BelongAgentID
+		isAgent = true
+	} else {
+		// No agent assigned, show admin contact
+		admin, err := h.userService.GetFirstAdmin(c.Request.Context())
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		contactUserID = admin.ID
+		isAgent = false
 	}
 
-	// Get agent's basic info
-	agent, err := h.userService.GetByID(c.Request.Context(), *user.BelongAgentID)
+	// Get contact user's basic info
+	agent, err := h.userService.GetByID(c.Request.Context(), contactUserID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
 
-	// Get agent's user attributes (contact info like WeChat, QQ, etc.)
-	attrValues, err := h.attrService.GetUserAttributes(c.Request.Context(), *user.BelongAgentID)
+	// Get contact user's attributes (contact info like WeChat, QQ, etc.)
+	attrValues, err := h.attrService.GetUserAttributes(c.Request.Context(), contactUserID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -191,9 +201,9 @@ func (h *AgentHandler) GetMyAgentContact(c *gin.Context) {
 		}
 	}
 
-	// Return agent contact info with attributes
+	// Return contact info with attributes
 	response.Success(c, map[string]interface{}{
-		"has_agent": true,
+		"has_agent": isAgent,
 		"agent": map[string]interface{}{
 			"email":      agent.Email,
 			"username":   agent.Username,
