@@ -2253,6 +2253,73 @@ export default {
       revokeAgentFailed: '取消代理身份失败'
     },
 
+    // 公告管理
+    announcements: {
+      title: '公告管理',
+      description: '创建公告并按条件定向推送',
+      createAnnouncement: '创建公告',
+      editAnnouncement: '编辑公告',
+      deleteAnnouncement: '删除公告',
+      searchAnnouncements: '搜索公告...',
+      status: '状态',
+      allStatus: '全部状态',
+      columns: {
+        title: '标题',
+        status: '状态',
+        targeting: '目标用户',
+        timeRange: '时间安排',
+        createdAt: '创建时间',
+        actions: '操作'
+      },
+      statusLabels: {
+        draft: '草稿',
+        active: '已发布',
+        archived: '已归档'
+      },
+      form: {
+        title: '标题',
+        content: '内容（支持 Markdown）',
+        status: '状态',
+        startsAt: '开始时间',
+        endsAt: '结束时间',
+        startsAtHint: '留空表示立即开始',
+        endsAtHint: '留空表示永不过期',
+        targetingMode: '目标用户',
+        targetingAll: '所有用户',
+        targetingCustom: '自定义规则',
+        addOrGroup: '添加 OR 组',
+        addAndCondition: '添加 AND 条件',
+        conditionType: '条件类型',
+        conditionSubscription: '订阅',
+        conditionBalance: '余额',
+        operator: '运算符',
+        balanceValue: '余额阈值',
+        selectPackages: '选择套餐'
+      },
+      operators: {
+        gt: '>',
+        gte: '≥',
+        lt: '<',
+        lte: '≤',
+        eq: '='
+      },
+      targetingSummaryAll: '所有用户',
+      targetingSummaryCustom: '自定义（{groups} 组）',
+      timeImmediate: '立即',
+      timeNever: '永不',
+      readStatus: '阅读状态',
+      eligible: '符合条件',
+      readAt: '阅读时间',
+      unread: '未读',
+      searchUsers: '搜索用户...',
+      failedToLoad: '加载公告失败',
+      failedToCreate: '创建公告失败',
+      failedToUpdate: '更新公告失败',
+      failedToDelete: '删除公告失败',
+      failedToLoadReadStatus: '加载阅读状态失败',
+      deleteConfirm: '确定要删除此公告吗？此操作无法撤销。'
+    },
+
     // Usage Records
     usage: {
       title: '使用记录',
