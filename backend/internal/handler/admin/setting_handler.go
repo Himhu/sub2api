@@ -47,7 +47,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  settings.RegistrationEnabled,
 		EmailVerifyEnabled:                   settings.EmailVerifyEnabled,
-		PromoCodeEnabled:                     settings.PromoCodeEnabled,
+		InviteRegistrationEnabled:            settings.InviteRegistrationEnabled,
 		PasswordResetEnabled:                 settings.PasswordResetEnabled,
 		TotpEnabled:                          settings.TotpEnabled,
 		TotpEncryptionKeyConfigured:          h.settingService.IsTotpEncryptionKeyConfigured(),
@@ -77,6 +77,8 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		PurchaseSubscriptionURL:              settings.PurchaseSubscriptionURL,
 		DefaultConcurrency:                   settings.DefaultConcurrency,
 		DefaultBalance:                       settings.DefaultBalance,
+		InviterBonus:                         settings.InviterBonus,
+		InviteeBonus:                         settings.InviteeBonus,
 		EnableModelFallback:                  settings.EnableModelFallback,
 		FallbackModelAnthropic:               settings.FallbackModelAnthropic,
 		FallbackModelOpenAI:                  settings.FallbackModelOpenAI,
@@ -96,7 +98,7 @@ type UpdateSettingsRequest struct {
 	// 注册设置
 	RegistrationEnabled  bool `json:"registration_enabled"`
 	EmailVerifyEnabled   bool `json:"email_verify_enabled"`
-	PromoCodeEnabled     bool `json:"promo_code_enabled"`
+	InviteRegistrationEnabled bool `json:"invite_registration_enabled"`
 	PasswordResetEnabled bool `json:"password_reset_enabled"`
 	TotpEnabled          bool `json:"totp_enabled"` // TOTP 双因素认证
 
@@ -135,6 +137,8 @@ type UpdateSettingsRequest struct {
 	// 默认配置
 	DefaultConcurrency int     `json:"default_concurrency"`
 	DefaultBalance     float64 `json:"default_balance"`
+	InviterBonus       float64 `json:"inviter_bonus"`  // 邀请人奖励余额
+	InviteeBonus       float64 `json:"invitee_bonus"`  // 被邀请人奖励余额
 
 	// Model fallback configuration
 	EnableModelFallback      bool   `json:"enable_model_fallback"`
@@ -175,6 +179,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	}
 	if req.DefaultBalance < 0 {
 		req.DefaultBalance = 0
+	}
+	if req.InviterBonus < 0 {
+		req.InviterBonus = 0
+	}
+	if req.InviteeBonus < 0 {
+		req.InviteeBonus = 0
 	}
 	if req.SMTPPort <= 0 {
 		req.SMTPPort = 587
@@ -289,7 +299,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	settings := &service.SystemSettings{
 		RegistrationEnabled:         req.RegistrationEnabled,
 		EmailVerifyEnabled:          req.EmailVerifyEnabled,
-		PromoCodeEnabled:            req.PromoCodeEnabled,
+		InviteRegistrationEnabled:   req.InviteRegistrationEnabled,
 		PasswordResetEnabled:        req.PasswordResetEnabled,
 		TotpEnabled:                 req.TotpEnabled,
 		SMTPHost:                    req.SMTPHost,
@@ -318,6 +328,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PurchaseSubscriptionURL:     purchaseURL,
 		DefaultConcurrency:          req.DefaultConcurrency,
 		DefaultBalance:              req.DefaultBalance,
+		InviterBonus:                req.InviterBonus,
+		InviteeBonus:                req.InviteeBonus,
 		EnableModelFallback:         req.EnableModelFallback,
 		FallbackModelAnthropic:      req.FallbackModelAnthropic,
 		FallbackModelOpenAI:         req.FallbackModelOpenAI,
@@ -368,7 +380,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  updatedSettings.RegistrationEnabled,
 		EmailVerifyEnabled:                   updatedSettings.EmailVerifyEnabled,
-		PromoCodeEnabled:                     updatedSettings.PromoCodeEnabled,
+		InviteRegistrationEnabled:            updatedSettings.InviteRegistrationEnabled,
 		PasswordResetEnabled:                 updatedSettings.PasswordResetEnabled,
 		TotpEnabled:                          updatedSettings.TotpEnabled,
 		TotpEncryptionKeyConfigured:          h.settingService.IsTotpEncryptionKeyConfigured(),
@@ -398,6 +410,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PurchaseSubscriptionURL:              updatedSettings.PurchaseSubscriptionURL,
 		DefaultConcurrency:                   updatedSettings.DefaultConcurrency,
 		DefaultBalance:                       updatedSettings.DefaultBalance,
+		InviterBonus:                         updatedSettings.InviterBonus,
+		InviteeBonus:                         updatedSettings.InviteeBonus,
 		EnableModelFallback:                  updatedSettings.EnableModelFallback,
 		FallbackModelAnthropic:               updatedSettings.FallbackModelAnthropic,
 		FallbackModelOpenAI:                  updatedSettings.FallbackModelOpenAI,
@@ -517,6 +531,12 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if before.DefaultBalance != after.DefaultBalance {
 		changed = append(changed, "default_balance")
+	}
+	if before.InviterBonus != after.InviterBonus {
+		changed = append(changed, "inviter_bonus")
+	}
+	if before.InviteeBonus != after.InviteeBonus {
+		changed = append(changed, "invitee_bonus")
 	}
 	if before.EnableModelFallback != after.EnableModelFallback {
 		changed = append(changed, "enable_model_fallback")

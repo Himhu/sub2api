@@ -14,7 +14,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
-	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -241,6 +240,121 @@ func (_u *UserUpdate) ClearTotpEnabledAt() *UserUpdate {
 	return _u
 }
 
+// SetIsAgent sets the "is_agent" field.
+func (_u *UserUpdate) SetIsAgent(v bool) *UserUpdate {
+	_u.mutation.SetIsAgent(v)
+	return _u
+}
+
+// SetNillableIsAgent sets the "is_agent" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableIsAgent(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetIsAgent(*v)
+	}
+	return _u
+}
+
+// SetParentAgentID sets the "parent_agent_id" field.
+func (_u *UserUpdate) SetParentAgentID(v int64) *UserUpdate {
+	_u.mutation.ResetParentAgentID()
+	_u.mutation.SetParentAgentID(v)
+	return _u
+}
+
+// SetNillableParentAgentID sets the "parent_agent_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableParentAgentID(v *int64) *UserUpdate {
+	if v != nil {
+		_u.SetParentAgentID(*v)
+	}
+	return _u
+}
+
+// AddParentAgentID adds value to the "parent_agent_id" field.
+func (_u *UserUpdate) AddParentAgentID(v int64) *UserUpdate {
+	_u.mutation.AddParentAgentID(v)
+	return _u
+}
+
+// ClearParentAgentID clears the value of the "parent_agent_id" field.
+func (_u *UserUpdate) ClearParentAgentID() *UserUpdate {
+	_u.mutation.ClearParentAgentID()
+	return _u
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (_u *UserUpdate) SetInviteCode(v string) *UserUpdate {
+	_u.mutation.SetInviteCode(v)
+	return _u
+}
+
+// SetNillableInviteCode sets the "invite_code" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableInviteCode(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetInviteCode(*v)
+	}
+	return _u
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (_u *UserUpdate) ClearInviteCode() *UserUpdate {
+	_u.mutation.ClearInviteCode()
+	return _u
+}
+
+// SetInvitedByUserID sets the "invited_by_user_id" field.
+func (_u *UserUpdate) SetInvitedByUserID(v int64) *UserUpdate {
+	_u.mutation.ResetInvitedByUserID()
+	_u.mutation.SetInvitedByUserID(v)
+	return _u
+}
+
+// SetNillableInvitedByUserID sets the "invited_by_user_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableInvitedByUserID(v *int64) *UserUpdate {
+	if v != nil {
+		_u.SetInvitedByUserID(*v)
+	}
+	return _u
+}
+
+// AddInvitedByUserID adds value to the "invited_by_user_id" field.
+func (_u *UserUpdate) AddInvitedByUserID(v int64) *UserUpdate {
+	_u.mutation.AddInvitedByUserID(v)
+	return _u
+}
+
+// ClearInvitedByUserID clears the value of the "invited_by_user_id" field.
+func (_u *UserUpdate) ClearInvitedByUserID() *UserUpdate {
+	_u.mutation.ClearInvitedByUserID()
+	return _u
+}
+
+// SetBelongAgentID sets the "belong_agent_id" field.
+func (_u *UserUpdate) SetBelongAgentID(v int64) *UserUpdate {
+	_u.mutation.ResetBelongAgentID()
+	_u.mutation.SetBelongAgentID(v)
+	return _u
+}
+
+// SetNillableBelongAgentID sets the "belong_agent_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableBelongAgentID(v *int64) *UserUpdate {
+	if v != nil {
+		_u.SetBelongAgentID(*v)
+	}
+	return _u
+}
+
+// AddBelongAgentID adds value to the "belong_agent_id" field.
+func (_u *UserUpdate) AddBelongAgentID(v int64) *UserUpdate {
+	_u.mutation.AddBelongAgentID(v)
+	return _u
+}
+
+// ClearBelongAgentID clears the value of the "belong_agent_id" field.
+func (_u *UserUpdate) ClearBelongAgentID() *UserUpdate {
+	_u.mutation.ClearBelongAgentID()
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *UserUpdate) AddAPIKeyIDs(ids ...int64) *UserUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -344,21 +458,6 @@ func (_u *UserUpdate) AddAttributeValues(v ...*UserAttributeValue) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddAttributeValueIDs(ids...)
-}
-
-// AddPromoCodeUsageIDs adds the "promo_code_usages" edge to the PromoCodeUsage entity by IDs.
-func (_u *UserUpdate) AddPromoCodeUsageIDs(ids ...int64) *UserUpdate {
-	_u.mutation.AddPromoCodeUsageIDs(ids...)
-	return _u
-}
-
-// AddPromoCodeUsages adds the "promo_code_usages" edges to the PromoCodeUsage entity.
-func (_u *UserUpdate) AddPromoCodeUsages(v ...*PromoCodeUsage) *UserUpdate {
-	ids := make([]int64, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddPromoCodeUsageIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -513,27 +612,6 @@ func (_u *UserUpdate) RemoveAttributeValues(v ...*UserAttributeValue) *UserUpdat
 	return _u.RemoveAttributeValueIDs(ids...)
 }
 
-// ClearPromoCodeUsages clears all "promo_code_usages" edges to the PromoCodeUsage entity.
-func (_u *UserUpdate) ClearPromoCodeUsages() *UserUpdate {
-	_u.mutation.ClearPromoCodeUsages()
-	return _u
-}
-
-// RemovePromoCodeUsageIDs removes the "promo_code_usages" edge to PromoCodeUsage entities by IDs.
-func (_u *UserUpdate) RemovePromoCodeUsageIDs(ids ...int64) *UserUpdate {
-	_u.mutation.RemovePromoCodeUsageIDs(ids...)
-	return _u
-}
-
-// RemovePromoCodeUsages removes "promo_code_usages" edges to PromoCodeUsage entities.
-func (_u *UserUpdate) RemovePromoCodeUsages(v ...*PromoCodeUsage) *UserUpdate {
-	ids := make([]int64, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemovePromoCodeUsageIDs(ids...)
-}
-
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *UserUpdate) Save(ctx context.Context) (int, error) {
 	if err := _u.defaults(); err != nil {
@@ -601,6 +679,11 @@ func (_u *UserUpdate) check() error {
 	if v, ok := _u.mutation.Username(); ok {
 		if err := user.UsernameValidator(v); err != nil {
 			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "User.username": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.InviteCode(); ok {
+		if err := user.InviteCodeValidator(v); err != nil {
+			return &ValidationError{Name: "invite_code", err: fmt.Errorf(`ent: validator failed for field "User.invite_code": %w`, err)}
 		}
 	}
 	return nil
@@ -671,6 +754,42 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TotpEnabledAtCleared() {
 		_spec.ClearField(user.FieldTotpEnabledAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.IsAgent(); ok {
+		_spec.SetField(user.FieldIsAgent, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ParentAgentID(); ok {
+		_spec.SetField(user.FieldParentAgentID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedParentAgentID(); ok {
+		_spec.AddField(user.FieldParentAgentID, field.TypeInt64, value)
+	}
+	if _u.mutation.ParentAgentIDCleared() {
+		_spec.ClearField(user.FieldParentAgentID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.InviteCode(); ok {
+		_spec.SetField(user.FieldInviteCode, field.TypeString, value)
+	}
+	if _u.mutation.InviteCodeCleared() {
+		_spec.ClearField(user.FieldInviteCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.InvitedByUserID(); ok {
+		_spec.SetField(user.FieldInvitedByUserID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedInvitedByUserID(); ok {
+		_spec.AddField(user.FieldInvitedByUserID, field.TypeInt64, value)
+	}
+	if _u.mutation.InvitedByUserIDCleared() {
+		_spec.ClearField(user.FieldInvitedByUserID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.BelongAgentID(); ok {
+		_spec.SetField(user.FieldBelongAgentID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedBelongAgentID(); ok {
+		_spec.AddField(user.FieldBelongAgentID, field.TypeInt64, value)
+	}
+	if _u.mutation.BelongAgentIDCleared() {
+		_spec.ClearField(user.FieldBelongAgentID, field.TypeInt64)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -992,51 +1111,6 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userattributevalue.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PromoCodeUsagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedPromoCodeUsagesIDs(); len(nodes) > 0 && !_u.mutation.PromoCodeUsagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PromoCodeUsagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -1270,6 +1344,121 @@ func (_u *UserUpdateOne) ClearTotpEnabledAt() *UserUpdateOne {
 	return _u
 }
 
+// SetIsAgent sets the "is_agent" field.
+func (_u *UserUpdateOne) SetIsAgent(v bool) *UserUpdateOne {
+	_u.mutation.SetIsAgent(v)
+	return _u
+}
+
+// SetNillableIsAgent sets the "is_agent" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableIsAgent(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetIsAgent(*v)
+	}
+	return _u
+}
+
+// SetParentAgentID sets the "parent_agent_id" field.
+func (_u *UserUpdateOne) SetParentAgentID(v int64) *UserUpdateOne {
+	_u.mutation.ResetParentAgentID()
+	_u.mutation.SetParentAgentID(v)
+	return _u
+}
+
+// SetNillableParentAgentID sets the "parent_agent_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableParentAgentID(v *int64) *UserUpdateOne {
+	if v != nil {
+		_u.SetParentAgentID(*v)
+	}
+	return _u
+}
+
+// AddParentAgentID adds value to the "parent_agent_id" field.
+func (_u *UserUpdateOne) AddParentAgentID(v int64) *UserUpdateOne {
+	_u.mutation.AddParentAgentID(v)
+	return _u
+}
+
+// ClearParentAgentID clears the value of the "parent_agent_id" field.
+func (_u *UserUpdateOne) ClearParentAgentID() *UserUpdateOne {
+	_u.mutation.ClearParentAgentID()
+	return _u
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (_u *UserUpdateOne) SetInviteCode(v string) *UserUpdateOne {
+	_u.mutation.SetInviteCode(v)
+	return _u
+}
+
+// SetNillableInviteCode sets the "invite_code" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableInviteCode(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetInviteCode(*v)
+	}
+	return _u
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (_u *UserUpdateOne) ClearInviteCode() *UserUpdateOne {
+	_u.mutation.ClearInviteCode()
+	return _u
+}
+
+// SetInvitedByUserID sets the "invited_by_user_id" field.
+func (_u *UserUpdateOne) SetInvitedByUserID(v int64) *UserUpdateOne {
+	_u.mutation.ResetInvitedByUserID()
+	_u.mutation.SetInvitedByUserID(v)
+	return _u
+}
+
+// SetNillableInvitedByUserID sets the "invited_by_user_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableInvitedByUserID(v *int64) *UserUpdateOne {
+	if v != nil {
+		_u.SetInvitedByUserID(*v)
+	}
+	return _u
+}
+
+// AddInvitedByUserID adds value to the "invited_by_user_id" field.
+func (_u *UserUpdateOne) AddInvitedByUserID(v int64) *UserUpdateOne {
+	_u.mutation.AddInvitedByUserID(v)
+	return _u
+}
+
+// ClearInvitedByUserID clears the value of the "invited_by_user_id" field.
+func (_u *UserUpdateOne) ClearInvitedByUserID() *UserUpdateOne {
+	_u.mutation.ClearInvitedByUserID()
+	return _u
+}
+
+// SetBelongAgentID sets the "belong_agent_id" field.
+func (_u *UserUpdateOne) SetBelongAgentID(v int64) *UserUpdateOne {
+	_u.mutation.ResetBelongAgentID()
+	_u.mutation.SetBelongAgentID(v)
+	return _u
+}
+
+// SetNillableBelongAgentID sets the "belong_agent_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableBelongAgentID(v *int64) *UserUpdateOne {
+	if v != nil {
+		_u.SetBelongAgentID(*v)
+	}
+	return _u
+}
+
+// AddBelongAgentID adds value to the "belong_agent_id" field.
+func (_u *UserUpdateOne) AddBelongAgentID(v int64) *UserUpdateOne {
+	_u.mutation.AddBelongAgentID(v)
+	return _u
+}
+
+// ClearBelongAgentID clears the value of the "belong_agent_id" field.
+func (_u *UserUpdateOne) ClearBelongAgentID() *UserUpdateOne {
+	_u.mutation.ClearBelongAgentID()
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *UserUpdateOne) AddAPIKeyIDs(ids ...int64) *UserUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1373,21 +1562,6 @@ func (_u *UserUpdateOne) AddAttributeValues(v ...*UserAttributeValue) *UserUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.AddAttributeValueIDs(ids...)
-}
-
-// AddPromoCodeUsageIDs adds the "promo_code_usages" edge to the PromoCodeUsage entity by IDs.
-func (_u *UserUpdateOne) AddPromoCodeUsageIDs(ids ...int64) *UserUpdateOne {
-	_u.mutation.AddPromoCodeUsageIDs(ids...)
-	return _u
-}
-
-// AddPromoCodeUsages adds the "promo_code_usages" edges to the PromoCodeUsage entity.
-func (_u *UserUpdateOne) AddPromoCodeUsages(v ...*PromoCodeUsage) *UserUpdateOne {
-	ids := make([]int64, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddPromoCodeUsageIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -1542,27 +1716,6 @@ func (_u *UserUpdateOne) RemoveAttributeValues(v ...*UserAttributeValue) *UserUp
 	return _u.RemoveAttributeValueIDs(ids...)
 }
 
-// ClearPromoCodeUsages clears all "promo_code_usages" edges to the PromoCodeUsage entity.
-func (_u *UserUpdateOne) ClearPromoCodeUsages() *UserUpdateOne {
-	_u.mutation.ClearPromoCodeUsages()
-	return _u
-}
-
-// RemovePromoCodeUsageIDs removes the "promo_code_usages" edge to PromoCodeUsage entities by IDs.
-func (_u *UserUpdateOne) RemovePromoCodeUsageIDs(ids ...int64) *UserUpdateOne {
-	_u.mutation.RemovePromoCodeUsageIDs(ids...)
-	return _u
-}
-
-// RemovePromoCodeUsages removes "promo_code_usages" edges to PromoCodeUsage entities.
-func (_u *UserUpdateOne) RemovePromoCodeUsages(v ...*PromoCodeUsage) *UserUpdateOne {
-	ids := make([]int64, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemovePromoCodeUsageIDs(ids...)
-}
-
 // Where appends a list predicates to the UserUpdate builder.
 func (_u *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
 	_u.mutation.Where(ps...)
@@ -1643,6 +1796,11 @@ func (_u *UserUpdateOne) check() error {
 	if v, ok := _u.mutation.Username(); ok {
 		if err := user.UsernameValidator(v); err != nil {
 			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "User.username": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.InviteCode(); ok {
+		if err := user.InviteCodeValidator(v); err != nil {
+			return &ValidationError{Name: "invite_code", err: fmt.Errorf(`ent: validator failed for field "User.invite_code": %w`, err)}
 		}
 	}
 	return nil
@@ -1730,6 +1888,42 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.TotpEnabledAtCleared() {
 		_spec.ClearField(user.FieldTotpEnabledAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.IsAgent(); ok {
+		_spec.SetField(user.FieldIsAgent, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ParentAgentID(); ok {
+		_spec.SetField(user.FieldParentAgentID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedParentAgentID(); ok {
+		_spec.AddField(user.FieldParentAgentID, field.TypeInt64, value)
+	}
+	if _u.mutation.ParentAgentIDCleared() {
+		_spec.ClearField(user.FieldParentAgentID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.InviteCode(); ok {
+		_spec.SetField(user.FieldInviteCode, field.TypeString, value)
+	}
+	if _u.mutation.InviteCodeCleared() {
+		_spec.ClearField(user.FieldInviteCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.InvitedByUserID(); ok {
+		_spec.SetField(user.FieldInvitedByUserID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedInvitedByUserID(); ok {
+		_spec.AddField(user.FieldInvitedByUserID, field.TypeInt64, value)
+	}
+	if _u.mutation.InvitedByUserIDCleared() {
+		_spec.ClearField(user.FieldInvitedByUserID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.BelongAgentID(); ok {
+		_spec.SetField(user.FieldBelongAgentID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedBelongAgentID(); ok {
+		_spec.AddField(user.FieldBelongAgentID, field.TypeInt64, value)
+	}
+	if _u.mutation.BelongAgentIDCleared() {
+		_spec.ClearField(user.FieldBelongAgentID, field.TypeInt64)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -2051,51 +2245,6 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userattributevalue.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PromoCodeUsagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedPromoCodeUsagesIDs(); len(nodes) > 0 && !_u.mutation.PromoCodeUsagesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PromoCodeUsagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

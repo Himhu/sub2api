@@ -312,7 +312,7 @@ export const useAppStore = defineStore('app', () => {
       return {
         registration_enabled: false,
         email_verify_enabled: false,
-        promo_code_enabled: true,
+        invite_registration_enabled: true,
         password_reset_enabled: false,
         turnstile_enabled: false,
         turnstile_site_key: '',
@@ -327,7 +327,9 @@ export const useAppStore = defineStore('app', () => {
         purchase_subscription_enabled: false,
         purchase_subscription_url: '',
         linuxdo_oauth_enabled: false,
-        version: siteVersion.value
+        version: siteVersion.value,
+        inviter_bonus: 0,
+        invitee_bonus: 0
       }
     }
 

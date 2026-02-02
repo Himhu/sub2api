@@ -9,9 +9,12 @@ import (
 )
 
 var (
-	ErrUserNotFound      = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
-	ErrPasswordIncorrect = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
-	ErrInsufficientPerms = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrUserNotFound        = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
+	ErrPasswordIncorrect   = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
+	ErrInsufficientPerms   = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrParentAgentSelf     = infraerrors.BadRequest("PARENT_AGENT_SELF", "cannot set self as parent agent")
+	ErrParentAgentInvalid  = infraerrors.BadRequest("PARENT_AGENT_INVALID", "parent agent must be an existing agent")
+	ErrParentAgentCycle    = infraerrors.BadRequest("PARENT_AGENT_CYCLE", "setting this parent would create a cycle in the agent hierarchy")
 )
 
 // UserListFilters contains all filter options for listing users
@@ -46,6 +49,9 @@ type UserRepository interface {
 	UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error
 	EnableTotp(ctx context.Context, userID int64) error
 	DisableTotp(ctx context.Context, userID int64) error
+
+	// 邀请码相关方法
+	GetByInviteCode(ctx context.Context, inviteCode string) (*User, error)
 }
 
 // UpdateProfileRequest 更新用户资料请求
@@ -245,4 +251,9 @@ func (s *UserService) Delete(ctx context.Context, userID int64) error {
 		return fmt.Errorf("delete user: %w", err)
 	}
 	return nil
+}
+
+// GetUserByInviteCode 通过邀请码获取用户
+func (s *UserService) GetUserByInviteCode(ctx context.Context, inviteCode string) (*User, error) {
+	return s.userRepo.GetByInviteCode(ctx, inviteCode)
 }

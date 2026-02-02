@@ -324,19 +324,20 @@
               <Toggle v-model="form.email_verify_enabled" />
             </div>
 
-            <!-- Promo Code -->
+            <!-- Invite Registration - Only show when registration is enabled -->
             <div
+              v-if="form.registration_enabled"
               class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
             >
               <div>
                 <label class="font-medium text-gray-900 dark:text-white">{{
-                  t('admin.settings.registration.promoCode')
+                  t('admin.settings.registration.inviteRegistration')
                 }}</label>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.settings.registration.promoCodeHint') }}
+                  {{ t('admin.settings.registration.inviteRegistrationHint') }}
                 </p>
               </div>
-              <Toggle v-model="form.promo_code_enabled" />
+              <Toggle v-model="form.invite_registration_enabled" />
             </div>
 
             <!-- Password Reset - Only show when email verification is enabled -->
@@ -596,6 +597,38 @@
                 />
                 <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                   {{ t('admin.settings.defaults.defaultConcurrencyHint') }}
+                </p>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.defaults.inviterBonus') }}
+                </label>
+                <input
+                  v-model.number="form.inviter_bonus"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="input"
+                  placeholder="0.00"
+                />
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.defaults.inviterBonusHint') }}
+                </p>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('admin.settings.defaults.inviteeBonus') }}
+                </label>
+                <input
+                  v-model.number="form.invitee_bonus"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="input"
+                  placeholder="0.00"
+                />
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.defaults.inviteeBonusHint') }}
                 </p>
               </div>
             </div>
@@ -1114,12 +1147,14 @@ type SettingsForm = SystemSettings & {
 const form = reactive<SettingsForm>({
   registration_enabled: true,
   email_verify_enabled: false,
-  promo_code_enabled: true,
+  invite_registration_enabled: true,
   password_reset_enabled: false,
   totp_enabled: false,
   totp_encryption_key_configured: false,
   default_balance: 0,
   default_concurrency: 1,
+  inviter_bonus: 0,
+  invitee_bonus: 0,
   site_name: 'Sub2API',
   site_logo: '',
   site_subtitle: 'Subscription to API Conversion Platform',
@@ -1242,11 +1277,13 @@ async function saveSettings() {
     const payload: UpdateSettingsRequest = {
       registration_enabled: form.registration_enabled,
       email_verify_enabled: form.email_verify_enabled,
-      promo_code_enabled: form.promo_code_enabled,
+      invite_registration_enabled: form.invite_registration_enabled,
       password_reset_enabled: form.password_reset_enabled,
       totp_enabled: form.totp_enabled,
       default_balance: form.default_balance,
       default_concurrency: form.default_concurrency,
+      inviter_bonus: form.inviter_bonus,
+      invitee_bonus: form.invitee_bonus,
       site_name: form.site_name,
       site_logo: form.site_logo,
       site_subtitle: form.site_subtitle,

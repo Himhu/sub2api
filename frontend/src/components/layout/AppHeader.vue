@@ -35,6 +35,64 @@
           <span class="hidden sm:inline">{{ t('nav.docs') }}</span>
         </a>
 
+        <!-- Contact Agent Button (only show if user has agent) -->
+        <div v-if="user && hasAgent" class="relative" ref="agentContactRef">
+          <button
+            @click="toggleAgentContact"
+            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+            <span class="hidden sm:inline">{{ t('common.contactAgent') }}</span>
+          </button>
+
+          <!-- Agent Contact Popover -->
+          <transition name="dropdown">
+            <div v-if="agentContactOpen" class="dropdown right-0 mt-2 w-64">
+              <div class="border-b border-gray-100 px-4 py-3 dark:border-dark-700">
+                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                  {{ t('common.agentContact') }}
+                </div>
+              </div>
+              <div class="p-4 space-y-2">
+                <!-- Show attributes if available -->
+                <template v-if="agentContact && agentContact.attributes && agentContact.attributes.length > 0">
+                  <div v-for="attr in agentContact.attributes" :key="attr.key" class="text-sm">
+                    <span class="text-gray-500 dark:text-gray-400">{{ attr.name }}:</span>
+                    <!-- URL type: render as clickable link -->
+                    <a
+                      v-if="attr.type === 'url'"
+                      :href="formatUrl(attr.value)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="ml-1 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 underline"
+                    >
+                      {{ t('common.clickToOpen') }}
+                    </a>
+                    <!-- Other types: render as text -->
+                    <span v-else class="ml-1 font-medium text-gray-900 dark:text-white">{{ attr.value }}</span>
+                  </div>
+                </template>
+                <!-- Fallback to email/username if no attributes -->
+                <template v-else-if="agentContact && (agentContact.email || agentContact.username)">
+                  <div v-if="agentContact.email" class="text-sm">
+                    <span class="text-gray-500 dark:text-gray-400">{{ t('common.email') }}:</span>
+                    <span class="ml-1 font-medium text-gray-900 dark:text-white">{{ agentContact.email }}</span>
+                  </div>
+                  <div v-if="agentContact.username" class="text-sm">
+                    <span class="text-gray-500 dark:text-gray-400">{{ t('profile.username') }}:</span>
+                    <span class="ml-1 font-medium text-gray-900 dark:text-white">{{ agentContact.username }}</span>
+                  </div>
+                </template>
+                <div v-else class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ t('common.noAgentAssigned') }}
+                </div>
+              </div>
+            </div>
+          </transition>
+        </div>
+
         <!-- Language Switcher -->
         <LocaleSwitcher />
 
@@ -187,10 +245,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore, useAuthStore, useOnboardingStore } from '@/stores'
+import { userAPI } from '@/api/user'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMini.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -207,6 +266,16 @@ const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)
 const docUrl = computed(() => appStore.docUrl)
+
+// Agent contact state
+const agentContactOpen = ref(false)
+const agentContactRef = ref<HTMLElement | null>(null)
+const hasAgent = ref(false)
+const agentContact = ref<{
+  email: string
+  username: string
+  attributes?: { key: string; name: string; type?: string; value: string }[]
+} | null>(null)
 
 // 只在标准模式的管理员下显示新手引导按钮
 const showOnboardingButton = computed(() => {
@@ -271,15 +340,57 @@ function handleReplayGuide() {
   onboardingStore.replay()
 }
 
+// Agent contact functions
+function toggleAgentContact() {
+  agentContactOpen.value = !agentContactOpen.value
+}
+
+function closeAgentContact() {
+  agentContactOpen.value = false
+}
+
+// Format URL to ensure it has a protocol prefix
+function formatUrl(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  return 'https://' + url
+}
+
+async function loadAgentContact() {
+  try {
+    const contactRes = await userAPI.getAgentContact()
+    hasAgent.value = contactRes.has_agent
+    agentContact.value = contactRes.has_agent ? contactRes.agent || null : null
+  } catch (error) {
+    console.error('Failed to load agent contact:', error)
+  }
+}
+
 function handleClickOutside(event: MouseEvent) {
   if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
     closeDropdown()
+  }
+  if (agentContactRef.value && !agentContactRef.value.contains(event.target as Node)) {
+    closeAgentContact()
   }
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  // Load agent contact info if user is logged in
+  if (user.value) {
+    loadAgentContact()
+  }
 })
+
+// Watch for user changes to load agent contact when user becomes available
+watch(user, (newUser) => {
+  if (newUser) {
+    loadAgentContact()
+  }
+}, { immediate: false })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)

@@ -26,6 +26,13 @@ type User struct {
 	TotpEnabled         bool       // 是否启用 TOTP
 	TotpEnabledAt       *time.Time // TOTP 启用时间
 
+	// 代理相关字段
+	IsAgent         bool   // 是否为代理
+	ParentAgentID   *int64 // 上级代理ID
+	InviteCode      *string // 邀请码
+	InvitedByUserID *int64 // 邀请人用户ID
+	BelongAgentID   *int64 // 所属代理ID
+
 	APIKeys       []APIKey
 	Subscriptions []UserSubscription
 }

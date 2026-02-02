@@ -331,6 +331,13 @@ async function handleLogin(): Promise<void> {
       const totpResponse = response as TotpLoginResponse
       totpTempToken.value = totpResponse.temp_token || ''
       totpUserEmailMasked.value = totpResponse.user_email_masked || ''
+      // Validate temp_token before showing 2FA modal
+      if (!totpTempToken.value) {
+        errorMessage.value = t('auth.loginFailed')
+        appStore.showError(errorMessage.value)
+        isLoading.value = false
+        return
+      }
       show2FAModal.value = true
       isLoading.value = false
       return

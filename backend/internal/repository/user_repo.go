@@ -60,6 +60,9 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 		SetBalance(userIn.Balance).
 		SetConcurrency(userIn.Concurrency).
 		SetStatus(userIn.Status).
+		SetNillableInvitedByUserID(userIn.InvitedByUserID).
+		SetNillableBelongAgentID(userIn.BelongAgentID).
+		SetNillableInviteCode(userIn.InviteCode).
 		Save(ctx)
 	if err != nil {
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
@@ -533,4 +536,23 @@ func (r *userRepository) DisableTotp(ctx context.Context, userID int64) error {
 		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 	}
 	return nil
+}
+
+// GetByInviteCode 通过邀请码获取用户
+func (r *userRepository) GetByInviteCode(ctx context.Context, inviteCode string) (*service.User, error) {
+	client := clientFromContext(ctx, r.client)
+	m, err := client.User.Query().Where(dbuser.InviteCodeEQ(inviteCode)).Only(ctx)
+	if err != nil {
+		return nil, translatePersistenceError(err, service.ErrUserNotFound, nil)
+	}
+
+	out := userEntityToService(m)
+	groups, err := r.loadAllowedGroups(ctx, []int64{m.ID})
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := groups[m.ID]; ok {
+		out.AllowedGroups = v
+	}
+	return out, nil
 }

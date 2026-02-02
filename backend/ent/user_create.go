@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
-	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -209,6 +208,76 @@ func (_c *UserCreate) SetNillableTotpEnabledAt(v *time.Time) *UserCreate {
 	return _c
 }
 
+// SetIsAgent sets the "is_agent" field.
+func (_c *UserCreate) SetIsAgent(v bool) *UserCreate {
+	_c.mutation.SetIsAgent(v)
+	return _c
+}
+
+// SetNillableIsAgent sets the "is_agent" field if the given value is not nil.
+func (_c *UserCreate) SetNillableIsAgent(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetIsAgent(*v)
+	}
+	return _c
+}
+
+// SetParentAgentID sets the "parent_agent_id" field.
+func (_c *UserCreate) SetParentAgentID(v int64) *UserCreate {
+	_c.mutation.SetParentAgentID(v)
+	return _c
+}
+
+// SetNillableParentAgentID sets the "parent_agent_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableParentAgentID(v *int64) *UserCreate {
+	if v != nil {
+		_c.SetParentAgentID(*v)
+	}
+	return _c
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (_c *UserCreate) SetInviteCode(v string) *UserCreate {
+	_c.mutation.SetInviteCode(v)
+	return _c
+}
+
+// SetNillableInviteCode sets the "invite_code" field if the given value is not nil.
+func (_c *UserCreate) SetNillableInviteCode(v *string) *UserCreate {
+	if v != nil {
+		_c.SetInviteCode(*v)
+	}
+	return _c
+}
+
+// SetInvitedByUserID sets the "invited_by_user_id" field.
+func (_c *UserCreate) SetInvitedByUserID(v int64) *UserCreate {
+	_c.mutation.SetInvitedByUserID(v)
+	return _c
+}
+
+// SetNillableInvitedByUserID sets the "invited_by_user_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableInvitedByUserID(v *int64) *UserCreate {
+	if v != nil {
+		_c.SetInvitedByUserID(*v)
+	}
+	return _c
+}
+
+// SetBelongAgentID sets the "belong_agent_id" field.
+func (_c *UserCreate) SetBelongAgentID(v int64) *UserCreate {
+	_c.mutation.SetBelongAgentID(v)
+	return _c
+}
+
+// SetNillableBelongAgentID sets the "belong_agent_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableBelongAgentID(v *int64) *UserCreate {
+	if v != nil {
+		_c.SetBelongAgentID(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *UserCreate) AddAPIKeyIDs(ids ...int64) *UserCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -314,21 +383,6 @@ func (_c *UserCreate) AddAttributeValues(v ...*UserAttributeValue) *UserCreate {
 	return _c.AddAttributeValueIDs(ids...)
 }
 
-// AddPromoCodeUsageIDs adds the "promo_code_usages" edge to the PromoCodeUsage entity by IDs.
-func (_c *UserCreate) AddPromoCodeUsageIDs(ids ...int64) *UserCreate {
-	_c.mutation.AddPromoCodeUsageIDs(ids...)
-	return _c
-}
-
-// AddPromoCodeUsages adds the "promo_code_usages" edges to the PromoCodeUsage entity.
-func (_c *UserCreate) AddPromoCodeUsages(v ...*PromoCodeUsage) *UserCreate {
-	ids := make([]int64, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddPromoCodeUsageIDs(ids...)
-}
-
 // Mutation returns the UserMutation object of the builder.
 func (_c *UserCreate) Mutation() *UserMutation {
 	return _c.mutation
@@ -408,6 +462,10 @@ func (_c *UserCreate) defaults() error {
 		v := user.DefaultTotpEnabled
 		_c.mutation.SetTotpEnabled(v)
 	}
+	if _, ok := _c.mutation.IsAgent(); !ok {
+		v := user.DefaultIsAgent
+		_c.mutation.SetIsAgent(v)
+	}
 	return nil
 }
 
@@ -470,6 +528,14 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.TotpEnabled(); !ok {
 		return &ValidationError{Name: "totp_enabled", err: errors.New(`ent: missing required field "User.totp_enabled"`)}
+	}
+	if _, ok := _c.mutation.IsAgent(); !ok {
+		return &ValidationError{Name: "is_agent", err: errors.New(`ent: missing required field "User.is_agent"`)}
+	}
+	if v, ok := _c.mutation.InviteCode(); ok {
+		if err := user.InviteCodeValidator(v); err != nil {
+			return &ValidationError{Name: "invite_code", err: fmt.Errorf(`ent: validator failed for field "User.invite_code": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -553,6 +619,26 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TotpEnabledAt(); ok {
 		_spec.SetField(user.FieldTotpEnabledAt, field.TypeTime, value)
 		_node.TotpEnabledAt = &value
+	}
+	if value, ok := _c.mutation.IsAgent(); ok {
+		_spec.SetField(user.FieldIsAgent, field.TypeBool, value)
+		_node.IsAgent = value
+	}
+	if value, ok := _c.mutation.ParentAgentID(); ok {
+		_spec.SetField(user.FieldParentAgentID, field.TypeInt64, value)
+		_node.ParentAgentID = &value
+	}
+	if value, ok := _c.mutation.InviteCode(); ok {
+		_spec.SetField(user.FieldInviteCode, field.TypeString, value)
+		_node.InviteCode = &value
+	}
+	if value, ok := _c.mutation.InvitedByUserID(); ok {
+		_spec.SetField(user.FieldInvitedByUserID, field.TypeInt64, value)
+		_node.InvitedByUserID = &value
+	}
+	if value, ok := _c.mutation.BelongAgentID(); ok {
+		_spec.SetField(user.FieldBelongAgentID, field.TypeInt64, value)
+		_node.BelongAgentID = &value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -663,22 +749,6 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userattributevalue.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.PromoCodeUsagesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.PromoCodeUsagesTable,
-			Columns: []string{user.PromoCodeUsagesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -921,6 +991,108 @@ func (u *UserUpsert) UpdateTotpEnabledAt() *UserUpsert {
 // ClearTotpEnabledAt clears the value of the "totp_enabled_at" field.
 func (u *UserUpsert) ClearTotpEnabledAt() *UserUpsert {
 	u.SetNull(user.FieldTotpEnabledAt)
+	return u
+}
+
+// SetIsAgent sets the "is_agent" field.
+func (u *UserUpsert) SetIsAgent(v bool) *UserUpsert {
+	u.Set(user.FieldIsAgent, v)
+	return u
+}
+
+// UpdateIsAgent sets the "is_agent" field to the value that was provided on create.
+func (u *UserUpsert) UpdateIsAgent() *UserUpsert {
+	u.SetExcluded(user.FieldIsAgent)
+	return u
+}
+
+// SetParentAgentID sets the "parent_agent_id" field.
+func (u *UserUpsert) SetParentAgentID(v int64) *UserUpsert {
+	u.Set(user.FieldParentAgentID, v)
+	return u
+}
+
+// UpdateParentAgentID sets the "parent_agent_id" field to the value that was provided on create.
+func (u *UserUpsert) UpdateParentAgentID() *UserUpsert {
+	u.SetExcluded(user.FieldParentAgentID)
+	return u
+}
+
+// AddParentAgentID adds v to the "parent_agent_id" field.
+func (u *UserUpsert) AddParentAgentID(v int64) *UserUpsert {
+	u.Add(user.FieldParentAgentID, v)
+	return u
+}
+
+// ClearParentAgentID clears the value of the "parent_agent_id" field.
+func (u *UserUpsert) ClearParentAgentID() *UserUpsert {
+	u.SetNull(user.FieldParentAgentID)
+	return u
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (u *UserUpsert) SetInviteCode(v string) *UserUpsert {
+	u.Set(user.FieldInviteCode, v)
+	return u
+}
+
+// UpdateInviteCode sets the "invite_code" field to the value that was provided on create.
+func (u *UserUpsert) UpdateInviteCode() *UserUpsert {
+	u.SetExcluded(user.FieldInviteCode)
+	return u
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (u *UserUpsert) ClearInviteCode() *UserUpsert {
+	u.SetNull(user.FieldInviteCode)
+	return u
+}
+
+// SetInvitedByUserID sets the "invited_by_user_id" field.
+func (u *UserUpsert) SetInvitedByUserID(v int64) *UserUpsert {
+	u.Set(user.FieldInvitedByUserID, v)
+	return u
+}
+
+// UpdateInvitedByUserID sets the "invited_by_user_id" field to the value that was provided on create.
+func (u *UserUpsert) UpdateInvitedByUserID() *UserUpsert {
+	u.SetExcluded(user.FieldInvitedByUserID)
+	return u
+}
+
+// AddInvitedByUserID adds v to the "invited_by_user_id" field.
+func (u *UserUpsert) AddInvitedByUserID(v int64) *UserUpsert {
+	u.Add(user.FieldInvitedByUserID, v)
+	return u
+}
+
+// ClearInvitedByUserID clears the value of the "invited_by_user_id" field.
+func (u *UserUpsert) ClearInvitedByUserID() *UserUpsert {
+	u.SetNull(user.FieldInvitedByUserID)
+	return u
+}
+
+// SetBelongAgentID sets the "belong_agent_id" field.
+func (u *UserUpsert) SetBelongAgentID(v int64) *UserUpsert {
+	u.Set(user.FieldBelongAgentID, v)
+	return u
+}
+
+// UpdateBelongAgentID sets the "belong_agent_id" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBelongAgentID() *UserUpsert {
+	u.SetExcluded(user.FieldBelongAgentID)
+	return u
+}
+
+// AddBelongAgentID adds v to the "belong_agent_id" field.
+func (u *UserUpsert) AddBelongAgentID(v int64) *UserUpsert {
+	u.Add(user.FieldBelongAgentID, v)
+	return u
+}
+
+// ClearBelongAgentID clears the value of the "belong_agent_id" field.
+func (u *UserUpsert) ClearBelongAgentID() *UserUpsert {
+	u.SetNull(user.FieldBelongAgentID)
 	return u
 }
 
@@ -1183,6 +1355,125 @@ func (u *UserUpsertOne) UpdateTotpEnabledAt() *UserUpsertOne {
 func (u *UserUpsertOne) ClearTotpEnabledAt() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearTotpEnabledAt()
+	})
+}
+
+// SetIsAgent sets the "is_agent" field.
+func (u *UserUpsertOne) SetIsAgent(v bool) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetIsAgent(v)
+	})
+}
+
+// UpdateIsAgent sets the "is_agent" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateIsAgent() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateIsAgent()
+	})
+}
+
+// SetParentAgentID sets the "parent_agent_id" field.
+func (u *UserUpsertOne) SetParentAgentID(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetParentAgentID(v)
+	})
+}
+
+// AddParentAgentID adds v to the "parent_agent_id" field.
+func (u *UserUpsertOne) AddParentAgentID(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddParentAgentID(v)
+	})
+}
+
+// UpdateParentAgentID sets the "parent_agent_id" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateParentAgentID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateParentAgentID()
+	})
+}
+
+// ClearParentAgentID clears the value of the "parent_agent_id" field.
+func (u *UserUpsertOne) ClearParentAgentID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearParentAgentID()
+	})
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (u *UserUpsertOne) SetInviteCode(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetInviteCode(v)
+	})
+}
+
+// UpdateInviteCode sets the "invite_code" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateInviteCode() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateInviteCode()
+	})
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (u *UserUpsertOne) ClearInviteCode() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearInviteCode()
+	})
+}
+
+// SetInvitedByUserID sets the "invited_by_user_id" field.
+func (u *UserUpsertOne) SetInvitedByUserID(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetInvitedByUserID(v)
+	})
+}
+
+// AddInvitedByUserID adds v to the "invited_by_user_id" field.
+func (u *UserUpsertOne) AddInvitedByUserID(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddInvitedByUserID(v)
+	})
+}
+
+// UpdateInvitedByUserID sets the "invited_by_user_id" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateInvitedByUserID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateInvitedByUserID()
+	})
+}
+
+// ClearInvitedByUserID clears the value of the "invited_by_user_id" field.
+func (u *UserUpsertOne) ClearInvitedByUserID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearInvitedByUserID()
+	})
+}
+
+// SetBelongAgentID sets the "belong_agent_id" field.
+func (u *UserUpsertOne) SetBelongAgentID(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBelongAgentID(v)
+	})
+}
+
+// AddBelongAgentID adds v to the "belong_agent_id" field.
+func (u *UserUpsertOne) AddBelongAgentID(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddBelongAgentID(v)
+	})
+}
+
+// UpdateBelongAgentID sets the "belong_agent_id" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBelongAgentID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBelongAgentID()
+	})
+}
+
+// ClearBelongAgentID clears the value of the "belong_agent_id" field.
+func (u *UserUpsertOne) ClearBelongAgentID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBelongAgentID()
 	})
 }
 
@@ -1611,6 +1902,125 @@ func (u *UserUpsertBulk) UpdateTotpEnabledAt() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearTotpEnabledAt() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearTotpEnabledAt()
+	})
+}
+
+// SetIsAgent sets the "is_agent" field.
+func (u *UserUpsertBulk) SetIsAgent(v bool) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetIsAgent(v)
+	})
+}
+
+// UpdateIsAgent sets the "is_agent" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateIsAgent() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateIsAgent()
+	})
+}
+
+// SetParentAgentID sets the "parent_agent_id" field.
+func (u *UserUpsertBulk) SetParentAgentID(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetParentAgentID(v)
+	})
+}
+
+// AddParentAgentID adds v to the "parent_agent_id" field.
+func (u *UserUpsertBulk) AddParentAgentID(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddParentAgentID(v)
+	})
+}
+
+// UpdateParentAgentID sets the "parent_agent_id" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateParentAgentID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateParentAgentID()
+	})
+}
+
+// ClearParentAgentID clears the value of the "parent_agent_id" field.
+func (u *UserUpsertBulk) ClearParentAgentID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearParentAgentID()
+	})
+}
+
+// SetInviteCode sets the "invite_code" field.
+func (u *UserUpsertBulk) SetInviteCode(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetInviteCode(v)
+	})
+}
+
+// UpdateInviteCode sets the "invite_code" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateInviteCode() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateInviteCode()
+	})
+}
+
+// ClearInviteCode clears the value of the "invite_code" field.
+func (u *UserUpsertBulk) ClearInviteCode() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearInviteCode()
+	})
+}
+
+// SetInvitedByUserID sets the "invited_by_user_id" field.
+func (u *UserUpsertBulk) SetInvitedByUserID(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetInvitedByUserID(v)
+	})
+}
+
+// AddInvitedByUserID adds v to the "invited_by_user_id" field.
+func (u *UserUpsertBulk) AddInvitedByUserID(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddInvitedByUserID(v)
+	})
+}
+
+// UpdateInvitedByUserID sets the "invited_by_user_id" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateInvitedByUserID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateInvitedByUserID()
+	})
+}
+
+// ClearInvitedByUserID clears the value of the "invited_by_user_id" field.
+func (u *UserUpsertBulk) ClearInvitedByUserID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearInvitedByUserID()
+	})
+}
+
+// SetBelongAgentID sets the "belong_agent_id" field.
+func (u *UserUpsertBulk) SetBelongAgentID(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBelongAgentID(v)
+	})
+}
+
+// AddBelongAgentID adds v to the "belong_agent_id" field.
+func (u *UserUpsertBulk) AddBelongAgentID(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddBelongAgentID(v)
+	})
+}
+
+// UpdateBelongAgentID sets the "belong_agent_id" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBelongAgentID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBelongAgentID()
+	})
+}
+
+// ClearBelongAgentID clears the value of the "belong_agent_id" field.
+func (u *UserUpsertBulk) ClearBelongAgentID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBelongAgentID()
 	})
 }
 

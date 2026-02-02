@@ -414,12 +414,43 @@ const ChevronDoubleRightIcon = {
     )
 }
 
+const ShareIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z'
+        })
+      ]
+    )
+}
+
+// 代理中心图标 - 组织架构/层级结构
+const AgentCenterIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z'
+        })
+      ]
+    )
+}
+
 // User navigation items (for regular users)
 const userNavItems = computed(() => {
   const items = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon },
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon },
-    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
+    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
     ...(appStore.cachedPublicSettings?.purchase_subscription_enabled
       ? [
@@ -431,7 +462,11 @@ const userNavItems = computed(() => {
           }
         ]
       : []),
-    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
+    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
+    // 推广中心 - 所有用户都能看到
+    { path: '/promotion', label: t('nav.promotion'), icon: ShareIcon, hideInSimpleMode: false },
+    // 代理中心 - 所有用户都能看到
+    { path: '/agent', label: t('nav.agentCenter'), icon: AgentCenterIcon, hideInSimpleMode: false },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon }
   ]
   return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
@@ -441,7 +476,7 @@ const userNavItems = computed(() => {
 const personalNavItems = computed(() => {
   const items = [
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon },
-    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
+    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
     ...(appStore.cachedPublicSettings?.purchase_subscription_enabled
       ? [
@@ -453,7 +488,11 @@ const personalNavItems = computed(() => {
           }
         ]
       : []),
-    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true },
+    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
+    // 推广中心 - 所有用户都能看到
+    { path: '/promotion', label: t('nav.promotion'), icon: ShareIcon, hideInSimpleMode: false },
+    // 代理中心 - 所有用户都能看到
+    { path: '/agent', label: t('nav.agentCenter'), icon: AgentCenterIcon, hideInSimpleMode: false },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon }
   ]
   return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
@@ -467,19 +506,23 @@ const adminNavItems = computed(() => {
       ? [{ path: '/admin/ops', label: t('nav.ops'), icon: ChartIcon }]
       : []),
     { path: '/admin/users', label: t('nav.users'), icon: UsersIcon, hideInSimpleMode: true },
+    { path: '/admin/agents', label: t('nav.agents'), icon: UsersIcon, hideInSimpleMode: true },
     { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon, hideInSimpleMode: true },
     { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon },
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon },
     { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true },
-    { path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true },
     { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon },
   ]
 
-  // 简单模式下，在系统设置前插入 API密钥
+  // 简单模式下，在系统设置前插入 API密钥和推广/代理中心
   if (authStore.isSimpleMode) {
     const filtered = baseItems.filter(item => !item.hideInSimpleMode)
     filtered.push({ path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon })
+    // 推广中心 - 所有用户都能看到
+    filtered.push({ path: '/promotion', label: t('nav.promotion'), icon: ShareIcon })
+    // 代理中心 - 所有用户都能看到
+    filtered.push({ path: '/agent', label: t('nav.agentCenter'), icon: AgentCenterIcon })
     filtered.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon })
     return filtered
   }

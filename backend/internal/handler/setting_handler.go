@@ -34,7 +34,7 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 	response.Success(c, dto.PublicSettings{
 		RegistrationEnabled:         settings.RegistrationEnabled,
 		EmailVerifyEnabled:          settings.EmailVerifyEnabled,
-		PromoCodeEnabled:            settings.PromoCodeEnabled,
+		InviteRegistrationEnabled:   settings.InviteRegistrationEnabled,
 		PasswordResetEnabled:        settings.PasswordResetEnabled,
 		TotpEnabled:                 settings.TotpEnabled,
 		TurnstileEnabled:            settings.TurnstileEnabled,
@@ -51,5 +51,7 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 		PurchaseSubscriptionURL:     settings.PurchaseSubscriptionURL,
 		LinuxDoOAuthEnabled:         settings.LinuxDoOAuthEnabled,
 		Version:                     h.version,
+		InviterBonus:                settings.InviterBonus,
+		InviteeBonus:                settings.InviteeBonus,
 	})
 }

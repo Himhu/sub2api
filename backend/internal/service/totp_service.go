@@ -229,14 +229,9 @@ func (s *TotpService) CompleteSetup(ctx context.Context, userID int64, totpCode,
 		return ErrTotpInvalidCode
 	}
 
-	setupSecretPrefix := "N/A"
-	if len(session.Secret) >= 4 {
-		setupSecretPrefix = session.Secret[:4]
-	}
 	slog.Debug("totp_complete_setup_before_encrypt",
 		"user_id", userID,
-		"secret_len", len(session.Secret),
-		"secret_prefix", setupSecretPrefix)
+		"secret_len", len(session.Secret))
 
 	// Encrypt the secret
 	encryptedSecret, err := s.encryptor.Encrypt(session.Secret)
@@ -251,21 +246,21 @@ func (s *TotpService) CompleteSetup(ctx context.Context, userID int64, totpCode,
 	// Verify encryption by decrypting
 	decrypted, decErr := s.encryptor.Decrypt(encryptedSecret)
 	if decErr != nil {
-		slog.Debug("totp_complete_setup_verify_failed",
+		slog.Error("totp_complete_setup_verify_failed",
 			"user_id", userID,
 			"error", decErr)
-	} else {
-		decryptedPrefix := "N/A"
-		if len(decrypted) >= 4 {
-			decryptedPrefix = decrypted[:4]
-		}
-		slog.Debug("totp_complete_setup_verified",
+		return fmt.Errorf("verify encrypted totp secret: %w", decErr)
+	}
+	if decrypted != session.Secret {
+		slog.Error("totp_complete_setup_verify_mismatch",
 			"user_id", userID,
 			"original_len", len(session.Secret),
-			"decrypted_len", len(decrypted),
-			"match", session.Secret == decrypted,
-			"decrypted_prefix", decryptedPrefix)
+			"decrypted_len", len(decrypted))
+		return fmt.Errorf("encrypted totp secret verification failed: content mismatch")
 	}
+	slog.Debug("totp_complete_setup_verified",
+		"user_id", userID,
+		"secret_len", len(session.Secret))
 
 	// Update user with encrypted TOTP secret
 	if err := s.userRepo.UpdateTotpSecret(ctx, userID, &encryptedSecret); err != nil {
@@ -365,14 +360,9 @@ func (s *TotpService) VerifyCode(ctx context.Context, userID int64, code string)
 		return infraerrors.InternalServer("TOTP_VERIFY_ERROR", "failed to verify totp code")
 	}
 
-	secretPrefix := "N/A"
-	if len(secret) >= 4 {
-		secretPrefix = secret[:4]
-	}
 	slog.Debug("totp_verify_decrypted",
 		"user_id", userID,
-		"secret_len", len(secret),
-		"secret_prefix", secretPrefix)
+		"secret_len", len(secret))
 
 	// Verify the code
 	valid := totp.Validate(code, secret)
@@ -380,7 +370,6 @@ func (s *TotpService) VerifyCode(ctx context.Context, userID int64, code string)
 		"user_id", userID,
 		"valid", valid,
 		"secret_len", len(secret),
-		"secret_prefix", secretPrefix,
 		"server_time", time.Now().UTC().Format(time.RFC3339))
 
 	if !valid {
@@ -418,7 +407,16 @@ func (s *TotpService) CreateLoginSession(ctx context.Context, userID int64, emai
 
 // GetLoginSession retrieves a login session
 func (s *TotpService) GetLoginSession(ctx context.Context, tempToken string) (*TotpLoginSession, error) {
-	return s.cache.GetLoginSession(ctx, tempToken)
+	session, err := s.cache.GetLoginSession(ctx, tempToken)
+	if err != nil || session == nil {
+		return session, err
+	}
+	// Check if session has expired (defense in depth, in case cache TTL fails)
+	if time.Now().After(session.TokenExpiry) {
+		_ = s.cache.DeleteLoginSession(ctx, tempToken)
+		return nil, nil
+	}
+	return session, nil
 }
 
 // DeleteLoginSession deletes a login session

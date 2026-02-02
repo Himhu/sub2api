@@ -12,13 +12,15 @@ export interface SystemSettings {
   // Registration settings
   registration_enabled: boolean
   email_verify_enabled: boolean
-  promo_code_enabled: boolean
+  invite_registration_enabled: boolean
   password_reset_enabled: boolean
   totp_enabled: boolean // TOTP 双因素认证
   totp_encryption_key_configured: boolean // TOTP 加密密钥是否已配置
   // Default settings
   default_balance: number
   default_concurrency: number
+  inviter_bonus: number  // 邀请人奖励余额
+  invitee_bonus: number  // 被邀请人奖励余额
   // OEM settings
   site_name: string
   site_logo: string
@@ -70,11 +72,13 @@ export interface SystemSettings {
 export interface UpdateSettingsRequest {
   registration_enabled?: boolean
   email_verify_enabled?: boolean
-  promo_code_enabled?: boolean
+  invite_registration_enabled?: boolean
   password_reset_enabled?: boolean
   totp_enabled?: boolean // TOTP 双因素认证
   default_balance?: number
   default_concurrency?: number
+  inviter_bonus?: number  // 邀请人奖励余额
+  invitee_bonus?: number  // 被邀请人奖励余额
   site_name?: string
   site_logo?: string
   site_subtitle?: string

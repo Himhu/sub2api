@@ -118,6 +118,8 @@ const setInputRef = (el: any, index: number) => {
 
 const handleCodeInput = (event: Event, index: number) => {
   const input = event.target as HTMLInputElement
+  // Clear error when user starts typing
+  error.value = ''
   const value = input.value.replace(/[^0-9]/g, '')
   code.value[index] = value
 

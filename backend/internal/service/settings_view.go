@@ -3,7 +3,7 @@ package service
 type SystemSettings struct {
 	RegistrationEnabled  bool
 	EmailVerifyEnabled   bool
-	PromoCodeEnabled     bool
+	InviteRegistrationEnabled bool
 	PasswordResetEnabled bool
 	TotpEnabled          bool // TOTP 双因素认证
 
@@ -41,6 +41,8 @@ type SystemSettings struct {
 
 	DefaultConcurrency int
 	DefaultBalance     float64
+	InviterBonus       float64 // 邀请人奖励余额
+	InviteeBonus       float64 // 被邀请人奖励余额
 
 	// Model fallback configuration
 	EnableModelFallback      bool   `json:"enable_model_fallback"`
@@ -63,7 +65,7 @@ type SystemSettings struct {
 type PublicSettings struct {
 	RegistrationEnabled  bool
 	EmailVerifyEnabled   bool
-	PromoCodeEnabled     bool
+	InviteRegistrationEnabled bool
 	PasswordResetEnabled bool
 	TotpEnabled          bool // TOTP 双因素认证
 	TurnstileEnabled     bool
@@ -82,6 +84,10 @@ type PublicSettings struct {
 
 	LinuxDoOAuthEnabled bool
 	Version             string
+
+	// Invite bonus settings
+	InviterBonus float64 // 邀请人奖励余额
+	InviteeBonus float64 // 被邀请人奖励余额
 }
 
 // StreamTimeoutSettings 流超时处理配置（仅控制超时后的处理方式，超时判定由网关配置控制）

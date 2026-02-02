@@ -4,7 +4,7 @@ package dto
 type SystemSettings struct {
 	RegistrationEnabled         bool `json:"registration_enabled"`
 	EmailVerifyEnabled          bool `json:"email_verify_enabled"`
-	PromoCodeEnabled            bool `json:"promo_code_enabled"`
+	InviteRegistrationEnabled   bool `json:"invite_registration_enabled"`
 	PasswordResetEnabled        bool `json:"password_reset_enabled"`
 	TotpEnabled                 bool `json:"totp_enabled"`                   // TOTP 双因素认证
 	TotpEncryptionKeyConfigured bool `json:"totp_encryption_key_configured"` // TOTP 加密密钥是否已配置
@@ -39,6 +39,8 @@ type SystemSettings struct {
 
 	DefaultConcurrency int     `json:"default_concurrency"`
 	DefaultBalance     float64 `json:"default_balance"`
+	InviterBonus       float64 `json:"inviter_bonus"`  // 邀请人奖励余额
+	InviteeBonus       float64 `json:"invitee_bonus"`  // 被邀请人奖励余额
 
 	// Model fallback configuration
 	EnableModelFallback      bool   `json:"enable_model_fallback"`
@@ -61,7 +63,7 @@ type SystemSettings struct {
 type PublicSettings struct {
 	RegistrationEnabled         bool   `json:"registration_enabled"`
 	EmailVerifyEnabled          bool   `json:"email_verify_enabled"`
-	PromoCodeEnabled            bool   `json:"promo_code_enabled"`
+	InviteRegistrationEnabled   bool   `json:"invite_registration_enabled"`
 	PasswordResetEnabled        bool   `json:"password_reset_enabled"`
 	TotpEnabled                 bool   `json:"totp_enabled"` // TOTP 双因素认证
 	TurnstileEnabled            bool   `json:"turnstile_enabled"`
@@ -78,6 +80,9 @@ type PublicSettings struct {
 	PurchaseSubscriptionURL     string `json:"purchase_subscription_url"`
 	LinuxDoOAuthEnabled         bool   `json:"linuxdo_oauth_enabled"`
 	Version                     string `json:"version"`
+	// Invite bonus settings
+	InviterBonus float64 `json:"inviter_bonus"` // 邀请人奖励余额
+	InviteeBonus float64 `json:"invitee_bonus"` // 被邀请人奖励余额
 }
 
 // StreamTimeoutSettings 流超时处理配置 DTO

@@ -38,12 +38,6 @@ const (
 	RedeemTypeSubscription = "subscription"
 )
 
-// PromoCode status constants
-const (
-	PromoCodeStatusActive   = "active"
-	PromoCodeStatusDisabled = "disabled"
-)
-
 // Admin adjustment type constants
 const (
 	AdjustmentTypeAdminBalance     = "admin_balance"     // 管理员调整余额
@@ -69,10 +63,12 @@ const LinuxDoConnectSyntheticEmailDomain = "@linuxdo-connect.invalid"
 // Setting keys
 const (
 	// 注册设置
-	SettingKeyRegistrationEnabled  = "registration_enabled"   // 是否开放注册
-	SettingKeyEmailVerifyEnabled   = "email_verify_enabled"   // 是否开启邮件验证
-	SettingKeyPromoCodeEnabled     = "promo_code_enabled"     // 是否启用优惠码功能
-	SettingKeyPasswordResetEnabled = "password_reset_enabled" // 是否启用忘记密码功能（需要先开启邮件验证）
+	SettingKeyRegistrationEnabled       = "registration_enabled"        // 是否开放注册
+	SettingKeyEmailVerifyEnabled        = "email_verify_enabled"        // 是否开启邮件验证
+	SettingKeyInviteRegistrationEnabled = "invite_registration_enabled" // 是否启用邀请注册
+	SettingKeyInviterBonus              = "inviter_bonus"               // 邀请人奖励金额
+	SettingKeyInviteeBonus              = "invitee_bonus"               // 被邀请人奖励金额
+	SettingKeyPasswordResetEnabled      = "password_reset_enabled"      // 是否启用忘记密码功能（需要先开启邮件验证）
 
 	// 邮件服务设置
 	SettingKeySMTPHost     = "smtp_host"      // SMTP服务器地址

@@ -22,6 +22,16 @@ func RegisterUserRoutes(
 			user.GET("/profile", h.User.GetProfile)
 			user.PUT("/password", h.User.ChangePassword)
 			user.PUT("", h.User.UpdateProfile)
+			user.GET("/invite-count", h.Agent.GetMyInviteCount)
+			user.GET("/agent-contact", h.Agent.GetMyAgentContact)
+
+			// 用户属性（联系方式等）
+			attrs := user.Group("/attributes")
+			{
+				attrs.GET("/definitions", h.User.GetAttributeDefinitions)
+				attrs.GET("", h.User.GetMyAttributes)
+				attrs.PUT("", h.User.UpdateMyAttributes)
+			}
 
 			// TOTP 双因素认证
 			totp := user.Group("/totp")
@@ -79,6 +89,13 @@ func RegisterUserRoutes(
 			subscriptions.GET("/active", h.Subscription.GetActive)
 			subscriptions.GET("/progress", h.Subscription.GetProgress)
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
+		}
+
+		// 代理中心（用户端）
+		agent := authenticated.Group("/agent")
+		{
+			agent.GET("/downline", h.Agent.GetMyDownline)
+			agent.GET("/stats", h.Agent.GetMyInviteStats)
 		}
 	}
 }

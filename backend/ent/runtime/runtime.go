@@ -9,8 +9,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
-	"github.com/Wei-Shaw/sub2api/ent/promocode"
-	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/schema"
@@ -285,60 +283,6 @@ func init() {
 	groupDescModelRoutingEnabled := groupFields[17].Descriptor()
 	// group.DefaultModelRoutingEnabled holds the default value on creation for the model_routing_enabled field.
 	group.DefaultModelRoutingEnabled = groupDescModelRoutingEnabled.Default.(bool)
-	promocodeFields := schema.PromoCode{}.Fields()
-	_ = promocodeFields
-	// promocodeDescCode is the schema descriptor for code field.
-	promocodeDescCode := promocodeFields[0].Descriptor()
-	// promocode.CodeValidator is a validator for the "code" field. It is called by the builders before save.
-	promocode.CodeValidator = func() func(string) error {
-		validators := promocodeDescCode.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(code string) error {
-			for _, fn := range fns {
-				if err := fn(code); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// promocodeDescBonusAmount is the schema descriptor for bonus_amount field.
-	promocodeDescBonusAmount := promocodeFields[1].Descriptor()
-	// promocode.DefaultBonusAmount holds the default value on creation for the bonus_amount field.
-	promocode.DefaultBonusAmount = promocodeDescBonusAmount.Default.(float64)
-	// promocodeDescMaxUses is the schema descriptor for max_uses field.
-	promocodeDescMaxUses := promocodeFields[2].Descriptor()
-	// promocode.DefaultMaxUses holds the default value on creation for the max_uses field.
-	promocode.DefaultMaxUses = promocodeDescMaxUses.Default.(int)
-	// promocodeDescUsedCount is the schema descriptor for used_count field.
-	promocodeDescUsedCount := promocodeFields[3].Descriptor()
-	// promocode.DefaultUsedCount holds the default value on creation for the used_count field.
-	promocode.DefaultUsedCount = promocodeDescUsedCount.Default.(int)
-	// promocodeDescStatus is the schema descriptor for status field.
-	promocodeDescStatus := promocodeFields[4].Descriptor()
-	// promocode.DefaultStatus holds the default value on creation for the status field.
-	promocode.DefaultStatus = promocodeDescStatus.Default.(string)
-	// promocode.StatusValidator is a validator for the "status" field. It is called by the builders before save.
-	promocode.StatusValidator = promocodeDescStatus.Validators[0].(func(string) error)
-	// promocodeDescCreatedAt is the schema descriptor for created_at field.
-	promocodeDescCreatedAt := promocodeFields[7].Descriptor()
-	// promocode.DefaultCreatedAt holds the default value on creation for the created_at field.
-	promocode.DefaultCreatedAt = promocodeDescCreatedAt.Default.(func() time.Time)
-	// promocodeDescUpdatedAt is the schema descriptor for updated_at field.
-	promocodeDescUpdatedAt := promocodeFields[8].Descriptor()
-	// promocode.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	promocode.DefaultUpdatedAt = promocodeDescUpdatedAt.Default.(func() time.Time)
-	// promocode.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	promocode.UpdateDefaultUpdatedAt = promocodeDescUpdatedAt.UpdateDefault.(func() time.Time)
-	promocodeusageFields := schema.PromoCodeUsage{}.Fields()
-	_ = promocodeusageFields
-	// promocodeusageDescUsedAt is the schema descriptor for used_at field.
-	promocodeusageDescUsedAt := promocodeusageFields[3].Descriptor()
-	// promocodeusage.DefaultUsedAt holds the default value on creation for the used_at field.
-	promocodeusage.DefaultUsedAt = promocodeusageDescUsedAt.Default.(func() time.Time)
 	proxyMixin := schema.Proxy{}.Mixin()
 	proxyMixinHooks1 := proxyMixin[1].Hooks()
 	proxy.Hooks[0] = proxyMixinHooks1[0]
@@ -740,6 +684,14 @@ func init() {
 	userDescTotpEnabled := userFields[9].Descriptor()
 	// user.DefaultTotpEnabled holds the default value on creation for the totp_enabled field.
 	user.DefaultTotpEnabled = userDescTotpEnabled.Default.(bool)
+	// userDescIsAgent is the schema descriptor for is_agent field.
+	userDescIsAgent := userFields[11].Descriptor()
+	// user.DefaultIsAgent holds the default value on creation for the is_agent field.
+	user.DefaultIsAgent = userDescIsAgent.Default.(bool)
+	// userDescInviteCode is the schema descriptor for invite_code field.
+	userDescInviteCode := userFields[13].Descriptor()
+	// user.InviteCodeValidator is a validator for the "invite_code" field. It is called by the builders before save.
+	user.InviteCodeValidator = userDescInviteCode.Validators[0].(func(string) error)
 	userallowedgroupFields := schema.UserAllowedGroup{}.Fields()
 	_ = userallowedgroupFields
 	// userallowedgroupDescCreatedAt is the schema descriptor for created_at field.

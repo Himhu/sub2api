@@ -145,9 +145,9 @@ export async function sendVerifyCode(
 }
 
 /**
- * Validate promo code response
+ * Validate invite code response
  */
-export interface ValidatePromoCodeResponse {
+export interface ValidateInviteCodeResponse {
   valid: boolean
   bonus_amount?: number
   error_code?: string
@@ -155,12 +155,12 @@ export interface ValidatePromoCodeResponse {
 }
 
 /**
- * Validate promo code (public endpoint, no auth required)
- * @param code - Promo code to validate
+ * Validate invite code (public endpoint, no auth required)
+ * @param code - Invite code to validate
  * @returns Validation result with bonus amount if valid
  */
-export async function validatePromoCode(code: string): Promise<ValidatePromoCodeResponse> {
-  const { data } = await apiClient.post<ValidatePromoCodeResponse>('/auth/validate-promo-code', { code })
+export async function validateInviteCode(code: string): Promise<ValidateInviteCodeResponse> {
+  const { data } = await apiClient.post<ValidateInviteCodeResponse>('/auth/validate-invite-code', { code })
   return data
 }
 
@@ -228,7 +228,7 @@ export const authAPI = {
   clearAuthToken,
   getPublicSettings,
   sendVerifyCode,
-  validatePromoCode,
+  validateInviteCode,
   forgotPassword,
   resetPassword
 }

@@ -72,6 +72,25 @@ func (User) Fields() []ent.Field {
 		field.Time("totp_enabled_at").
 			Optional().
 			Nillable(),
+
+		// 代理相关字段
+		field.Bool("is_agent").
+			Default(false),
+		field.Int64("parent_agent_id").
+			Optional().
+			Nillable(),
+
+		// 邀请相关字段
+		field.String("invite_code").
+			MaxLen(32).
+			Optional().
+			Nillable(),
+		field.Int64("invited_by_user_id").
+			Optional().
+			Nillable(),
+		field.Int64("belong_agent_id").
+			Optional().
+			Nillable(),
 	}
 }
 
@@ -85,7 +104,6 @@ func (User) Edges() []ent.Edge {
 			Through("user_allowed_groups", UserAllowedGroup.Type),
 		edge.To("usage_logs", UsageLog.Type),
 		edge.To("attribute_values", UserAttributeValue.Type),
-		edge.To("promo_code_usages", PromoCodeUsage.Type),
 	}
 }
 

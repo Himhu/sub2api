@@ -34,6 +34,12 @@ export interface User {
   status: 'active' | 'disabled' // Account status
   allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
   subscriptions?: UserSubscription[] // User's active subscriptions
+  // Agent-related fields
+  is_agent?: boolean // Whether user is an agent
+  parent_agent_id?: number | null // Parent agent ID
+  invite_code?: string | null // Agent's invite code
+  invited_by_user_id?: number | null // User who invited this user
+  belong_agent_id?: number | null // Agent this user belongs to
   created_at: string
   updated_at: string
 }
@@ -70,7 +76,7 @@ export interface SendVerifyCodeResponse {
 export interface PublicSettings {
   registration_enabled: boolean
   email_verify_enabled: boolean
-  promo_code_enabled: boolean
+  invite_registration_enabled: boolean
   password_reset_enabled: boolean
   turnstile_enabled: boolean
   turnstile_site_key: string
@@ -86,6 +92,9 @@ export interface PublicSettings {
   purchase_subscription_url: string
   linuxdo_oauth_enabled: boolean
   version: string
+  // Invite bonus settings
+  inviter_bonus: number
+  invitee_bonus: number
 }
 
 export interface AuthResponse {
@@ -1078,47 +1087,6 @@ export interface UpdateUserAttributeRequest {
 
 export interface UserAttributeValuesMap {
   [attributeId: number]: string
-}
-
-// ==================== Promo Code Types ====================
-
-export interface PromoCode {
-  id: number
-  code: string
-  bonus_amount: number
-  max_uses: number
-  used_count: number
-  status: 'active' | 'disabled'
-  expires_at: string | null
-  notes: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface PromoCodeUsage {
-  id: number
-  promo_code_id: number
-  user_id: number
-  bonus_amount: number
-  used_at: string
-  user?: User
-}
-
-export interface CreatePromoCodeRequest {
-  code?: string
-  bonus_amount: number
-  max_uses?: number
-  expires_at?: number | null
-  notes?: string
-}
-
-export interface UpdatePromoCodeRequest {
-  code?: string
-  bonus_amount?: number
-  max_uses?: number
-  status?: 'active' | 'disabled'
-  expires_at?: number | null
-  notes?: string
 }
 
 // ==================== TOTP (2FA) Types ====================

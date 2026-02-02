@@ -28,12 +28,31 @@ var (
 	ErrTokenTooLarge       = infraerrors.BadRequest("TOKEN_TOO_LARGE", "token too large")
 	ErrTokenRevoked        = infraerrors.Unauthorized("TOKEN_REVOKED", "token has been revoked")
 	ErrEmailVerifyRequired = infraerrors.BadRequest("EMAIL_VERIFY_REQUIRED", "email verification is required")
+	ErrInviteCodeRequired  = infraerrors.BadRequest("INVITE_CODE_REQUIRED", "invite code is required")
+	ErrInviteCodeInvalid   = infraerrors.BadRequest("INVITE_CODE_INVALID", "invite code is invalid")
+	ErrInviteCodeFormat    = infraerrors.BadRequest("INVITE_CODE_INVALID_FORMAT", "invite code must be 16 hex characters")
 	ErrRegDisabled         = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
 	ErrServiceUnavailable  = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
 )
 
 // maxTokenLength 限制 token 大小，避免超长 header 触发解析时的异常内存分配。
 const maxTokenLength = 8192
+
+// inviteCodeLen 邀请码长度（16位十六进制字符）
+const inviteCodeLen = 16
+
+// IsValidInviteCodeFormat 验证邀请码格式（16位十六进制字符，大写）
+func IsValidInviteCodeFormat(code string) bool {
+	if len(code) != inviteCodeLen {
+		return false
+	}
+	for _, c := range code {
+		if !((c >= 'A' && c <= 'F') || (c >= '0' && c <= '9')) {
+			return false
+		}
+	}
+	return true
+}
 
 // JWTClaims JWT载荷数据
 type JWTClaims struct {
@@ -52,7 +71,6 @@ type AuthService struct {
 	emailService      *EmailService
 	turnstileService  *TurnstileService
 	emailQueueService *EmailQueueService
-	promoService      *PromoService
 }
 
 // NewAuthService 创建认证服务实例
@@ -63,7 +81,6 @@ func NewAuthService(
 	emailService *EmailService,
 	turnstileService *TurnstileService,
 	emailQueueService *EmailQueueService,
-	promoService *PromoService,
 ) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
@@ -72,7 +89,6 @@ func NewAuthService(
 		emailService:      emailService,
 		turnstileService:  turnstileService,
 		emailQueueService: emailQueueService,
-		promoService:      promoService,
 	}
 }
 
@@ -110,6 +126,31 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
+	// 邀请注册启用时，校验邀请码
+	var inviter *User
+	if s.settingService != nil && s.settingService.IsInviteRegistrationEnabled(ctx) {
+		inviteCode := strings.ToUpper(strings.TrimSpace(promoCode))
+		if inviteCode == "" {
+			return "", nil, ErrInviteCodeRequired
+		}
+		// 格式验证：6-32位字母数字
+		if !IsValidInviteCodeFormat(inviteCode) {
+			return "", nil, ErrInviteCodeFormat
+		}
+		var inviteErr error
+		inviter, inviteErr = s.userRepo.GetByInviteCode(ctx, inviteCode)
+		if inviteErr != nil {
+			if errors.Is(inviteErr, ErrUserNotFound) {
+				return "", nil, ErrInviteCodeInvalid
+			}
+			log.Printf("[Auth] Database error checking invite code: %v", inviteErr)
+			return "", nil, ErrServiceUnavailable
+		}
+		if inviter == nil || !inviter.IsActive() {
+			return "", nil, ErrInviteCodeInvalid
+		}
+	}
+
 	// 检查邮箱是否已存在
 	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
@@ -134,6 +175,13 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
 	}
 
+	// 为新用户生成唯一邀请码
+	inviteCode, err := s.generateUniqueInviteCode(ctx)
+	if err != nil {
+		log.Printf("[Auth] Failed to generate invite code: %v", err)
+		return "", nil, ErrServiceUnavailable
+	}
+
 	// 创建用户
 	user := &User{
 		Email:        email,
@@ -142,6 +190,20 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		Balance:      defaultBalance,
 		Concurrency:  defaultConcurrency,
 		Status:       StatusActive,
+		InviteCode:   &inviteCode,
+	}
+	// 设置邀请人和所属代理
+	if inviter != nil {
+		inviterID := inviter.ID
+		user.InvitedByUserID = &inviterID
+		// 设置所属代理ID
+		if inviter.IsAgent {
+			// 邀请人是代理 → 直接设置为邀请人
+			user.BelongAgentID = &inviterID
+		} else if inviter.BelongAgentID != nil {
+			// 邀请人不是代理 → 继承邀请人的所属代理
+			user.BelongAgentID = inviter.BelongAgentID
+		}
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -153,15 +215,26 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		return "", nil, ErrServiceUnavailable
 	}
 
-	// 应用优惠码（如果提供且功能已启用）
-	if promoCode != "" && s.promoService != nil && s.settingService != nil && s.settingService.IsPromoCodeEnabled(ctx) {
-		if err := s.promoService.ApplyPromoCode(ctx, user.ID, promoCode); err != nil {
-			// 优惠码应用失败不影响注册，只记录日志
-			log.Printf("[Auth] Failed to apply promo code for user %d: %v", user.ID, err)
-		} else {
-			// 重新获取用户信息以获取更新后的余额
-			if updatedUser, err := s.userRepo.GetByID(ctx, user.ID); err == nil {
-				user = updatedUser
+	// 邀请奖励发放逻辑
+	if inviter != nil && s.settingService != nil {
+		// 邀请人奖励：只有非代理用户邀请时才发放（代理是推广渠道，不获得邀请奖励）
+		if !inviter.IsAgent {
+			inviterBonus := s.settingService.GetInviterBonus(ctx)
+			if inviterBonus > 0 {
+				if err := s.userRepo.UpdateBalance(ctx, inviter.ID, inviterBonus); err != nil {
+					log.Printf("[Auth] Failed to add inviter bonus for user %d: %v", inviter.ID, err)
+					// 奖励发放失败不影响注册流程，仅记录日志
+				}
+			}
+		}
+		// 被邀请人奖励：始终发放
+		inviteeBonus := s.settingService.GetInviteeBonus(ctx)
+		if inviteeBonus > 0 {
+			if err := s.userRepo.UpdateBalance(ctx, user.ID, inviteeBonus); err != nil {
+				log.Printf("[Auth] Failed to add invitee bonus for user %d: %v", user.ID, err)
+			} else {
+				// 更新本地用户对象的余额，以便返回正确的值
+				user.Balance += inviteeBonus
 			}
 		}
 	}
@@ -399,6 +472,13 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 				defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
 			}
 
+			// 为新用户生成唯一邀请码
+			oauthInviteCode, err := s.generateUniqueInviteCode(ctx)
+			if err != nil {
+				log.Printf("[Auth] Failed to generate invite code for oauth user: %v", err)
+				return "", nil, ErrServiceUnavailable
+			}
+
 			newUser := &User{
 				Email:        email,
 				Username:     username,
@@ -407,6 +487,7 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 				Balance:      defaultBalance,
 				Concurrency:  defaultConcurrency,
 				Status:       StatusActive,
+				InviteCode:   &oauthInviteCode,
 			}
 
 			if err := s.userRepo.Create(ctx, newUser); err != nil {
@@ -725,4 +806,27 @@ func (s *AuthService) ResetPassword(ctx context.Context, email, token, newPasswo
 
 	log.Printf("[Auth] Password reset successful for user: %s", email)
 	return nil
+}
+
+// generateUniqueInviteCode 生成唯一邀请码（带冲突重试）
+func (s *AuthService) generateUniqueInviteCode(ctx context.Context) (string, error) {
+	const maxRetries = 5
+	for i := 0; i < maxRetries; i++ {
+		code, err := generateInviteCode()
+		if err != nil {
+			return "", err
+		}
+		// 检查邀请码是否已存在
+		_, err = s.userRepo.GetByInviteCode(ctx, code)
+		if errors.Is(err, ErrUserNotFound) {
+			// 邀请码不存在，可以使用
+			return code, nil
+		}
+		if err != nil {
+			// 数据库错误
+			return "", fmt.Errorf("check invite code existence: %w", err)
+		}
+		// 邀请码已存在，重试
+	}
+	return "", fmt.Errorf("failed to generate unique invite code after %d attempts", maxRetries)
 }

@@ -187,6 +187,30 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'purchase.description'
     }
   },
+  {
+    path: '/promotion',
+    name: 'Promotion',
+    component: () => import('@/views/user/PromotionView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Promotion Center',
+      titleKey: 'promotion.title',
+      descriptionKey: 'promotion.description'
+    }
+  },
+  {
+    path: '/agent',
+    name: 'AgentCenter',
+    component: () => import('@/views/user/AgentCenterView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Agent Center',
+      titleKey: 'agentCenter.title',
+      descriptionKey: 'agentCenter.description'
+    }
+  },
 
   // ==================== Admin Routes ====================
   {
@@ -290,15 +314,15 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/admin/promo-codes',
-    name: 'AdminPromoCodes',
-    component: () => import('@/views/admin/PromoCodesView.vue'),
+    path: '/admin/agents',
+    name: 'AdminAgents',
+    component: () => import('@/views/admin/AgentsView.vue'),
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'Promo Code Management',
-      titleKey: 'admin.promo.title',
-      descriptionKey: 'admin.promo.description'
+      title: 'Agent Management',
+      titleKey: 'admin.agents.title',
+      descriptionKey: 'admin.agents.description'
     }
   },
   {

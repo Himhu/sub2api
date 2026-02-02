@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
@@ -15,23 +17,21 @@ import (
 
 // AuthHandler handles authentication-related requests
 type AuthHandler struct {
-	cfg          *config.Config
-	authService  *service.AuthService
-	userService  *service.UserService
-	settingSvc   *service.SettingService
-	promoService *service.PromoService
-	totpService  *service.TotpService
+	cfg         *config.Config
+	authService *service.AuthService
+	userService *service.UserService
+	settingSvc  *service.SettingService
+	totpService *service.TotpService
 }
 
 // NewAuthHandler creates a new AuthHandler
-func NewAuthHandler(cfg *config.Config, authService *service.AuthService, userService *service.UserService, settingService *service.SettingService, promoService *service.PromoService, totpService *service.TotpService) *AuthHandler {
+func NewAuthHandler(cfg *config.Config, authService *service.AuthService, userService *service.UserService, settingService *service.SettingService, totpService *service.TotpService) *AuthHandler {
 	return &AuthHandler{
-		cfg:          cfg,
-		authService:  authService,
-		userService:  userService,
-		settingSvc:   settingService,
-		promoService: promoService,
-		totpService:  totpService,
+		cfg:         cfg,
+		authService: authService,
+		userService: userService,
+		settingSvc:  settingService,
+		totpService: totpService,
 	}
 }
 
@@ -83,6 +83,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if req.VerifyCode == "" {
 		if err := h.authService.VerifyTurnstile(c.Request.Context(), req.TurnstileToken, ip.GetClientIP(c)); err != nil {
 			response.ErrorFrom(c, err)
+			return
+		}
+	}
+
+	// 邀请注册启用时，邀请码必填
+	if h.settingSvc != nil && h.settingSvc.IsInviteRegistrationEnabled(c.Request.Context()) {
+		if req.PromoCode == "" {
+			response.BadRequest(c, "邀请码不能为空")
 			return
 		}
 	}
@@ -149,7 +157,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Check if TOTP 2FA is enabled for this user
-	if h.totpService != nil && h.settingSvc.IsTotpEnabled(c.Request.Context()) && user.TotpEnabled {
+	if h.totpService != nil && h.settingSvc != nil && h.settingSvc.IsTotpEnabled(c.Request.Context()) && user.TotpEnabled {
 		// Create a temporary login session for 2FA
 		tempToken, err := h.totpService.CreateLoginSession(c.Request.Context(), user.ID, user.Email)
 		if err != nil {
@@ -279,72 +287,88 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	response.Success(c, UserResponse{User: dto.UserFromService(user), RunMode: runMode})
 }
 
-// ValidatePromoCodeRequest 验证优惠码请求
-type ValidatePromoCodeRequest struct {
+// ValidateInviteCodeRequest 验证邀请码请求
+type ValidateInviteCodeRequest struct {
 	Code string `json:"code" binding:"required"`
 }
 
-// ValidatePromoCodeResponse 验证优惠码响应
-type ValidatePromoCodeResponse struct {
+// ValidateInviteCodeResponse 验证邀请码响应
+type ValidateInviteCodeResponse struct {
 	Valid       bool    `json:"valid"`
 	BonusAmount float64 `json:"bonus_amount,omitempty"`
 	ErrorCode   string  `json:"error_code,omitempty"`
-	Message     string  `json:"message,omitempty"`
 }
 
-// ValidatePromoCode 验证优惠码（公开接口，注册前调用）
-// POST /api/v1/auth/validate-promo-code
-func (h *AuthHandler) ValidatePromoCode(c *gin.Context) {
-	// 检查优惠码功能是否启用
-	if h.settingSvc != nil && !h.settingSvc.IsPromoCodeEnabled(c.Request.Context()) {
-		response.Success(c, ValidatePromoCodeResponse{
+// ValidateInviteCode 验证邀请码（公开接口，注册前调用）
+// POST /api/v1/auth/validate-invite-code
+func (h *AuthHandler) ValidateInviteCode(c *gin.Context) {
+	// 检查邀请注册功能是否启用
+	if h.settingSvc != nil && !h.settingSvc.IsInviteRegistrationEnabled(c.Request.Context()) {
+		response.Success(c, ValidateInviteCodeResponse{
 			Valid:     false,
-			ErrorCode: "PROMO_CODE_DISABLED",
+			ErrorCode: "INVITE_CODE_DISABLED",
 		})
 		return
 	}
 
-	var req ValidatePromoCodeRequest
+	var req ValidateInviteCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 	}
 
-	promoCode, err := h.promoService.ValidatePromoCode(c.Request.Context(), req.Code)
+	// 通过 userService 验证邀请码（大小写不敏感）
+	inviteCode := strings.ToUpper(strings.TrimSpace(req.Code))
+
+	// 邀请码格式校验：必须是 16 位十六进制字符
+	if !service.IsValidInviteCodeFormat(inviteCode) {
+		response.Success(c, ValidateInviteCodeResponse{
+			Valid:     false,
+			ErrorCode: "INVITE_CODE_INVALID_FORMAT",
+		})
+		return
+	}
+
+	inviter, err := h.userService.GetUserByInviteCode(c.Request.Context(), inviteCode)
 	if err != nil {
-		// 根据错误类型返回对应的错误码
-		errorCode := "PROMO_CODE_INVALID"
-		switch err {
-		case service.ErrPromoCodeNotFound:
-			errorCode = "PROMO_CODE_NOT_FOUND"
-		case service.ErrPromoCodeExpired:
-			errorCode = "PROMO_CODE_EXPIRED"
-		case service.ErrPromoCodeDisabled:
-			errorCode = "PROMO_CODE_DISABLED"
-		case service.ErrPromoCodeMaxUsed:
-			errorCode = "PROMO_CODE_MAX_USED"
-		case service.ErrPromoCodeAlreadyUsed:
-			errorCode = "PROMO_CODE_ALREADY_USED"
+		// 区分 "not found" 和其他错误
+		if errors.Is(err, service.ErrUserNotFound) {
+			response.Success(c, ValidateInviteCodeResponse{
+				Valid:     false,
+				ErrorCode: "INVITE_CODE_NOT_FOUND",
+			})
+			return
 		}
-
-		response.Success(c, ValidatePromoCodeResponse{
+		// 其他错误（如数据库故障）返回服务错误
+		response.ErrorFrom(c, err)
+		return
+	}
+	if inviter == nil {
+		response.Success(c, ValidateInviteCodeResponse{
 			Valid:     false,
-			ErrorCode: errorCode,
+			ErrorCode: "INVITE_CODE_NOT_FOUND",
 		})
 		return
 	}
 
-	if promoCode == nil {
-		response.Success(c, ValidatePromoCodeResponse{
+	// 检查邀请人是否激活
+	if !inviter.IsActive() {
+		response.Success(c, ValidateInviteCodeResponse{
 			Valid:     false,
-			ErrorCode: "PROMO_CODE_INVALID",
+			ErrorCode: "INVITER_NOT_ACTIVE",
 		})
 		return
 	}
 
-	response.Success(c, ValidatePromoCodeResponse{
+	// 获取被邀请人奖励金额
+	var bonusAmount float64
+	if h.settingSvc != nil {
+		bonusAmount = h.settingSvc.GetInviteeBonus(c.Request.Context())
+	}
+
+	response.Success(c, ValidateInviteCodeResponse{
 		Valid:       true,
-		BonusAmount: promoCode.BonusAmount,
+		BonusAmount: bonusAmount,
 	})
 }
 

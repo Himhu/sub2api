@@ -95,11 +95,10 @@
           </p>
         </div>
 
-        <!-- Promo Code Input (Optional) -->
+        <!-- Invite Code Input (Required when invite registration is enabled) -->
         <div v-if="promoCodeEnabled">
           <label for="promo_code" class="input-label">
             {{ t('auth.promoCodeLabel') }}
-            <span class="ml-1 text-xs font-normal text-gray-400 dark:text-dark-500">({{ t('common.optional') }})</span>
           </label>
           <div class="relative">
             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
@@ -239,7 +238,7 @@ import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-import { getPublicSettings, validatePromoCode } from '@/api/auth'
+import { getPublicSettings, validateInviteCode } from '@/api/auth'
 
 const { t } = useI18n()
 
@@ -299,19 +298,20 @@ onMounted(async () => {
     const settings = await getPublicSettings()
     registrationEnabled.value = settings.registration_enabled
     emailVerifyEnabled.value = settings.email_verify_enabled
-    promoCodeEnabled.value = settings.promo_code_enabled
+    promoCodeEnabled.value = settings.invite_registration_enabled
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     siteName.value = settings.site_name || 'Sub2API'
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
 
     // Read promo code from URL parameter only if promo code is enabled
+    // Support both ?promo_code=xxx and ?promo=xxx
     if (promoCodeEnabled.value) {
-      const promoParam = route.query.promo as string
+      const promoParam = (route.query.promo_code || route.query.promo) as string
       if (promoParam) {
         formData.promo_code = promoParam
-        // Validate the promo code from URL
-        await validatePromoCodeDebounced(promoParam)
+        // Validate the invite code from URL
+        await validateInviteCodeDebounced(promoParam)
       }
     }
   } catch (error) {
@@ -349,17 +349,27 @@ function handlePromoCodeInput(): void {
   }
 
   promoValidateTimeout = setTimeout(() => {
-    validatePromoCodeDebounced(code)
+    validateInviteCodeDebounced(code)
   }, 500)
 }
 
-async function validatePromoCodeDebounced(code: string): Promise<void> {
+async function validateInviteCodeDebounced(code: string): Promise<void> {
   if (!code.trim()) return
+
+  // 前端格式校验：必须是 16 位十六进制字符
+  const trimmedCode = code.trim().toUpperCase()
+  if (!isValidInviteCodeFormat(trimmedCode)) {
+    promoValidation.valid = false
+    promoValidation.invalid = true
+    promoValidation.bonusAmount = null
+    promoValidation.message = getPromoErrorMessage('INVITE_CODE_INVALID_FORMAT')
+    return
+  }
 
   promoValidating.value = true
 
   try {
-    const result = await validatePromoCode(code)
+    const result = await validateInviteCode(code)
 
     if (result.valid) {
       promoValidation.valid = true
@@ -385,19 +395,29 @@ async function validatePromoCodeDebounced(code: string): Promise<void> {
 
 function getPromoErrorMessage(errorCode?: string): string {
   switch (errorCode) {
-    case 'PROMO_CODE_NOT_FOUND':
+    case 'INVITE_CODE_NOT_FOUND':
       return t('auth.promoCodeNotFound')
-    case 'PROMO_CODE_EXPIRED':
+    case 'INVITE_CODE_EXPIRED':
       return t('auth.promoCodeExpired')
-    case 'PROMO_CODE_DISABLED':
+    case 'INVITE_CODE_DISABLED':
       return t('auth.promoCodeDisabled')
-    case 'PROMO_CODE_MAX_USED':
+    case 'INVITER_NOT_ACTIVE':
+      return t('auth.inviterNotActive')
+    case 'INVITE_CODE_MAX_USED':
       return t('auth.promoCodeMaxUsed')
-    case 'PROMO_CODE_ALREADY_USED':
+    case 'INVITE_CODE_ALREADY_USED':
       return t('auth.promoCodeAlreadyUsed')
+    case 'INVITE_CODE_INVALID_FORMAT':
+      return t('auth.promoCodeInvalidFormat')
     default:
       return t('auth.promoCodeInvalid')
   }
+}
+
+// 校验邀请码格式：必须是 16 位十六进制字符
+function isValidInviteCodeFormat(code: string): boolean {
+  if (code.length !== 16) return false
+  return /^[0-9A-F]{16}$/.test(code)
 }
 
 // ==================== Turnstile Handlers ====================
@@ -470,16 +490,26 @@ async function handleRegister(): Promise<void> {
     return
   }
 
-  // Check promo code validation status
-  if (formData.promo_code.trim()) {
-    // If promo code is being validated, wait
+  // Check invite code when invite registration is enabled
+  if (promoCodeEnabled.value) {
+    // Invite code is required when invite registration is enabled
+    if (!formData.promo_code.trim()) {
+      errorMessage.value = t('auth.inviteCodeRequired')
+      return
+    }
+    // If invite code is being validated, wait
     if (promoValidating.value) {
       errorMessage.value = t('auth.promoCodeValidating')
       return
     }
-    // If promo code is invalid, block submission
+    // If invite code is invalid, block submission
     if (promoValidation.invalid) {
       errorMessage.value = t('auth.promoCodeInvalidCannotRegister')
+      return
+    }
+    // If invite code hasn't been validated yet (valid is false but not invalid), validate it
+    if (!promoValidation.valid) {
+      errorMessage.value = t('auth.inviteCodeRequired')
       return
     }
   }

@@ -323,6 +323,13 @@ func (s *adminServiceImpl) GetUser(ctx context.Context, id int64) (*User, error)
 }
 
 func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInput) (*User, error) {
+	// 为新用户生成唯一邀请码
+	inviteCode, err := s.generateUniqueInviteCode(ctx)
+	if err != nil {
+		log.Printf("[AdminService] Failed to generate invite code: %v", err)
+		return nil, fmt.Errorf("generate invite code: %w", err)
+	}
+
 	user := &User{
 		Email:         input.Email,
 		Username:      input.Username,
@@ -332,6 +339,7 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 		Concurrency:   input.Concurrency,
 		Status:        StatusActive,
 		AllowedGroups: input.AllowedGroups,
+		InviteCode:    &inviteCode,
 	}
 	if err := user.SetPassword(input.Password); err != nil {
 		return nil, err
@@ -1529,4 +1537,27 @@ type MixedChannelError struct {
 func (e *MixedChannelError) Error() string {
 	return fmt.Sprintf("mixed_channel_warning: Group '%s' contains both %s and %s accounts. Using mixed channels in the same context may cause thinking block signature validation issues, which will fallback to non-thinking mode for historical messages.",
 		e.GroupName, e.CurrentPlatform, e.OtherPlatform)
+}
+
+// generateUniqueInviteCode 生成唯一邀请码（带冲突重试）
+func (s *adminServiceImpl) generateUniqueInviteCode(ctx context.Context) (string, error) {
+	const maxRetries = 5
+	for i := 0; i < maxRetries; i++ {
+		code, err := generateInviteCode()
+		if err != nil {
+			return "", err
+		}
+		// 检查邀请码是否已存在
+		_, err = s.userRepo.GetByInviteCode(ctx, code)
+		if errors.Is(err, ErrUserNotFound) {
+			// 邀请码不存在，可以使用
+			return code, nil
+		}
+		if err != nil {
+			// 数据库错误
+			return "", fmt.Errorf("check invite code: %w", err)
+		}
+		// 邀请码已存在，重试
+	}
+	return "", fmt.Errorf("failed to generate unique invite code after %d attempts", maxRetries)
 }

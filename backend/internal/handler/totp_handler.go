@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"errors"
+	"io"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -80,8 +83,11 @@ func (h *TotpHandler) InitiateSetup(c *gin.Context) {
 
 	var req TotpSetupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// Allow empty body (optional params)
-		req = TotpSetupRequest{}
+		// Only allow empty body (optional params), reject invalid JSON
+		if !errors.Is(err, io.EOF) {
+			response.BadRequest(c, "Invalid request: "+err.Error())
+			return
+		}
 	}
 
 	result, err := h.totpService.InitiateSetup(c.Request.Context(), subject.UserID, req.EmailCode, req.Password)

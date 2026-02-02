@@ -60,7 +60,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 	keys := []string{
 		SettingKeyRegistrationEnabled,
 		SettingKeyEmailVerifyEnabled,
-		SettingKeyPromoCodeEnabled,
+		SettingKeyInviteRegistrationEnabled,
 		SettingKeyPasswordResetEnabled,
 		SettingKeyTotpEnabled,
 		SettingKeyTurnstileEnabled,
@@ -76,6 +76,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyPurchaseSubscriptionEnabled,
 		SettingKeyPurchaseSubscriptionURL,
 		SettingKeyLinuxDoConnectEnabled,
+		SettingKeyInviterBonus,
+		SettingKeyInviteeBonus,
 	}
 
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
@@ -94,10 +96,19 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 	emailVerifyEnabled := settings[SettingKeyEmailVerifyEnabled] == "true"
 	passwordResetEnabled := emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true"
 
+	// Parse invite bonus values
+	var inviterBonus, inviteeBonus float64
+	if v, err := strconv.ParseFloat(settings[SettingKeyInviterBonus], 64); err == nil && v >= 0 {
+		inviterBonus = v
+	}
+	if v, err := strconv.ParseFloat(settings[SettingKeyInviteeBonus], 64); err == nil && v >= 0 {
+		inviteeBonus = v
+	}
+
 	return &PublicSettings{
 		RegistrationEnabled:         settings[SettingKeyRegistrationEnabled] == "true",
 		EmailVerifyEnabled:          emailVerifyEnabled,
-		PromoCodeEnabled:            settings[SettingKeyPromoCodeEnabled] != "false", // 默认启用
+		InviteRegistrationEnabled:   settings[SettingKeyInviteRegistrationEnabled] == "true", // 默认关闭
 		PasswordResetEnabled:        passwordResetEnabled,
 		TotpEnabled:                 settings[SettingKeyTotpEnabled] == "true",
 		TurnstileEnabled:            settings[SettingKeyTurnstileEnabled] == "true",
@@ -113,6 +124,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		PurchaseSubscriptionEnabled: settings[SettingKeyPurchaseSubscriptionEnabled] == "true",
 		PurchaseSubscriptionURL:     strings.TrimSpace(settings[SettingKeyPurchaseSubscriptionURL]),
 		LinuxDoOAuthEnabled:         linuxDoEnabled,
+		InviterBonus:                inviterBonus,
+		InviteeBonus:                inviteeBonus,
 	}, nil
 }
 
@@ -139,7 +152,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 	return &struct {
 		RegistrationEnabled         bool   `json:"registration_enabled"`
 		EmailVerifyEnabled          bool   `json:"email_verify_enabled"`
-		PromoCodeEnabled            bool   `json:"promo_code_enabled"`
+		InviteRegistrationEnabled   bool   `json:"invite_registration_enabled"`
 		PasswordResetEnabled        bool   `json:"password_reset_enabled"`
 		TotpEnabled                 bool   `json:"totp_enabled"`
 		TurnstileEnabled            bool   `json:"turnstile_enabled"`
@@ -154,12 +167,14 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		HideCcsImportButton         bool   `json:"hide_ccs_import_button"`
 		PurchaseSubscriptionEnabled bool   `json:"purchase_subscription_enabled"`
 		PurchaseSubscriptionURL     string `json:"purchase_subscription_url,omitempty"`
-		LinuxDoOAuthEnabled         bool   `json:"linuxdo_oauth_enabled"`
-		Version                     string `json:"version,omitempty"`
+		LinuxDoOAuthEnabled         bool    `json:"linuxdo_oauth_enabled"`
+		Version                     string  `json:"version,omitempty"`
+		InviterBonus                float64 `json:"inviter_bonus"`
+		InviteeBonus                float64 `json:"invitee_bonus"`
 	}{
 		RegistrationEnabled:         settings.RegistrationEnabled,
 		EmailVerifyEnabled:          settings.EmailVerifyEnabled,
-		PromoCodeEnabled:            settings.PromoCodeEnabled,
+		InviteRegistrationEnabled:   settings.InviteRegistrationEnabled,
 		PasswordResetEnabled:        settings.PasswordResetEnabled,
 		TotpEnabled:                 settings.TotpEnabled,
 		TurnstileEnabled:            settings.TurnstileEnabled,
@@ -176,6 +191,8 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		PurchaseSubscriptionURL:     settings.PurchaseSubscriptionURL,
 		LinuxDoOAuthEnabled:         settings.LinuxDoOAuthEnabled,
 		Version:                     s.version,
+		InviterBonus:                settings.InviterBonus,
+		InviteeBonus:                settings.InviteeBonus,
 	}, nil
 }
 
@@ -186,7 +203,7 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	// 注册设置
 	updates[SettingKeyRegistrationEnabled] = strconv.FormatBool(settings.RegistrationEnabled)
 	updates[SettingKeyEmailVerifyEnabled] = strconv.FormatBool(settings.EmailVerifyEnabled)
-	updates[SettingKeyPromoCodeEnabled] = strconv.FormatBool(settings.PromoCodeEnabled)
+	updates[SettingKeyInviteRegistrationEnabled] = strconv.FormatBool(settings.InviteRegistrationEnabled)
 	updates[SettingKeyPasswordResetEnabled] = strconv.FormatBool(settings.PasswordResetEnabled)
 	updates[SettingKeyTotpEnabled] = strconv.FormatBool(settings.TotpEnabled)
 
@@ -231,6 +248,8 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	// 默认配置
 	updates[SettingKeyDefaultConcurrency] = strconv.Itoa(settings.DefaultConcurrency)
 	updates[SettingKeyDefaultBalance] = strconv.FormatFloat(settings.DefaultBalance, 'f', 8, 64)
+	updates[SettingKeyInviterBonus] = strconv.FormatFloat(settings.InviterBonus, 'f', 8, 64)
+	updates[SettingKeyInviteeBonus] = strconv.FormatFloat(settings.InviteeBonus, 'f', 8, 64)
 
 	// Model fallback configuration
 	updates[SettingKeyEnableModelFallback] = strconv.FormatBool(settings.EnableModelFallback)
@@ -277,13 +296,13 @@ func (s *SettingService) IsEmailVerifyEnabled(ctx context.Context) bool {
 	return value == "true"
 }
 
-// IsPromoCodeEnabled 检查是否启用优惠码功能
-func (s *SettingService) IsPromoCodeEnabled(ctx context.Context) bool {
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyPromoCodeEnabled)
+// IsInviteRegistrationEnabled 检查是否启用邀请注册功能
+func (s *SettingService) IsInviteRegistrationEnabled(ctx context.Context) bool {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyInviteRegistrationEnabled)
 	if err != nil {
-		return true // 默认启用
+		return false // 默认关闭
 	}
-	return value != "false"
+	return value == "true"
 }
 
 // IsPasswordResetEnabled 检查是否启用密码重置功能
@@ -348,6 +367,30 @@ func (s *SettingService) GetDefaultBalance(ctx context.Context) float64 {
 	return s.cfg.Default.UserBalance
 }
 
+// GetInviterBonus 获取邀请人奖励余额
+func (s *SettingService) GetInviterBonus(ctx context.Context) float64 {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyInviterBonus)
+	if err != nil {
+		return 0
+	}
+	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+		return v
+	}
+	return 0
+}
+
+// GetInviteeBonus 获取被邀请人奖励余额
+func (s *SettingService) GetInviteeBonus(ctx context.Context) float64 {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyInviteeBonus)
+	if err != nil {
+		return 0
+	}
+	if v, err := strconv.ParseFloat(value, 64); err == nil && v >= 0 {
+		return v
+	}
+	return 0
+}
+
 // InitializeDefaultSettings 初始化默认设置
 func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	// 检查是否已有设置
@@ -364,13 +407,15 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	defaults := map[string]string{
 		SettingKeyRegistrationEnabled:         "true",
 		SettingKeyEmailVerifyEnabled:          "false",
-		SettingKeyPromoCodeEnabled:            "true", // 默认启用优惠码功能
+		SettingKeyInviteRegistrationEnabled:   "false", // 默认关闭邀请注册功能
 		SettingKeySiteName:                    "Sub2API",
 		SettingKeySiteLogo:                    "",
 		SettingKeyPurchaseSubscriptionEnabled: "false",
 		SettingKeyPurchaseSubscriptionURL:     "",
 		SettingKeyDefaultConcurrency:          strconv.Itoa(s.cfg.Default.UserConcurrency),
 		SettingKeyDefaultBalance:              strconv.FormatFloat(s.cfg.Default.UserBalance, 'f', 8, 64),
+		SettingKeyInviterBonus:                "0", // 邀请人奖励余额默认为0
+		SettingKeyInviteeBonus:                "0", // 被邀请人奖励余额默认为0
 		SettingKeySMTPPort:                    "587",
 		SettingKeySMTPUseTLS:                  "false",
 		// Model fallback defaults
@@ -399,7 +444,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	result := &SystemSettings{
 		RegistrationEnabled:          settings[SettingKeyRegistrationEnabled] == "true",
 		EmailVerifyEnabled:           emailVerifyEnabled,
-		PromoCodeEnabled:             settings[SettingKeyPromoCodeEnabled] != "false", // 默认启用
+		InviteRegistrationEnabled:    settings[SettingKeyInviteRegistrationEnabled] == "true", // 默认关闭
 		PasswordResetEnabled:         emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true",
 		TotpEnabled:                  settings[SettingKeyTotpEnabled] == "true",
 		SMTPHost:                     settings[SettingKeySMTPHost],
@@ -441,6 +486,14 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		result.DefaultBalance = balance
 	} else {
 		result.DefaultBalance = s.cfg.Default.UserBalance
+	}
+
+	// 解析邀请奖励余额
+	if inviterBonus, err := strconv.ParseFloat(settings[SettingKeyInviterBonus], 64); err == nil && inviterBonus >= 0 {
+		result.InviterBonus = inviterBonus
+	}
+	if inviteeBonus, err := strconv.ParseFloat(settings[SettingKeyInviteeBonus], 64); err == nil && inviteeBonus >= 0 {
+		result.InviteeBonus = inviteeBonus
 	}
 
 	// 敏感信息直接返回，方便测试连接时使用

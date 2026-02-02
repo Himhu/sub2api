@@ -45,6 +45,16 @@ type User struct {
 	TotpEnabled bool `json:"totp_enabled,omitempty"`
 	// TotpEnabledAt holds the value of the "totp_enabled_at" field.
 	TotpEnabledAt *time.Time `json:"totp_enabled_at,omitempty"`
+	// IsAgent holds the value of the "is_agent" field.
+	IsAgent bool `json:"is_agent,omitempty"`
+	// ParentAgentID holds the value of the "parent_agent_id" field.
+	ParentAgentID *int64 `json:"parent_agent_id,omitempty"`
+	// InviteCode holds the value of the "invite_code" field.
+	InviteCode *string `json:"invite_code,omitempty"`
+	// InvitedByUserID holds the value of the "invited_by_user_id" field.
+	InvitedByUserID *int64 `json:"invited_by_user_id,omitempty"`
+	// BelongAgentID holds the value of the "belong_agent_id" field.
+	BelongAgentID *int64 `json:"belong_agent_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -67,13 +77,11 @@ type UserEdges struct {
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
 	// AttributeValues holds the value of the attribute_values edge.
 	AttributeValues []*UserAttributeValue `json:"attribute_values,omitempty"`
-	// PromoCodeUsages holds the value of the promo_code_usages edge.
-	PromoCodeUsages []*PromoCodeUsage `json:"promo_code_usages,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [8]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -139,19 +147,10 @@ func (e UserEdges) AttributeValuesOrErr() ([]*UserAttributeValue, error) {
 	return nil, &NotLoadedError{edge: "attribute_values"}
 }
 
-// PromoCodeUsagesOrErr returns the PromoCodeUsages value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) PromoCodeUsagesOrErr() ([]*PromoCodeUsage, error) {
-	if e.loadedTypes[7] {
-		return e.PromoCodeUsages, nil
-	}
-	return nil, &NotLoadedError{edge: "promo_code_usages"}
-}
-
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[7] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -162,13 +161,13 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldTotpEnabled:
+		case user.FieldTotpEnabled, user.FieldIsAgent:
 			values[i] = new(sql.NullBool)
 		case user.FieldBalance:
 			values[i] = new(sql.NullFloat64)
-		case user.FieldID, user.FieldConcurrency:
+		case user.FieldID, user.FieldConcurrency, user.FieldParentAgentID, user.FieldInvitedByUserID, user.FieldBelongAgentID:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted, user.FieldInviteCode:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldTotpEnabledAt:
 			values[i] = new(sql.NullTime)
@@ -280,6 +279,40 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				_m.TotpEnabledAt = new(time.Time)
 				*_m.TotpEnabledAt = value.Time
 			}
+		case user.FieldIsAgent:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_agent", values[i])
+			} else if value.Valid {
+				_m.IsAgent = value.Bool
+			}
+		case user.FieldParentAgentID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field parent_agent_id", values[i])
+			} else if value.Valid {
+				_m.ParentAgentID = new(int64)
+				*_m.ParentAgentID = value.Int64
+			}
+		case user.FieldInviteCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field invite_code", values[i])
+			} else if value.Valid {
+				_m.InviteCode = new(string)
+				*_m.InviteCode = value.String
+			}
+		case user.FieldInvitedByUserID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field invited_by_user_id", values[i])
+			} else if value.Valid {
+				_m.InvitedByUserID = new(int64)
+				*_m.InvitedByUserID = value.Int64
+			}
+		case user.FieldBelongAgentID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field belong_agent_id", values[i])
+			} else if value.Valid {
+				_m.BelongAgentID = new(int64)
+				*_m.BelongAgentID = value.Int64
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -326,11 +359,6 @@ func (_m *User) QueryUsageLogs() *UsageLogQuery {
 // QueryAttributeValues queries the "attribute_values" edge of the User entity.
 func (_m *User) QueryAttributeValues() *UserAttributeValueQuery {
 	return NewUserClient(_m.config).QueryAttributeValues(_m)
-}
-
-// QueryPromoCodeUsages queries the "promo_code_usages" edge of the User entity.
-func (_m *User) QueryPromoCodeUsages() *PromoCodeUsageQuery {
-	return NewUserClient(_m.config).QueryPromoCodeUsages(_m)
 }
 
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.
@@ -407,6 +435,29 @@ func (_m *User) String() string {
 	if v := _m.TotpEnabledAt; v != nil {
 		builder.WriteString("totp_enabled_at=")
 		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("is_agent=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsAgent))
+	builder.WriteString(", ")
+	if v := _m.ParentAgentID; v != nil {
+		builder.WriteString("parent_agent_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.InviteCode; v != nil {
+		builder.WriteString("invite_code=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.InvitedByUserID; v != nil {
+		builder.WriteString("invited_by_user_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.BelongAgentID; v != nil {
+		builder.WriteString("belong_agent_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteByte(')')
 	return builder.String()

@@ -44,9 +44,6 @@ func RegisterAdminRoutes(
 		// 卡密管理
 		registerRedeemCodeRoutes(admin, h)
 
-		// 优惠码管理
-		registerPromoCodeRoutes(admin, h)
-
 		// 系统设置
 		registerSettingsRoutes(admin, h)
 
@@ -64,6 +61,9 @@ func RegisterAdminRoutes(
 
 		// 用户属性管理
 		registerUserAttributeRoutes(admin, h)
+
+		// 代理（Agent）管理
+		registerAgentRoutes(admin, h)
 	}
 }
 
@@ -288,18 +288,6 @@ func registerRedeemCodeRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	}
 }
 
-func registerPromoCodeRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
-	promoCodes := admin.Group("/promo-codes")
-	{
-		promoCodes.GET("", h.Admin.Promo.List)
-		promoCodes.GET("/:id", h.Admin.Promo.GetByID)
-		promoCodes.POST("", h.Admin.Promo.Create)
-		promoCodes.PUT("/:id", h.Admin.Promo.Update)
-		promoCodes.DELETE("/:id", h.Admin.Promo.Delete)
-		promoCodes.GET("/:id/usages", h.Admin.Promo.GetUsages)
-	}
-}
-
 func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	adminSettings := admin.Group("/settings")
 	{
@@ -369,5 +357,16 @@ func registerUserAttributeRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		attrs.PUT("/reorder", h.Admin.UserAttribute.ReorderDefinitions)
 		attrs.PUT("/:id", h.Admin.UserAttribute.UpdateDefinition)
 		attrs.DELETE("/:id", h.Admin.UserAttribute.DeleteDefinition)
+	}
+}
+
+func registerAgentRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	agents := admin.Group("/agents")
+	{
+		agents.GET("", h.Admin.Agent.List)
+		agents.GET("/:id", h.Admin.Agent.GetByID)
+		agents.PATCH("/:id/status", h.Admin.Agent.SetAgentStatus)
+		agents.GET("/:id/downline", h.Admin.Agent.GetDownline)
+		agents.GET("/:id/invite-stats", h.Admin.Agent.GetInviteStats)
 	}
 }
