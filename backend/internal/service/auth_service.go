@@ -32,6 +32,7 @@ var (
 	ErrInviteCodeInvalid   = infraerrors.BadRequest("INVITE_CODE_INVALID", "invite code is invalid")
 	ErrInviteCodeFormat    = infraerrors.BadRequest("INVITE_CODE_INVALID_FORMAT", "invite code must be 16 hex characters")
 	ErrRegDisabled         = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
+	ErrDisposableEmail     = infraerrors.BadRequest("DISPOSABLE_EMAIL", "disposable/temporary email addresses are not allowed")
 	ErrServiceUnavailable  = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
 )
 
@@ -107,6 +108,11 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 	// 防止用户注册 LinuxDo OAuth 合成邮箱，避免第三方登录与本地账号发生碰撞。
 	if isReservedEmail(email) {
 		return "", nil, ErrEmailReserved
+	}
+
+	// 防止临时邮箱注册
+	if isDisposableEmail(email) {
+		return "", nil, ErrDisposableEmail
 	}
 
 	// 检查是否需要邮件验证
@@ -264,6 +270,10 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email string) error {
 		return ErrEmailReserved
 	}
 
+	if isDisposableEmail(email) {
+		return ErrDisposableEmail
+	}
+
 	// 检查邮箱是否已存在
 	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
@@ -300,6 +310,10 @@ func (s *AuthService) SendVerifyCodeAsync(ctx context.Context, email string) (*S
 
 	if isReservedEmail(email) {
 		return nil, ErrEmailReserved
+	}
+
+	if isDisposableEmail(email) {
+		return nil, ErrDisposableEmail
 	}
 
 	// 检查邮箱是否已存在
@@ -586,6 +600,50 @@ func randomHexString(byteLength int) (string, error) {
 func isReservedEmail(email string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(email))
 	return strings.HasSuffix(normalized, LinuxDoConnectSyntheticEmailDomain)
+}
+
+// disposableEmailDomains 临时邮箱域名黑名单
+var disposableEmailDomains = map[string]bool{
+	// 常见临时邮箱服务
+	"10minutemail.com": true, "10minutemail.net": true, "10minmail.com": true,
+	"guerrillamail.com": true, "guerrillamail.net": true, "guerrillamail.org": true,
+	"guerrillamailblock.com": true, "sharklasers.com": true, "grr.la": true,
+	"tempmail.com": true, "temp-mail.org": true, "temp-mail.io": true,
+	"mailinator.com": true, "mailinator.net": true, "mailinator2.com": true,
+	"throwaway.email": true, "throwawaymail.com": true,
+	"fakeinbox.com": true, "fakemailgenerator.com": true,
+	"getnada.com": true, "nada.email": true,
+	"mohmal.com": true, "dispostable.com": true,
+	"mailnesia.com": true, "maildrop.cc": true,
+	"yopmail.com": true, "yopmail.fr": true, "yopmail.net": true,
+	"tempail.com": true, "tempr.email": true,
+	"discard.email": true, "discardmail.com": true,
+	"spamgourmet.com": true, "trashmail.com": true, "trashmail.net": true,
+	"mailcatch.com": true, "mytrashmail.com": true,
+	"getairmail.com": true, "airmail.cc": true,
+	"emailondeck.com": true, "anonymbox.com": true,
+	"mintemail.com": true, "tempinbox.com": true,
+	"burnermail.io": true, "mailsac.com": true,
+	"inboxalias.com": true, "33mail.com": true,
+	"spamex.com": true, "spam4.me": true,
+	"jetable.org": true, "mailexpire.com": true,
+	"tempmailo.com": true, "emailfake.com": true,
+	"crazymailing.com": true, "tempsky.com": true,
+	"fakemailgenerator.net": true, "emailtemporar.ro": true,
+	"mohmal.im": true, "emailnax.com": true,
+	"tmpmail.org": true, "tmpmail.net": true,
+	"1secmail.com": true, "1secmail.org": true, "1secmail.net": true,
+}
+
+// isDisposableEmail 检查是否是临时邮箱
+func isDisposableEmail(email string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	parts := strings.Split(normalized, "@")
+	if len(parts) != 2 {
+		return false
+	}
+	domain := parts[1]
+	return disposableEmailDomains[domain]
 }
 
 // GenerateToken 生成JWT token
