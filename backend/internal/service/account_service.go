@@ -38,6 +38,8 @@ type AccountRepository interface {
 	BatchUpdateLastUsed(ctx context.Context, updates map[int64]time.Time) error
 	SetError(ctx context.Context, id int64, errorMsg string) error
 	ClearError(ctx context.Context, id int64) error
+	// BatchClearErrors 批量清除所有 error 状态的账号，将其重置为 active
+	BatchClearErrors(ctx context.Context) (int64, error)
 	SetSchedulable(ctx context.Context, id int64, schedulable bool) error
 	AutoPauseExpiredAccounts(ctx context.Context, now time.Time) (int64, error)
 	BindGroups(ctx context.Context, accountID int64, groupIDs []int64) error

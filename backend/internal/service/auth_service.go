@@ -111,7 +111,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 	}
 
 	// 防止临时邮箱注册
-	if isDisposableEmail(email) {
+	if IsDisposableEmail(email) {
 		return "", nil, ErrDisposableEmail
 	}
 
@@ -270,7 +270,7 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email string) error {
 		return ErrEmailReserved
 	}
 
-	if isDisposableEmail(email) {
+	if IsDisposableEmail(email) {
 		return ErrDisposableEmail
 	}
 
@@ -312,7 +312,7 @@ func (s *AuthService) SendVerifyCodeAsync(ctx context.Context, email string) (*S
 		return nil, ErrEmailReserved
 	}
 
-	if isDisposableEmail(email) {
+	if IsDisposableEmail(email) {
 		return nil, ErrDisposableEmail
 	}
 
@@ -633,17 +633,46 @@ var disposableEmailDomains = map[string]bool{
 	"mohmal.im": true, "emailnax.com": true,
 	"tmpmail.org": true, "tmpmail.net": true,
 	"1secmail.com": true, "1secmail.org": true, "1secmail.net": true,
+	// 邮箱转发/别名服务（允许创建无限子邮箱）
+	"2925.com": true, "anonaddy.com": true, "simplelogin.io": true,
+	"firefox.com": true, "relay.firefox.com": true,
+	"duck.com": true, "duckduckgo.com": true,
+	"fastmail.com": true, "pobox.com": true,
+	"sneakemail.com": true, "spamcop.net": true,
+	"mailforspam.com": true, "rmqkr.net": true,
+	"emailproxsy.com": true, "guerrillamail.biz": true,
+	"guerrillamail.de": true, "guerrillamail.info": true,
+	"spam.la": true, "spamherelots.com": true,
+	"spamobox.com": true, "tempmailaddress.com": true,
+	"wegwerfmail.de": true, "wegwerfmail.net": true,
+	"wegwerfmail.org": true, "wh4f.org": true,
+	// 新发现的临时邮箱域名
+	"deepyinc.com": true, "virgilian.com": true,
 }
 
-// isDisposableEmail 检查是否是临时邮箱
-func isDisposableEmail(email string) bool {
+// IsDisposableEmail 检查是否是临时邮箱（导出供 handler 层使用）
+func IsDisposableEmail(email string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(email))
 	parts := strings.Split(normalized, "@")
 	if len(parts) != 2 {
 		return false
 	}
 	domain := parts[1]
-	return disposableEmailDomains[domain]
+
+	// 1. 精确匹配
+	if disposableEmailDomains[domain] {
+		return true
+	}
+
+	// 2. 子域名匹配：检查是否为黑名单域名的子域名
+	// 例如：ynhololens.33mail.com 是 33mail.com 的子域名
+	for blockedDomain := range disposableEmailDomains {
+		if strings.HasSuffix(domain, "."+blockedDomain) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GenerateToken 生成JWT token

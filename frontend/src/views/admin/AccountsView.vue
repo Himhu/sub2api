@@ -15,6 +15,7 @@
             @refresh="load"
             @sync="showSync = true"
             @create="showCreate = true"
+            @batch-clear-error="handleBatchClearError"
           >
             <template #after>
               <!-- Auto Refresh Dropdown -->
@@ -642,6 +643,15 @@ const handleReAuth = (a: Account) => { reAuthAcc.value = a; showReAuth.value = t
 const handleRefresh = async (a: Account) => { try { await adminAPI.accounts.refreshCredentials(a.id); load() } catch (error) { console.error('Failed to refresh credentials:', error) } }
 const handleResetStatus = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() } catch (error) { console.error('Failed to reset status:', error) } }
 const handleClearRateLimit = async (a: Account) => { try { await adminAPI.accounts.clearRateLimit(a.id); appStore.showSuccess(t('common.success')); load() } catch (error) { console.error('Failed to clear rate limit:', error) } }
+const handleBatchClearError = async () => {
+  try {
+    const result = await adminAPI.accounts.batchClearError()
+    appStore.showSuccess(t('admin.accounts.batchClearErrorSuccess', { count: result.affected }))
+    load()
+  } catch (error) {
+    console.error('Failed to batch clear error:', error)
+  }
+}
 const handleDelete = (a: Account) => { deletingAcc.value = a; showDeleteDialog.value = true }
 const confirmDelete = async () => { if(!deletingAcc.value) return; try { await adminAPI.accounts.delete(deletingAcc.value.id); showDeleteDialog.value = false; deletingAcc.value = null; reload() } catch (error) { console.error('Failed to delete account:', error) } }
 const handleToggleSchedulable = async (a: Account) => {

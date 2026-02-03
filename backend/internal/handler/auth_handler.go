@@ -87,6 +87,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		}
 	}
 
+	// 防止临时邮箱注册（在邀请码检查之前）
+	if service.IsDisposableEmail(req.Email) {
+		response.ErrorFrom(c, service.ErrDisposableEmail)
+		return
+	}
+
 	// 邀请注册启用时，邀请码必填
 	if h.settingSvc != nil && h.settingSvc.IsInviteRegistrationEnabled(c.Request.Context()) {
 		if req.PromoCode == "" {

@@ -150,6 +150,17 @@ export async function clearError(id: number): Promise<Account> {
 }
 
 /**
+ * Batch clear all error status accounts
+ * @returns Number of affected accounts
+ */
+export async function batchClearError(): Promise<{ affected: number; message: string }> {
+  const { data } = await apiClient.post<{ affected: number; message: string }>(
+    `/admin/accounts/batch-clear-error`
+  )
+  return data
+}
+
+/**
  * Get account usage information (5h/7d window)
  * @param id - Account ID
  * @returns Account usage info
@@ -358,6 +369,7 @@ export const accountsAPI = {
   refreshCredentials,
   getStats,
   clearError,
+  batchClearError,
   getUsage,
   getTodayStats,
   clearRateLimit,

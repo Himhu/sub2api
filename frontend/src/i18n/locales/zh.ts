@@ -1288,6 +1288,8 @@ export default {
       refreshInterval30s: '30 秒',
       autoRefreshCountdown: '自动刷新：{seconds}s',
       syncFromCrs: '从 CRS 同步',
+      batchClearError: '批量清除错误',
+      batchClearErrorSuccess: '已清除 {count} 个账号的错误状态',
       syncFromCrsTitle: '从 CRS 同步账号',
       syncFromCrsDesc:
         '将 claude-relay-service（CRS）中的账号同步到当前系统（不会在浏览器侧直接请求 CRS）。',

@@ -1214,6 +1214,8 @@ export default {
       refreshInterval30s: '30 seconds',
       autoRefreshCountdown: 'Auto refresh: {seconds}s',
       syncFromCrs: 'Sync from CRS',
+      batchClearError: 'Batch Clear Errors',
+      batchClearErrorSuccess: 'Cleared error status for {count} accounts',
       syncFromCrsTitle: 'Sync Accounts from CRS',
       syncFromCrsDesc:
         'Sync accounts from claude-relay-service (CRS) into this system (CRS is called server-to-server).',

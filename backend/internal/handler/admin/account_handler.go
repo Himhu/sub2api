@@ -685,6 +685,21 @@ func (h *AccountHandler) ClearError(c *gin.Context) {
 	response.Success(c, dto.AccountFromService(account))
 }
 
+// BatchClearError handles batch clearing error status for all error accounts
+// POST /api/v1/admin/accounts/batch-clear-error
+func (h *AccountHandler) BatchClearError(c *gin.Context) {
+	affected, err := h.adminService.BatchClearAccountErrors(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, map[string]interface{}{
+		"affected": affected,
+		"message":  "Successfully cleared error status",
+	})
+}
+
 // BatchCreate handles batch creating accounts
 // POST /api/v1/admin/accounts/batch
 func (h *AccountHandler) BatchCreate(c *gin.Context) {

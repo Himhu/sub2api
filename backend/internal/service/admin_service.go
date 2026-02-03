@@ -42,6 +42,7 @@ type AdminService interface {
 	DeleteAccount(ctx context.Context, id int64) error
 	RefreshAccountCredentials(ctx context.Context, id int64) (*Account, error)
 	ClearAccountError(ctx context.Context, id int64) (*Account, error)
+	BatchClearAccountErrors(ctx context.Context) (int64, error) // 批量清除所有error状态账号
 	SetAccountError(ctx context.Context, id int64, errorMsg string) error
 	SetAccountSchedulable(ctx context.Context, id int64, schedulable bool) (*Account, error)
 	BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error)
@@ -1108,6 +1109,11 @@ func (s *adminServiceImpl) ClearAccountError(ctx context.Context, id int64) (*Ac
 		return nil, err
 	}
 	return account, nil
+}
+
+// BatchClearAccountErrors 批量清除所有error状态的账号，将其重置为active
+func (s *adminServiceImpl) BatchClearAccountErrors(ctx context.Context) (int64, error) {
+	return s.accountRepo.BatchClearErrors(ctx)
 }
 
 func (s *adminServiceImpl) SetAccountError(ctx context.Context, id int64, errorMsg string) error {

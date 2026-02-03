@@ -584,6 +584,22 @@ func (r *accountRepository) ClearError(ctx context.Context, id int64) error {
 	return err
 }
 
+// BatchClearErrors 批量清除所有error状态的账号，将其重置为active
+func (r *accountRepository) BatchClearErrors(ctx context.Context) (int64, error) {
+	affected, err := r.client.Account.Update().
+		Where(
+			dbaccount.StatusEQ(service.StatusError),
+			dbaccount.DeletedAtIsNil(),
+		).
+		SetStatus(service.StatusActive).
+		SetErrorMessage("").
+		Save(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return int64(affected), nil
+}
+
 func (r *accountRepository) AddToGroup(ctx context.Context, accountID, groupID int64, priority int) error {
 	_, err := r.client.AccountGroup.Create().
 		SetAccountID(accountID).
