@@ -259,8 +259,21 @@
             :key="def.id"
             #[`cell-attr_${def.id}`]="{ row }"
           >
-            <div class="max-w-xs">
+            <div class="max-w-[120px]">
+              <!-- URL type: clickable link with truncated display -->
+              <a
+                v-if="def.type === 'url' && getAttributeValue(row.id, def.id) !== '-'"
+                :href="getAttributeValue(row.id, def.id)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block truncate text-sm text-primary-600 hover:text-primary-700 hover:underline dark:text-primary-400"
+                :title="getAttributeValue(row.id, def.id)"
+              >
+                {{ formatUrlDisplay(getAttributeValue(row.id, def.id)) }}
+              </a>
+              <!-- Other types: plain text -->
               <span
+                v-else
                 class="block truncate text-sm text-gray-700 dark:text-gray-300"
                 :title="getAttributeValue(row.id, def.id)"
               >
@@ -570,18 +583,37 @@ const getAttributeValue = (userId: number, attrId: number): string => {
   return value
 }
 
+// Format URL for display (truncate to show domain + short path)
+const formatUrlDisplay = (url: string): string => {
+  if (!url || url === '-') return '-'
+  try {
+    const urlObj = new URL(url)
+    const domain = urlObj.hostname.replace('www.', '')
+    // Show domain + truncated path
+    const path = urlObj.pathname
+    if (path && path !== '/') {
+      const shortPath = path.length > 10 ? path.substring(0, 10) + '...' : path
+      return domain + shortPath
+    }
+    return domain
+  } catch {
+    // If not a valid URL, just truncate
+    return url.length > 20 ? url.substring(0, 17) + '...' : url
+  }
+}
+
 // All possible columns (for column settings)
 const allColumns = computed<Column[]>(() => [
   { key: 'email', label: t('admin.users.columns.user'), sortable: true },
   { key: 'id', label: 'ID', sortable: true },
   { key: 'username', label: t('admin.users.columns.username'), sortable: true },
   { key: 'notes', label: t('admin.users.columns.notes'), sortable: false },
-  // Dynamic attribute columns
-  ...attributeColumns.value,
   { key: 'role', label: t('admin.users.columns.role'), sortable: true },
   { key: 'subscriptions', label: t('admin.users.columns.subscriptions'), sortable: false },
   { key: 'balance', label: t('admin.users.columns.balance'), sortable: true },
   { key: 'usage', label: t('admin.users.columns.usage'), sortable: false },
+  // Dynamic attribute columns (WeChat, QQ, Purchase Link, etc.)
+  ...attributeColumns.value,
   { key: 'concurrency', label: t('admin.users.columns.concurrency'), sortable: true },
   { key: 'status', label: t('admin.users.columns.status'), sortable: true },
   { key: 'created_at', label: t('admin.users.columns.created'), sortable: true },
