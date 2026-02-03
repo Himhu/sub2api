@@ -362,6 +362,8 @@ export interface Group {
   // Claude Code 客户端限制
   claude_code_only: boolean
   fallback_group_id: number | null
+  // 新人专属分组（仅对未使用过兑换码的用户可见）
+  is_newbie_only: boolean
   created_at: string
   updated_at: string
 }
@@ -430,6 +432,7 @@ export interface CreateGroupRequest {
   image_price_4k?: number | null
   claude_code_only?: boolean
   fallback_group_id?: number | null
+  is_newbie_only?: boolean
 }
 
 export interface UpdateGroupRequest {
@@ -448,6 +451,7 @@ export interface UpdateGroupRequest {
   image_price_4k?: number | null
   claude_code_only?: boolean
   fallback_group_id?: number | null
+  is_newbie_only?: boolean
 }
 
 // ==================== Account & Proxy Types ====================

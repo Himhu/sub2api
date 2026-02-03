@@ -43,6 +43,8 @@ type CreateGroupRequest struct {
 	// 模型路由配置（仅 anthropic 平台使用）
 	ModelRouting        map[string][]int64 `json:"model_routing"`
 	ModelRoutingEnabled bool               `json:"model_routing_enabled"`
+	// 新人专属分组
+	IsNewbieOnly bool `json:"is_newbie_only"`
 }
 
 // UpdateGroupRequest represents update group request
@@ -66,6 +68,8 @@ type UpdateGroupRequest struct {
 	// 模型路由配置（仅 anthropic 平台使用）
 	ModelRouting        map[string][]int64 `json:"model_routing"`
 	ModelRoutingEnabled *bool              `json:"model_routing_enabled"`
+	// 新人专属分组
+	IsNewbieOnly *bool `json:"is_newbie_only"`
 }
 
 // List handles listing all groups with pagination
@@ -171,6 +175,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		FallbackGroupID:     req.FallbackGroupID,
 		ModelRouting:        req.ModelRouting,
 		ModelRoutingEnabled: req.ModelRoutingEnabled,
+		IsNewbieOnly:        req.IsNewbieOnly,
 	})
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -213,6 +218,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		FallbackGroupID:     req.FallbackGroupID,
 		ModelRouting:        req.ModelRouting,
 		ModelRoutingEnabled: req.ModelRoutingEnabled,
+		IsNewbieOnly:        req.IsNewbieOnly,
 	})
 	if err != nil {
 		response.ErrorFrom(c, err)

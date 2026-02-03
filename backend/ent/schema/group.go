@@ -106,6 +106,11 @@ func (Group) Fields() []ent.Field {
 		field.Bool("model_routing_enabled").
 			Default(false).
 			Comment("是否启用模型路由配置"),
+
+		// 新人专属分组 (added by migration 047)
+		field.Bool("is_newbie_only").
+			Default(false).
+			Comment("是否仅对未使用过兑换码的新用户可见"),
 	}
 }
 

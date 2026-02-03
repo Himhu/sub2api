@@ -1000,6 +1000,7 @@ const loadGroups = async () => {
     groups.value = await userGroupsAPI.getAvailable()
   } catch (error) {
     console.error('Failed to load groups:', error)
+    appStore.showError(t('keys.failedToLoadGroups'))
   }
 }
 

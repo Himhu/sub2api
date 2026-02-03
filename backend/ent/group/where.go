@@ -155,6 +155,11 @@ func ModelRoutingEnabled(v bool) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldModelRoutingEnabled, v))
 }
 
+// IsNewbieOnly applies equality check predicate on the "is_newbie_only" field. It's identical to IsNewbieOnlyEQ.
+func IsNewbieOnly(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldIsNewbieOnly, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -1088,6 +1093,16 @@ func ModelRoutingEnabledEQ(v bool) predicate.Group {
 // ModelRoutingEnabledNEQ applies the NEQ predicate on the "model_routing_enabled" field.
 func ModelRoutingEnabledNEQ(v bool) predicate.Group {
 	return predicate.Group(sql.FieldNEQ(FieldModelRoutingEnabled, v))
+}
+
+// IsNewbieOnlyEQ applies the EQ predicate on the "is_newbie_only" field.
+func IsNewbieOnlyEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldIsNewbieOnly, v))
+}
+
+// IsNewbieOnlyNEQ applies the NEQ predicate on the "is_newbie_only" field.
+func IsNewbieOnlyNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldIsNewbieOnly, v))
 }
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

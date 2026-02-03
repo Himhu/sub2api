@@ -972,6 +972,11 @@ export default {
       upgradeToAgentSuccess: '用户已成功升级为代理',
       upgradeToAgentFailed: '升级代理失败',
       alreadyAgent: '该用户已经是代理',
+      revokeAgent: '取消代理资格',
+      revokeAgentConfirm: '确定要取消用户 {email} 的代理资格吗？',
+      revokeAgentSuccess: '已成功取消代理资格',
+      revokeAgentFailed: '取消代理资格失败',
+      notAgent: '该用户不是代理',
       depositAmount: '充值金额',
       withdrawAmount: '退款金额',
       withdrawAll: '全部',
@@ -1181,6 +1186,12 @@ export default {
         fallbackGroup: '降级分组',
         fallbackHint: '非 Claude Code 请求将使用此分组，留空则直接拒绝',
         noFallback: '不降级（直接拒绝）'
+      },
+      newbieOnly: {
+        title: '新人专属分组',
+        tooltip: '启用后，此分组仅对未使用过兑换码的新用户可见。已使用过兑换码的用户将无法看到此分组。',
+        enabled: '仅限新用户',
+        disabled: '所有用户可见'
       },
       modelRouting: {
         title: '模型路由配置',

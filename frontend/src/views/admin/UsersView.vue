@@ -481,6 +481,18 @@
                 {{ t('admin.users.upgradeToAgent') }}
               </button>
 
+              <!-- Revoke Agent (only for agents) -->
+              <button
+                v-if="user.is_agent"
+                @click="handleRevokeAgent(user); closeActionMenu()"
+                class="flex w-full items-center gap-2 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                </svg>
+                {{ t('admin.users.revokeAgent') }}
+              </button>
+
               <div class="my-1 border-t border-gray-100 dark:border-dark-700"></div>
 
               <!-- Delete (not for admin) -->
@@ -1125,7 +1137,7 @@ const closeBalanceModal = () => {
 // 升级用户为代理
 const handleUpgradeToAgent = async (user: AdminUser) => {
   if (user.is_agent) {
-    appStore.showToast('warning', t('admin.users.alreadyAgent'))
+    appStore.showWarning(t('admin.users.alreadyAgent'))
     return
   }
 
@@ -1134,11 +1146,31 @@ const handleUpgradeToAgent = async (user: AdminUser) => {
 
   try {
     await adminAPI.agents.setAgentStatus(user.id, { is_agent: true })
-    appStore.showToast('success', t('admin.users.upgradeToAgentSuccess'))
+    appStore.showSuccess(t('admin.users.upgradeToAgentSuccess'))
     loadUsers()
   } catch (error) {
     console.error('Failed to upgrade user to agent:', error)
-    appStore.showToast('error', t('admin.users.upgradeToAgentFailed'))
+    appStore.showError(t('admin.users.upgradeToAgentFailed'))
+  }
+}
+
+// 取消用户代理资格
+const handleRevokeAgent = async (user: AdminUser) => {
+  if (!user.is_agent) {
+    appStore.showWarning(t('admin.users.notAgent'))
+    return
+  }
+
+  const confirmed = window.confirm(t('admin.users.revokeAgentConfirm', { email: user.email }))
+  if (!confirmed) return
+
+  try {
+    await adminAPI.agents.setAgentStatus(user.id, { is_agent: false })
+    appStore.showSuccess(t('admin.users.revokeAgentSuccess'))
+    loadUsers()
+  } catch (error) {
+    console.error('Failed to revoke agent status:', error)
+    appStore.showError(t('admin.users.revokeAgentFailed'))
   }
 }
 

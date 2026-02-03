@@ -918,6 +918,11 @@ export default {
       upgradeToAgentSuccess: 'User has been upgraded to agent successfully',
       upgradeToAgentFailed: 'Failed to upgrade to agent',
       alreadyAgent: 'This user is already an agent',
+      revokeAgent: 'Revoke Agent Status',
+      revokeAgentConfirm: 'Are you sure you want to revoke agent status for user {email}?',
+      revokeAgentSuccess: 'Agent status has been revoked successfully',
+      revokeAgentFailed: 'Failed to revoke agent status',
+      notAgent: 'This user is not an agent',
       depositAmount: 'Deposit Amount',
       withdrawAmount: 'Withdraw Amount',
       withdrawAll: 'All',
@@ -1106,6 +1111,12 @@ export default {
         fallbackGroup: 'Fallback Group',
         fallbackHint: 'Non-Claude Code requests will use this group. Leave empty to reject directly.',
         noFallback: 'No Fallback (Reject)'
+      },
+      newbieOnly: {
+        title: 'Newbie Only Group',
+        tooltip: 'When enabled, this group is only visible to new users who have not used any redeem codes. Users who have redeemed codes will not see this group.',
+        enabled: 'Newbie Only',
+        disabled: 'Visible to All'
       },
       modelRouting: {
         title: 'Model Routing',

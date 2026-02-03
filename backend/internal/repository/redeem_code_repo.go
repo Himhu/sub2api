@@ -237,3 +237,19 @@ func redeemCodeEntitiesToService(models []*dbent.RedeemCode) []service.RedeemCod
 	}
 	return out
 }
+
+// HasUsedByUser 检查用户是否使用过兑换码（排除管理员操作类型）
+// 以 used_at 非空作为"实际已使用"的判定，避免 status 被手动过期后误判。
+func (r *redeemCodeRepository) HasUsedByUser(ctx context.Context, userID int64) (bool, error) {
+	return r.client.RedeemCode.Query().
+		Where(
+			redeemcode.UsedByEQ(userID),
+			redeemcode.UsedAtNotNil(),
+			redeemcode.TypeIn(
+				service.RedeemTypeBalance,
+				service.RedeemTypeConcurrency,
+				service.RedeemTypeSubscription,
+			),
+		).
+		Exist(ctx)
+}

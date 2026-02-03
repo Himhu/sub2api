@@ -306,6 +306,20 @@ func (_c *GroupCreate) SetNillableModelRoutingEnabled(v *bool) *GroupCreate {
 	return _c
 }
 
+// SetIsNewbieOnly sets the "is_newbie_only" field.
+func (_c *GroupCreate) SetIsNewbieOnly(v bool) *GroupCreate {
+	_c.mutation.SetIsNewbieOnly(v)
+	return _c
+}
+
+// SetNillableIsNewbieOnly sets the "is_newbie_only" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableIsNewbieOnly(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetIsNewbieOnly(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -479,6 +493,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultModelRoutingEnabled
 		_c.mutation.SetModelRoutingEnabled(v)
 	}
+	if _, ok := _c.mutation.IsNewbieOnly(); !ok {
+		v := group.DefaultIsNewbieOnly
+		_c.mutation.SetIsNewbieOnly(v)
+	}
 	return nil
 }
 
@@ -536,6 +554,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.ModelRoutingEnabled(); !ok {
 		return &ValidationError{Name: "model_routing_enabled", err: errors.New(`ent: missing required field "Group.model_routing_enabled"`)}
+	}
+	if _, ok := _c.mutation.IsNewbieOnly(); !ok {
+		return &ValidationError{Name: "is_newbie_only", err: errors.New(`ent: missing required field "Group.is_newbie_only"`)}
 	}
 	return nil
 }
@@ -647,6 +668,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ModelRoutingEnabled(); ok {
 		_spec.SetField(group.FieldModelRoutingEnabled, field.TypeBool, value)
 		_node.ModelRoutingEnabled = value
+	}
+	if value, ok := _c.mutation.IsNewbieOnly(); ok {
+		_spec.SetField(group.FieldIsNewbieOnly, field.TypeBool, value)
+		_node.IsNewbieOnly = value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1158,6 +1183,18 @@ func (u *GroupUpsert) UpdateModelRoutingEnabled() *GroupUpsert {
 	return u
 }
 
+// SetIsNewbieOnly sets the "is_newbie_only" field.
+func (u *GroupUpsert) SetIsNewbieOnly(v bool) *GroupUpsert {
+	u.Set(group.FieldIsNewbieOnly, v)
+	return u
+}
+
+// UpdateIsNewbieOnly sets the "is_newbie_only" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateIsNewbieOnly() *GroupUpsert {
+	u.SetExcluded(group.FieldIsNewbieOnly)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -1613,6 +1650,20 @@ func (u *GroupUpsertOne) SetModelRoutingEnabled(v bool) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateModelRoutingEnabled() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateModelRoutingEnabled()
+	})
+}
+
+// SetIsNewbieOnly sets the "is_newbie_only" field.
+func (u *GroupUpsertOne) SetIsNewbieOnly(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetIsNewbieOnly(v)
+	})
+}
+
+// UpdateIsNewbieOnly sets the "is_newbie_only" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateIsNewbieOnly() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateIsNewbieOnly()
 	})
 }
 
@@ -2237,6 +2288,20 @@ func (u *GroupUpsertBulk) SetModelRoutingEnabled(v bool) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateModelRoutingEnabled() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateModelRoutingEnabled()
+	})
+}
+
+// SetIsNewbieOnly sets the "is_newbie_only" field.
+func (u *GroupUpsertBulk) SetIsNewbieOnly(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetIsNewbieOnly(v)
+	})
+}
+
+// UpdateIsNewbieOnly sets the "is_newbie_only" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateIsNewbieOnly() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateIsNewbieOnly()
 	})
 }
 

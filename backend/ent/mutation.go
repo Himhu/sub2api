@@ -5535,6 +5535,7 @@ type GroupMutation struct {
 	addfallback_group_id     *int64
 	model_routing            *map[string][]int64
 	model_routing_enabled    *bool
+	is_newbie_only           *bool
 	clearedFields            map[string]struct{}
 	api_keys                 map[int64]struct{}
 	removedapi_keys          map[int64]struct{}
@@ -6730,6 +6731,42 @@ func (m *GroupMutation) ResetModelRoutingEnabled() {
 	m.model_routing_enabled = nil
 }
 
+// SetIsNewbieOnly sets the "is_newbie_only" field.
+func (m *GroupMutation) SetIsNewbieOnly(b bool) {
+	m.is_newbie_only = &b
+}
+
+// IsNewbieOnly returns the value of the "is_newbie_only" field in the mutation.
+func (m *GroupMutation) IsNewbieOnly() (r bool, exists bool) {
+	v := m.is_newbie_only
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsNewbieOnly returns the old "is_newbie_only" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldIsNewbieOnly(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsNewbieOnly is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsNewbieOnly requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsNewbieOnly: %w", err)
+	}
+	return oldValue.IsNewbieOnly, nil
+}
+
+// ResetIsNewbieOnly resets all changes to the "is_newbie_only" field.
+func (m *GroupMutation) ResetIsNewbieOnly() {
+	m.is_newbie_only = nil
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -7088,7 +7125,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -7152,6 +7189,9 @@ func (m *GroupMutation) Fields() []string {
 	if m.model_routing_enabled != nil {
 		fields = append(fields, group.FieldModelRoutingEnabled)
 	}
+	if m.is_newbie_only != nil {
+		fields = append(fields, group.FieldIsNewbieOnly)
+	}
 	return fields
 }
 
@@ -7202,6 +7242,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelRouting()
 	case group.FieldModelRoutingEnabled:
 		return m.ModelRoutingEnabled()
+	case group.FieldIsNewbieOnly:
+		return m.IsNewbieOnly()
 	}
 	return nil, false
 }
@@ -7253,6 +7295,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldModelRouting(ctx)
 	case group.FieldModelRoutingEnabled:
 		return m.OldModelRoutingEnabled(ctx)
+	case group.FieldIsNewbieOnly:
+		return m.OldIsNewbieOnly(ctx)
 	}
 	return nil, fmt.Errorf("unknown Group field %s", name)
 }
@@ -7408,6 +7452,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModelRoutingEnabled(v)
+		return nil
+	case group.FieldIsNewbieOnly:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsNewbieOnly(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Group field %s", name)
@@ -7694,6 +7745,9 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldModelRoutingEnabled:
 		m.ResetModelRoutingEnabled()
+		return nil
+	case group.FieldIsNewbieOnly:
+		m.ResetIsNewbieOnly()
 		return nil
 	}
 	return fmt.Errorf("unknown Group field %s", name)
@@ -16404,7 +16458,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 8)
 	if m.api_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -16490,7 +16544,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 8)
 	if m.removedapi_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -16576,7 +16630,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 8)
 	if m.clearedapi_keys {
 		edges = append(edges, user.EdgeAPIKeys)
 	}

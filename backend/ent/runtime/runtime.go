@@ -335,6 +335,10 @@ func init() {
 	groupDescModelRoutingEnabled := groupFields[17].Descriptor()
 	// group.DefaultModelRoutingEnabled holds the default value on creation for the model_routing_enabled field.
 	group.DefaultModelRoutingEnabled = groupDescModelRoutingEnabled.Default.(bool)
+	// groupDescIsNewbieOnly is the schema descriptor for is_newbie_only field.
+	groupDescIsNewbieOnly := groupFields[18].Descriptor()
+	// group.DefaultIsNewbieOnly holds the default value on creation for the is_newbie_only field.
+	group.DefaultIsNewbieOnly = groupDescIsNewbieOnly.Default.(bool)
 	proxyMixin := schema.Proxy{}.Mixin()
 	proxyMixinHooks1 := proxyMixin[1].Hooks()
 	proxy.Hooks[0] = proxyMixinHooks1[0]

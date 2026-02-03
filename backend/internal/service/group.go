@@ -36,6 +36,9 @@ type Group struct {
 	ModelRouting        map[string][]int64
 	ModelRoutingEnabled bool
 
+	// 新人专属分组
+	IsNewbieOnly bool
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
