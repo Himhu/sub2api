@@ -693,7 +693,7 @@ export default {
     contactAdmin: '请联系管理员申请成为代理',
     noInviteCode: '暂无邀请码',
     generateCode: '生成邀请码',
-    credits: '积分'
+    credits: '余额'
   },
 
   // Agent Center
