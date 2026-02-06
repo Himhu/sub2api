@@ -586,8 +586,31 @@ func (r *accountRepository) ClearError(ctx context.Context, id int64) error {
 
 // BatchClearErrors 批量清除所有error状态的账号，将其重置为active
 func (r *accountRepository) BatchClearErrors(ctx context.Context) (int64, error) {
+	// 1. 先查询所有 error 状态的账户 ID
+	accounts, err := r.client.Account.Query().
+		Where(
+			dbaccount.StatusEQ(service.StatusError),
+			dbaccount.DeletedAtIsNil(),
+		).
+		Select(dbaccount.FieldID).
+		All(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(accounts) == 0 {
+		return 0, nil
+	}
+
+	// 2. 提取 ID 列表
+	accountIDs := make([]int64, 0, len(accounts))
+	for i := range accounts {
+		accountIDs = append(accountIDs, accounts[i].ID)
+	}
+
+	// 3. 批量更新 (包含 StatusEQ 防止竞态条件)
 	affected, err := r.client.Account.Update().
 		Where(
+			dbaccount.IDIn(accountIDs...),
 			dbaccount.StatusEQ(service.StatusError),
 			dbaccount.DeletedAtIsNil(),
 		).
@@ -597,6 +620,20 @@ func (r *accountRepository) BatchClearErrors(ctx context.Context) (int64, error)
 	if err != nil {
 		return 0, err
 	}
+
+	// 4. 触发调度器批量事件
+	payload := map[string]any{"account_ids": accountIDs}
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountBulkChanged, nil, nil, payload); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue batch clear error failed: err=%v", err)
+	}
+
+	// 5. 小批量时同步缓存快照，大批量依赖 bulk 事件
+	if len(accountIDs) <= 100 {
+		for _, accountID := range accountIDs {
+			r.syncSchedulerAccountSnapshot(ctx, accountID)
+		}
+	}
+
 	return int64(affected), nil
 }
 
