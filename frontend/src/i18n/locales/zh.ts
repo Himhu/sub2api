@@ -224,6 +224,7 @@ export default {
     contactAgent: '点击联系',
     agentContact: '代理联系方式',
     noAgentAssigned: '暂无分配代理',
+    noContactInfo: '暂无联系方式',
     clickToOpen: '点击打开',
     add: '添加',
     invalidEmail: '请输入有效的邮箱地址',

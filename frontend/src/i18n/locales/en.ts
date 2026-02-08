@@ -224,6 +224,7 @@ export default {
     contactAgent: 'Contact Agent',
     agentContact: 'Agent Contact',
     noAgentAssigned: 'No agent assigned',
+    noContactInfo: 'No contact info available',
     clickToOpen: 'Click to open',
     add: 'Add',
     invalidEmail: 'Please enter a valid email address',

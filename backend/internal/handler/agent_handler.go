@@ -149,7 +149,12 @@ func (h *AgentHandler) GetMyAgentContact(c *gin.Context) {
 	var contactUserID int64
 	var isAgent bool
 
-	if user.BelongAgentID != nil && *user.BelongAgentID != 0 {
+	if user.IsAgent {
+		// Agent views their own contact info
+		contactUser = user
+		contactUserID = user.ID
+		isAgent = true
+	} else if user.BelongAgentID != nil && *user.BelongAgentID != 0 {
 		// User has an assigned agent; validate before using.
 		agent, err := h.userService.GetByID(c.Request.Context(), *user.BelongAgentID)
 		if err == nil && agent.IsActive() && agent.IsAgent {

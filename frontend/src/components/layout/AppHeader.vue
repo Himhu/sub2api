@@ -38,8 +38,8 @@
           <span class="hidden sm:inline">{{ t('nav.docs') }}</span>
         </a>
 
-        <!-- Contact Agent Button (only show if user has agent) -->
-        <div v-if="user && hasAgent" class="relative" ref="agentContactRef">
+        <!-- Contact Info Button -->
+        <div v-if="user" class="relative" ref="agentContactRef">
           <button
             @click="toggleAgentContact"
             class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30"
@@ -89,7 +89,7 @@
                   </div>
                 </template>
                 <div v-else class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('common.noAgentAssigned') }}
+                  {{ t('common.noContactInfo') }}
                 </div>
               </div>
             </div>
@@ -356,7 +356,7 @@ async function loadAgentContact() {
   try {
     const contactRes = await userAPI.getAgentContact()
     hasAgent.value = contactRes.has_agent
-    agentContact.value = contactRes.has_agent ? contactRes.agent || null : null
+    agentContact.value = contactRes.agent || null
   } catch (error) {
     console.error('Failed to load agent contact:', error)
   }
