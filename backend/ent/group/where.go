@@ -165,6 +165,11 @@ func McpXMLInject(v bool) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldMcpXMLInject, v))
 }
 
+// IsPointsOnly applies equality check predicate on the "is_points_only" field. It's identical to IsPointsOnlyEQ.
+func IsPointsOnly(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldIsPointsOnly, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -1158,6 +1163,16 @@ func McpXMLInjectEQ(v bool) predicate.Group {
 // McpXMLInjectNEQ applies the NEQ predicate on the "mcp_xml_inject" field.
 func McpXMLInjectNEQ(v bool) predicate.Group {
 	return predicate.Group(sql.FieldNEQ(FieldMcpXMLInject, v))
+}
+
+// IsPointsOnlyEQ applies the EQ predicate on the "is_points_only" field.
+func IsPointsOnlyEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldIsPointsOnly, v))
+}
+
+// IsPointsOnlyNEQ applies the NEQ predicate on the "is_points_only" field.
+func IsPointsOnlyNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldIsPointsOnly, v))
 }
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

@@ -29,6 +29,8 @@ const (
 	FieldRole = "role"
 	// FieldBalance holds the string denoting the balance field in the database.
 	FieldBalance = "balance"
+	// FieldPoints holds the string denoting the points field in the database.
+	FieldPoints = "points"
 	// FieldConcurrency holds the string denoting the concurrency field in the database.
 	FieldConcurrency = "concurrency"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -69,6 +71,8 @@ const (
 	EdgeUsageLogs = "usage_logs"
 	// EdgeAttributeValues holds the string denoting the attribute_values edge name in mutations.
 	EdgeAttributeValues = "attribute_values"
+	// EdgePromoCodeUsages holds the string denoting the promo_code_usages edge name in mutations.
+	EdgePromoCodeUsages = "promo_code_usages"
 	// EdgeUserAllowedGroups holds the string denoting the user_allowed_groups edge name in mutations.
 	EdgeUserAllowedGroups = "user_allowed_groups"
 	// Table holds the table name of the user in the database.
@@ -127,6 +131,13 @@ const (
 	AttributeValuesInverseTable = "user_attribute_values"
 	// AttributeValuesColumn is the table column denoting the attribute_values relation/edge.
 	AttributeValuesColumn = "user_id"
+	// PromoCodeUsagesTable is the table that holds the promo_code_usages relation/edge.
+	PromoCodeUsagesTable = "promo_code_usages"
+	// PromoCodeUsagesInverseTable is the table name for the PromoCodeUsage entity.
+	// It exists in this package in order to avoid circular dependency with the "promocodeusage" package.
+	PromoCodeUsagesInverseTable = "promo_code_usages"
+	// PromoCodeUsagesColumn is the table column denoting the promo_code_usages relation/edge.
+	PromoCodeUsagesColumn = "user_id"
 	// UserAllowedGroupsTable is the table that holds the user_allowed_groups relation/edge.
 	UserAllowedGroupsTable = "user_allowed_groups"
 	// UserAllowedGroupsInverseTable is the table name for the UserAllowedGroup entity.
@@ -146,6 +157,7 @@ var Columns = []string{
 	FieldPasswordHash,
 	FieldRole,
 	FieldBalance,
+	FieldPoints,
 	FieldConcurrency,
 	FieldStatus,
 	FieldUsername,
@@ -200,6 +212,8 @@ var (
 	RoleValidator func(string) error
 	// DefaultBalance holds the default value on creation for the "balance" field.
 	DefaultBalance float64
+	// DefaultPoints holds the default value on creation for the "points" field.
+	DefaultPoints float64
 	// DefaultConcurrency holds the default value on creation for the "concurrency" field.
 	DefaultConcurrency int
 	// DefaultStatus holds the default value on creation for the "status" field.
@@ -261,6 +275,11 @@ func ByRole(opts ...sql.OrderTermOption) OrderOption {
 // ByBalance orders the results by the balance field.
 func ByBalance(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBalance, opts...).ToFunc()
+}
+
+// ByPoints orders the results by the points field.
+func ByPoints(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPoints, opts...).ToFunc()
 }
 
 // ByConcurrency orders the results by the concurrency field.
@@ -435,6 +454,20 @@ func ByAttributeValues(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByPromoCodeUsagesCount orders the results by promo_code_usages count.
+func ByPromoCodeUsagesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPromoCodeUsagesStep(), opts...)
+	}
+}
+
+// ByPromoCodeUsages orders the results by promo_code_usages terms.
+func ByPromoCodeUsages(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPromoCodeUsagesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByUserAllowedGroupsCount orders the results by user_allowed_groups count.
 func ByUserAllowedGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -502,6 +535,13 @@ func newAttributeValuesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AttributeValuesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AttributeValuesTable, AttributeValuesColumn),
+	)
+}
+func newPromoCodeUsagesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PromoCodeUsagesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PromoCodeUsagesTable, PromoCodeUsagesColumn),
 	)
 }
 func newUserAllowedGroupsStep() *sqlgraph.Step {

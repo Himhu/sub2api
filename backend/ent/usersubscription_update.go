@@ -127,6 +127,20 @@ func (_u *UserSubscriptionUpdate) SetNillableStatus(v *string) *UserSubscription
 	return _u
 }
 
+// SetSource sets the "source" field.
+func (_u *UserSubscriptionUpdate) SetSource(v string) *UserSubscriptionUpdate {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableSource(v *string) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
 // SetDailyWindowStart sets the "daily_window_start" field.
 func (_u *UserSubscriptionUpdate) SetDailyWindowStart(v time.Time) *UserSubscriptionUpdate {
 	_u.mutation.SetDailyWindowStart(v)
@@ -441,6 +455,11 @@ func (_u *UserSubscriptionUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Source(); ok {
+		if err := usersubscription.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.source": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UserSubscription.user"`)
 	}
@@ -479,6 +498,9 @@ func (_u *UserSubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(usersubscription.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(usersubscription.FieldSource, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.DailyWindowStart(); ok {
 		_spec.SetField(usersubscription.FieldDailyWindowStart, field.TypeTime, value)
@@ -769,6 +791,20 @@ func (_u *UserSubscriptionUpdateOne) SetStatus(v string) *UserSubscriptionUpdate
 func (_u *UserSubscriptionUpdateOne) SetNillableStatus(v *string) *UserSubscriptionUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
+	}
+	return _u
+}
+
+// SetSource sets the "source" field.
+func (_u *UserSubscriptionUpdateOne) SetSource(v string) *UserSubscriptionUpdateOne {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableSource(v *string) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetSource(*v)
 	}
 	return _u
 }
@@ -1100,6 +1136,11 @@ func (_u *UserSubscriptionUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Source(); ok {
+		if err := usersubscription.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.source": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UserSubscription.user"`)
 	}
@@ -1155,6 +1196,9 @@ func (_u *UserSubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *UserSu
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(usersubscription.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(usersubscription.FieldSource, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.DailyWindowStart(); ok {
 		_spec.SetField(usersubscription.FieldDailyWindowStart, field.TypeTime, value)

@@ -212,6 +212,30 @@
               <label class="input-label">{{ t('admin.redeem.codeType') }}</label>
               <Select v-model="generateForm.type" :options="typeOptions" />
             </div>
+            <!-- 余额类型：显示来源选择 -->
+            <div v-if="generateForm.type === 'balance'">
+              <label class="input-label">{{ t('admin.redeem.source') }}</label>
+              <div class="flex gap-4 mt-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    v-model="generateForm.source"
+                    value="paid"
+                    class="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-dark-700"
+                  />
+                  <span class="text-sm text-gray-700 dark:text-gray-200">{{ t('admin.redeem.sources.paid') }}</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    v-model="generateForm.source"
+                    value="gift"
+                    class="h-4 w-4 border-gray-300 text-amber-600 focus:ring-amber-500 dark:border-gray-600 dark:bg-dark-700"
+                  />
+                  <span class="text-sm text-gray-700 dark:text-gray-200">{{ t('admin.redeem.sources.gift') }}</span>
+                </label>
+              </div>
+            </div>
             <!-- 余额/并发类型：显示数值输入 -->
             <div v-if="generateForm.type !== 'subscription' && generateForm.type !== 'invitation'">
               <label class="input-label">
@@ -548,6 +572,7 @@ const copiedCode = ref<string | null>(null)
 
 const generateForm = reactive({
   type: 'balance' as RedeemCodeType,
+  source: 'paid',
   value: 10,
   count: 1,
   group_id: null as number | null,
@@ -644,7 +669,8 @@ const handleGenerateCodes = async () => {
       generateForm.type,
       generateForm.value,
       generateForm.type === 'subscription' ? generateForm.group_id : undefined,
-      generateForm.type === 'subscription' ? generateForm.validity_days : undefined
+      generateForm.type === 'subscription' ? generateForm.validity_days : undefined,
+      generateForm.type === 'balance' ? generateForm.source : undefined
     )
     showGenerateDialog.value = false
     generatedCodes.value = result

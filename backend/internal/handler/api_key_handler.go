@@ -255,7 +255,7 @@ func (h *APIKeyHandler) GetAvailableGroups(c *gin.Context) {
 type GroupAvailableModelsResponse struct {
 	GroupID  int64    `json:"group_id"`
 	Platform string   `json:"platform"`
-	Source   string   `json:"source"` // "mapping" or "default"
+	Source   string   `json:"source"` // "mapping", "unlimited", "no_accounts", "all_paused", "error"
 	Models   []string `json:"models"`
 }
 
@@ -297,6 +297,10 @@ func (h *APIKeyHandler) GetGroupAvailableModels(c *gin.Context) {
 
 	// Get available models for this group with source information
 	result := h.gatewayService.GetAvailableModelsWithSource(c.Request.Context(), &groupID, target.Platform)
+	if result.Source == "error" {
+		response.InternalError(c, "Failed to query available models")
+		return
+	}
 	models := result.Models
 	if models == nil {
 		models = []string{}

@@ -27,10 +27,14 @@ type Group struct {
 	ImagePrice4K *float64
 
 	// Claude Code 客户端限制
-	ClaudeCodeOnly  bool
-	FallbackGroupID *int64
-	// 无效请求兜底分组（仅 anthropic 平台使用）
+	ClaudeCodeOnly                  bool
+	FallbackGroupID                 *int64
 	FallbackGroupIDOnInvalidRequest *int64
+
+	// MCP XML 协议注入开关（仅 antigravity 平台）
+	MCPXMLInject bool
+	// 支持的模型系列（仅 antigravity 平台）
+	SupportedModelScopes []string
 
 	// 模型路由配置
 	// key: 模型匹配模式（支持 * 通配符，如 "claude-opus-*"）
@@ -38,15 +42,8 @@ type Group struct {
 	ModelRouting        map[string][]int64
 	ModelRoutingEnabled bool
 
-	// MCP XML 协议注入开关（仅 antigravity 平台使用）
-	MCPXMLInject bool
-
-	// 支持的模型系列（仅 antigravity 平台使用）
-	// 可选值: claude, gemini_text, gemini_image
-	SupportedModelScopes []string
-
-	// 新人专属分组
-	IsNewbieOnly bool
+	// 积分专用分组
+	IsPointsOnly bool
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -1,21 +1,43 @@
 <template>
   <AppLayout>
     <div class="mx-auto max-w-2xl space-y-6">
-      <!-- Current Balance Card -->
+      <!-- Current Balance & Points Card -->
       <div class="card overflow-hidden">
-        <div class="bg-gradient-to-br from-primary-500 to-primary-600 px-6 py-8 text-center">
-          <div
-            class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm"
-          >
-            <Icon name="creditCard" size="xl" class="text-white" />
+        <div class="bg-gradient-to-br from-primary-500 to-primary-600 px-6 py-8">
+          <div class="flex flex-col gap-8 md:flex-row md:items-center md:justify-around text-center">
+            <!-- Balance -->
+            <div>
+              <div
+                class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm"
+              >
+                <Icon name="creditCard" size="lg" class="text-white" />
+              </div>
+              <p class="text-sm font-medium text-primary-100">{{ t('redeem.currentBalance') }}</p>
+              <p class="mt-1 text-3xl font-bold text-white">
+                ${{ user?.balance?.toFixed(2) || '0.00' }}
+              </p>
+            </div>
+            <!-- Divider -->
+            <div class="hidden md:block h-16 w-px bg-primary-400/30"></div>
+            <!-- Points -->
+            <div>
+              <div
+                class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-400/20 backdrop-blur-sm"
+              >
+                <Icon name="gift" size="lg" class="text-amber-200" />
+              </div>
+              <p class="text-sm font-medium text-primary-100">{{ t('dashboard.points') }}</p>
+              <p class="mt-1 text-3xl font-bold text-amber-200">
+                ${{ user?.points?.toFixed(2) || '0.00' }}
+              </p>
+            </div>
           </div>
-          <p class="text-sm font-medium text-primary-100">{{ t('redeem.currentBalance') }}</p>
-          <p class="mt-2 text-4xl font-bold text-white">
-            ${{ user?.balance?.toFixed(2) || '0.00' }}
-          </p>
-          <p class="mt-2 text-sm text-primary-100">
-            {{ t('redeem.concurrency') }}: {{ user?.concurrency || 0 }} {{ t('redeem.requests') }}
-          </p>
+          <!-- Concurrency Footer -->
+          <div class="mt-6 text-center border-t border-primary-400/30 pt-4">
+            <p class="text-sm text-primary-100">
+              {{ t('redeem.concurrency') }}: <span class="font-bold">{{ user?.concurrency || 0 }}</span> {{ t('redeem.requests') }}
+            </p>
+          </div>
         </div>
       </div>
 

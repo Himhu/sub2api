@@ -45,6 +45,10 @@ func (UserSubscription) Fields() []ent.Field {
 		field.String("status").
 			MaxLen(20).
 			Default(domain.SubscriptionStatusActive),
+		field.String("source").
+			MaxLen(20).
+			Default("paid").
+			Comment("Subscription source: paid, gift"),
 
 		field.Time("daily_window_start").
 			Optional().

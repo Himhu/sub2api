@@ -49,19 +49,17 @@ type RedeemCodeRepository interface {
 	List(ctx context.Context, params pagination.PaginationParams) ([]RedeemCode, *pagination.PaginationResult, error)
 	ListWithFilters(ctx context.Context, params pagination.PaginationParams, codeType, status, search string) ([]RedeemCode, *pagination.PaginationResult, error)
 	ListByUser(ctx context.Context, userID int64, limit int) ([]RedeemCode, error)
-	HasUsedByUser(ctx context.Context, userID int64) (bool, error)
-	// ListByUserPaginated returns paginated balance/concurrency history for a specific user.
-	// codeType filter is optional - pass empty string to return all types.
 	ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]RedeemCode, *pagination.PaginationResult, error)
-	// SumPositiveBalanceByUser returns the total recharged amount (sum of positive balance values) for a user.
 	SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error)
+	HasUsedByUser(ctx context.Context, userID int64) (bool, error)
 }
 
 // GenerateCodesRequest 生成兑换码请求
 type GenerateCodesRequest struct {
-	Count int     `json:"count"`
-	Value float64 `json:"value"`
-	Type  string  `json:"type"`
+	Count  int     `json:"count"`
+	Value  float64 `json:"value"`
+	Type   string  `json:"type"`
+	Source string  `json:"source"`
 }
 
 // RedeemCodeResponse 兑换码响应
@@ -132,8 +130,7 @@ func (s *RedeemService) GenerateCodes(ctx context.Context, req GenerateCodesRequ
 		return nil, errors.New("count must be greater than 0")
 	}
 
-	// 邀请码类型不需要数值，其他类型需要
-	if req.Type != RedeemTypeInvitation && req.Value <= 0 {
+	if req.Value <= 0 {
 		return nil, errors.New("value must be greater than 0")
 	}
 
@@ -145,11 +142,9 @@ func (s *RedeemService) GenerateCodes(ctx context.Context, req GenerateCodesRequ
 	if codeType == "" {
 		codeType = RedeemTypeBalance
 	}
-
-	// 邀请码类型的 value 设为 0
-	value := req.Value
-	if codeType == RedeemTypeInvitation {
-		value = 0
+	source := req.Source
+	if source == "" {
+		source = RedeemSourcePaid
 	}
 
 	codes := make([]RedeemCode, 0, req.Count)
@@ -162,7 +157,8 @@ func (s *RedeemService) GenerateCodes(ctx context.Context, req GenerateCodesRequ
 		codes = append(codes, RedeemCode{
 			Code:   code,
 			Type:   codeType,
-			Value:  value,
+			Source: source,
+			Value:  req.Value,
 			Status: StatusUnused,
 		})
 	}
@@ -290,9 +286,14 @@ func (s *RedeemService) Redeem(ctx context.Context, userID int64, code string) (
 	// 执行兑换逻辑（兑换码已被锁定，此时可安全操作）
 	switch redeemCode.Type {
 	case RedeemTypeBalance:
-		// 增加用户余额
-		if err := s.userRepo.UpdateBalance(txCtx, userID, redeemCode.Value); err != nil {
-			return nil, fmt.Errorf("update user balance: %w", err)
+		if redeemCode.Source == RedeemSourceGift {
+			if err := s.userRepo.AddPoints(txCtx, userID, redeemCode.Value); err != nil {
+				return nil, fmt.Errorf("add user points: %w", err)
+			}
+		} else {
+			if err := s.userRepo.UpdateBalance(txCtx, userID, redeemCode.Value); err != nil {
+				return nil, fmt.Errorf("update user balance: %w", err)
+			}
 		}
 
 	case RedeemTypeConcurrency:
@@ -348,10 +349,15 @@ func (s *RedeemService) invalidateRedeemCaches(ctx context.Context, userID int64
 		if s.billingCacheService == nil {
 			return
 		}
+		source := redeemCode.Source
 		go func() {
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = s.billingCacheService.InvalidateUserBalance(cacheCtx, userID)
+			if source == RedeemSourceGift {
+				_ = s.billingCacheService.InvalidateUserPoints(cacheCtx, userID)
+			} else {
+				_ = s.billingCacheService.InvalidateUserBalance(cacheCtx, userID)
+			}
 		}()
 	case RedeemTypeConcurrency:
 		if s.authCacheInvalidator != nil {

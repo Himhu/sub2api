@@ -14,6 +14,7 @@ import (
 
 const (
 	billingBalanceKeyPrefix = "billing:balance:"
+	billingPointsKeyPrefix  = "billing:points:"
 	billingSubKeyPrefix     = "billing:sub:"
 	billingCacheTTL         = 5 * time.Minute
 )
@@ -21,6 +22,11 @@ const (
 // billingBalanceKey generates the Redis key for user balance cache.
 func billingBalanceKey(userID int64) string {
 	return fmt.Sprintf("%s%d", billingBalanceKeyPrefix, userID)
+}
+
+// billingPointsKey generates the Redis key for user points cache.
+func billingPointsKey(userID int64) string {
+	return fmt.Sprintf("%s%d", billingPointsKeyPrefix, userID)
 }
 
 // billingSubKey generates the Redis key for subscription cache.
@@ -39,6 +45,17 @@ const (
 
 var (
 	deductBalanceScript = redis.NewScript(`
+		local current = redis.call('GET', KEYS[1])
+		if current == false then
+			return 0
+		end
+		local newVal = tonumber(current) - tonumber(ARGV[1])
+		redis.call('SET', KEYS[1], newVal)
+		redis.call('EXPIRE', KEYS[1], ARGV[2])
+		return 1
+	`)
+
+	deductPointsScript = redis.NewScript(`
 		local current = redis.call('GET', KEYS[1])
 		if current == false then
 			return 0
@@ -96,6 +113,34 @@ func (c *billingCache) DeductUserBalance(ctx context.Context, userID int64, amou
 
 func (c *billingCache) InvalidateUserBalance(ctx context.Context, userID int64) error {
 	key := billingBalanceKey(userID)
+	return c.rdb.Del(ctx, key).Err()
+}
+
+func (c *billingCache) GetUserPoints(ctx context.Context, userID int64) (float64, error) {
+	key := billingPointsKey(userID)
+	val, err := c.rdb.Get(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseFloat(val, 64)
+}
+
+func (c *billingCache) SetUserPoints(ctx context.Context, userID int64, points float64) error {
+	key := billingPointsKey(userID)
+	return c.rdb.Set(ctx, key, points, billingCacheTTL).Err()
+}
+
+func (c *billingCache) DeductUserPoints(ctx context.Context, userID int64, amount float64) error {
+	key := billingPointsKey(userID)
+	_, err := deductPointsScript.Run(ctx, c.rdb, []string{key}, amount, int(billingCacheTTL.Seconds())).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		log.Printf("Warning: deduct points cache failed for user %d: %v", userID, err)
+	}
+	return nil
+}
+
+func (c *billingCache) InvalidateUserPoints(ctx context.Context, userID int64) error {
+	key := billingPointsKey(userID)
 	return c.rdb.Del(ctx, key).Err()
 }
 

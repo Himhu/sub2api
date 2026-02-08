@@ -78,6 +78,14 @@ func (s *userRepoStub) DeductBalance(ctx context.Context, id int64, amount float
 	panic("unexpected DeductBalance call")
 }
 
+func (s *userRepoStub) TryDeductPoints(ctx context.Context, id int64, amount float64) (bool, error) {
+	panic("unexpected TryDeductPoints call")
+}
+
+func (s *userRepoStub) AddPoints(ctx context.Context, id int64, amount float64) error {
+	panic("unexpected AddPoints call")
+}
+
 func (s *userRepoStub) UpdateConcurrency(ctx context.Context, id int64, amount int) error {
 	panic("unexpected UpdateConcurrency call")
 }
@@ -103,6 +111,14 @@ func (s *userRepoStub) EnableTotp(ctx context.Context, userID int64) error {
 
 func (s *userRepoStub) DisableTotp(ctx context.Context, userID int64) error {
 	panic("unexpected DisableTotp call")
+}
+
+func (s *userRepoStub) GetByInviteCode(ctx context.Context, inviteCode string) (*User, error) {
+	panic("unexpected GetByInviteCode call")
+}
+
+func (s *userRepoStub) LoadSubscriptions(ctx context.Context, userID int64) ([]UserSubscription, error) {
+	panic("unexpected LoadSubscriptions call")
 }
 
 type groupRepoStub struct {
@@ -164,14 +180,6 @@ func (s *groupRepoStub) DeleteAccountGroupsByGroupID(ctx context.Context, groupI
 	panic("unexpected DeleteAccountGroupsByGroupID call")
 }
 
-func (s *groupRepoStub) BindAccountsToGroup(ctx context.Context, groupID int64, accountIDs []int64) error {
-	panic("unexpected BindAccountsToGroup call")
-}
-
-func (s *groupRepoStub) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []int64) ([]int64, error) {
-	panic("unexpected GetAccountIDsByGroupIDs call")
-}
-
 type proxyRepoStub struct {
 	deleteErr    error
 	countErr     error
@@ -185,10 +193,6 @@ func (s *proxyRepoStub) Create(ctx context.Context, proxy *Proxy) error {
 
 func (s *proxyRepoStub) GetByID(ctx context.Context, id int64) (*Proxy, error) {
 	panic("unexpected GetByID call")
-}
-
-func (s *proxyRepoStub) ListByIDs(ctx context.Context, ids []int64) ([]Proxy, error) {
-	panic("unexpected ListByIDs call")
 }
 
 func (s *proxyRepoStub) Update(ctx context.Context, proxy *Proxy) error {
@@ -286,12 +290,8 @@ func (s *redeemRepoStub) ListByUser(ctx context.Context, userID int64, limit int
 	panic("unexpected ListByUser call")
 }
 
-func (s *redeemRepoStub) ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]RedeemCode, *pagination.PaginationResult, error) {
-	panic("unexpected ListByUserPaginated call")
-}
-
-func (s *redeemRepoStub) SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error) {
-	panic("unexpected SumPositiveBalanceByUser call")
+func (s *redeemRepoStub) HasUsedByUser(ctx context.Context, userID int64) (bool, error) {
+	panic("unexpected HasUsedByUser call")
 }
 
 type subscriptionInvalidateCall struct {
@@ -321,6 +321,22 @@ func (s *billingCacheStub) DeductUserBalance(ctx context.Context, userID int64, 
 
 func (s *billingCacheStub) InvalidateUserBalance(ctx context.Context, userID int64) error {
 	panic("unexpected InvalidateUserBalance call")
+}
+
+func (s *billingCacheStub) GetUserPoints(ctx context.Context, userID int64) (float64, error) {
+	panic("unexpected GetUserPoints call")
+}
+
+func (s *billingCacheStub) SetUserPoints(ctx context.Context, userID int64, points float64) error {
+	panic("unexpected SetUserPoints call")
+}
+
+func (s *billingCacheStub) DeductUserPoints(ctx context.Context, userID int64, amount float64) error {
+	panic("unexpected DeductUserPoints call")
+}
+
+func (s *billingCacheStub) InvalidateUserPoints(ctx context.Context, userID int64) error {
+	panic("unexpected InvalidateUserPoints call")
 }
 
 func (s *billingCacheStub) GetSubscriptionCache(ctx context.Context, userID, groupID int64) (*SubscriptionCacheData, error) {

@@ -58,6 +58,20 @@ func (_u *RedeemCodeUpdate) SetNillableType(v *string) *RedeemCodeUpdate {
 	return _u
 }
 
+// SetSource sets the "source" field.
+func (_u *RedeemCodeUpdate) SetSource(v string) *RedeemCodeUpdate {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *RedeemCodeUpdate) SetNillableSource(v *string) *RedeemCodeUpdate {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
 // SetValue sets the "value" field.
 func (_u *RedeemCodeUpdate) SetValue(v float64) *RedeemCodeUpdate {
 	_u.mutation.ResetValue()
@@ -274,6 +288,11 @@ func (_u *RedeemCodeUpdate) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Source(); ok {
+		if err := redeemcode.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.source": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := redeemcode.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.status": %w`, err)}
@@ -299,6 +318,9 @@ func (_u *RedeemCodeUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(redeemcode.FieldType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(redeemcode.FieldSource, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Value(); ok {
 		_spec.SetField(redeemcode.FieldValue, field.TypeFloat64, value)
@@ -429,6 +451,20 @@ func (_u *RedeemCodeUpdateOne) SetType(v string) *RedeemCodeUpdateOne {
 func (_u *RedeemCodeUpdateOne) SetNillableType(v *string) *RedeemCodeUpdateOne {
 	if v != nil {
 		_u.SetType(*v)
+	}
+	return _u
+}
+
+// SetSource sets the "source" field.
+func (_u *RedeemCodeUpdateOne) SetSource(v string) *RedeemCodeUpdateOne {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *RedeemCodeUpdateOne) SetNillableSource(v *string) *RedeemCodeUpdateOne {
+	if v != nil {
+		_u.SetSource(*v)
 	}
 	return _u
 }
@@ -662,6 +698,11 @@ func (_u *RedeemCodeUpdateOne) check() error {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Source(); ok {
+		if err := redeemcode.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.source": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := redeemcode.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.status": %w`, err)}
@@ -704,6 +745,9 @@ func (_u *RedeemCodeUpdateOne) sqlSave(ctx context.Context) (_node *RedeemCode, 
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(redeemcode.FieldType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(redeemcode.FieldSource, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Value(); ok {
 		_spec.SetField(redeemcode.FieldValue, field.TypeFloat64, value)

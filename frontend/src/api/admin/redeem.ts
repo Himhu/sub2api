@@ -65,12 +65,18 @@ export async function generate(
   type: RedeemCodeType,
   value: number,
   groupId?: number | null,
-  validityDays?: number
+  validityDays?: number,
+  source?: string
 ): Promise<RedeemCode[]> {
   const payload: GenerateRedeemCodesRequest = {
     count,
     type,
     value
+  }
+
+  // 余额类型专用字段
+  if (type === 'balance' && source) {
+    payload.source = source
   }
 
   // 订阅类型专用字段

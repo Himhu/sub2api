@@ -18,6 +18,8 @@ const (
 	FieldCode = "code"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
+	// FieldSource holds the string denoting the source field in the database.
+	FieldSource = "source"
 	// FieldValue holds the string denoting the value field in the database.
 	FieldValue = "value"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -61,6 +63,7 @@ var Columns = []string{
 	FieldID,
 	FieldCode,
 	FieldType,
+	FieldSource,
 	FieldValue,
 	FieldStatus,
 	FieldUsedBy,
@@ -88,6 +91,10 @@ var (
 	DefaultType string
 	// TypeValidator is a validator for the "type" field. It is called by the builders before save.
 	TypeValidator func(string) error
+	// DefaultSource holds the default value on creation for the "source" field.
+	DefaultSource string
+	// SourceValidator is a validator for the "source" field. It is called by the builders before save.
+	SourceValidator func(string) error
 	// DefaultValue holds the default value on creation for the "value" field.
 	DefaultValue float64
 	// DefaultStatus holds the default value on creation for the "status" field.
@@ -116,6 +123,11 @@ func ByCode(opts ...sql.OrderTermOption) OrderOption {
 // ByType orders the results by the type field.
 func ByType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// BySource orders the results by the source field.
+func BySource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSource, opts...).ToFunc()
 }
 
 // ByValue orders the results by the value field.

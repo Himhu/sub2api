@@ -1218,6 +1218,12 @@ func (r *stubUserSubscriptionRepo) ListActiveByUserID(ctx context.Context, userI
 	}
 	return append([]service.UserSubscription(nil), r.activeByUser[userID]...), nil
 }
+func (r *stubUserSubscriptionRepo) HasPaidActiveByUserID(ctx context.Context, userID int64) (bool, error) {
+	if r.activeByUser == nil {
+		return false, nil
+	}
+	return len(r.activeByUser[userID]) > 0, nil
+}
 func (stubUserSubscriptionRepo) ListByGroupID(ctx context.Context, groupID int64, params pagination.PaginationParams) ([]service.UserSubscription, *pagination.PaginationResult, error) {
 	return nil, nil, errors.New("not implemented")
 }

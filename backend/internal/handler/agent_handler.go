@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -143,29 +145,32 @@ func (h *AgentHandler) GetMyAgentContact(c *gin.Context) {
 	}
 
 	// Determine which contact to show: agent or admin
+	var contactUser *service.User
 	var contactUserID int64
 	var isAgent bool
 
 	if user.BelongAgentID != nil && *user.BelongAgentID != 0 {
-		// User has an assigned agent
-		contactUserID = *user.BelongAgentID
-		isAgent = true
-	} else {
-		// No agent assigned, show admin contact
+		// User has an assigned agent; validate before using.
+		agent, err := h.userService.GetByID(c.Request.Context(), *user.BelongAgentID)
+		if err == nil && agent.IsActive() && agent.IsAgent {
+			contactUser = agent
+			contactUserID = agent.ID
+			isAgent = true
+		} else if err != nil {
+			log.Printf("[AgentContact] failed to lookup agent %d for user %d, falling back to admin", *user.BelongAgentID, userID)
+		}
+		// Fall through to admin fallback if agent is invalid/inactive/revoked.
+	}
+
+	if contactUser == nil {
 		admin, err := h.userService.GetFirstAdmin(c.Request.Context())
 		if err != nil {
 			response.ErrorFrom(c, err)
 			return
 		}
+		contactUser = admin
 		contactUserID = admin.ID
 		isAgent = false
-	}
-
-	// Get contact user's basic info
-	agent, err := h.userService.GetByID(c.Request.Context(), contactUserID)
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
 	}
 
 	// Get contact user's attributes (contact info like WeChat, QQ, etc.)
@@ -205,8 +210,8 @@ func (h *AgentHandler) GetMyAgentContact(c *gin.Context) {
 	response.Success(c, map[string]interface{}{
 		"has_agent": isAgent,
 		"agent": map[string]interface{}{
-			"email":      agent.Email,
-			"username":   agent.Username,
+			"email":      contactUser.Email,
+			"username":   contactUser.Username,
 			"attributes": attributes,
 		},
 	})

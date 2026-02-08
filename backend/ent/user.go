@@ -31,6 +31,8 @@ type User struct {
 	Role string `json:"role,omitempty"`
 	// Balance holds the value of the "balance" field.
 	Balance float64 `json:"balance,omitempty"`
+	// 用户积分余额
+	Points float64 `json:"points,omitempty"`
 	// Concurrency holds the value of the "concurrency" field.
 	Concurrency int `json:"concurrency,omitempty"`
 	// Status holds the value of the "status" field.
@@ -45,15 +47,15 @@ type User struct {
 	TotpEnabled bool `json:"totp_enabled,omitempty"`
 	// TotpEnabledAt holds the value of the "totp_enabled_at" field.
 	TotpEnabledAt *time.Time `json:"totp_enabled_at,omitempty"`
-	// IsAgent holds the value of the "is_agent" field.
+	// 是否是代理
 	IsAgent bool `json:"is_agent,omitempty"`
-	// ParentAgentID holds the value of the "parent_agent_id" field.
+	// 上级代理用户ID
 	ParentAgentID *int64 `json:"parent_agent_id,omitempty"`
-	// InviteCode holds the value of the "invite_code" field.
+	// 用户专属邀请码
 	InviteCode *string `json:"invite_code,omitempty"`
-	// InvitedByUserID holds the value of the "invited_by_user_id" field.
+	// 邀请人用户ID
 	InvitedByUserID *int64 `json:"invited_by_user_id,omitempty"`
-	// BelongAgentID holds the value of the "belong_agent_id" field.
+	// 所属代理用户ID
 	BelongAgentID *int64 `json:"belong_agent_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
@@ -79,11 +81,13 @@ type UserEdges struct {
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
 	// AttributeValues holds the value of the attribute_values edge.
 	AttributeValues []*UserAttributeValue `json:"attribute_values,omitempty"`
+	// PromoCodeUsages holds the value of the promo_code_usages edge.
+	PromoCodeUsages []*PromoCodeUsage `json:"promo_code_usages,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [10]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -158,10 +162,19 @@ func (e UserEdges) AttributeValuesOrErr() ([]*UserAttributeValue, error) {
 	return nil, &NotLoadedError{edge: "attribute_values"}
 }
 
+// PromoCodeUsagesOrErr returns the PromoCodeUsages value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PromoCodeUsagesOrErr() ([]*PromoCodeUsage, error) {
+	if e.loadedTypes[8] {
+		return e.PromoCodeUsages, nil
+	}
+	return nil, &NotLoadedError{edge: "promo_code_usages"}
+}
+
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -174,7 +187,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldTotpEnabled, user.FieldIsAgent:
 			values[i] = new(sql.NullBool)
-		case user.FieldBalance:
+		case user.FieldBalance, user.FieldPoints:
 			values[i] = new(sql.NullFloat64)
 		case user.FieldID, user.FieldConcurrency, user.FieldParentAgentID, user.FieldInvitedByUserID, user.FieldBelongAgentID:
 			values[i] = new(sql.NullInt64)
@@ -245,6 +258,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field balance", values[i])
 			} else if value.Valid {
 				_m.Balance = value.Float64
+			}
+		case user.FieldPoints:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field points", values[i])
+			} else if value.Valid {
+				_m.Points = value.Float64
 			}
 		case user.FieldConcurrency:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -377,6 +396,11 @@ func (_m *User) QueryAttributeValues() *UserAttributeValueQuery {
 	return NewUserClient(_m.config).QueryAttributeValues(_m)
 }
 
+// QueryPromoCodeUsages queries the "promo_code_usages" edge of the User entity.
+func (_m *User) QueryPromoCodeUsages() *PromoCodeUsageQuery {
+	return NewUserClient(_m.config).QueryPromoCodeUsages(_m)
+}
+
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.
 func (_m *User) QueryUserAllowedGroups() *UserAllowedGroupQuery {
 	return NewUserClient(_m.config).QueryUserAllowedGroups(_m)
@@ -427,6 +451,9 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("balance=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Balance))
+	builder.WriteString(", ")
+	builder.WriteString("points=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Points))
 	builder.WriteString(", ")
 	builder.WriteString("concurrency=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Concurrency))

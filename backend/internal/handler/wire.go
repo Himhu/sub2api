@@ -20,6 +20,7 @@ func ProvideAdminHandlers(
 	antigravityOAuthHandler *admin.AntigravityOAuthHandler,
 	proxyHandler *admin.ProxyHandler,
 	redeemHandler *admin.RedeemHandler,
+	promoHandler *admin.PromoHandler,
 	agentHandler *admin.AgentHandler,
 	settingHandler *admin.SettingHandler,
 	opsHandler *admin.OpsHandler,
@@ -41,6 +42,7 @@ func ProvideAdminHandlers(
 		AntigravityOAuth: antigravityOAuthHandler,
 		Proxy:            proxyHandler,
 		Redeem:           redeemHandler,
+		Promo:            promoHandler,
 		Agent:            agentHandler,
 		Setting:          settingHandler,
 		Ops:              opsHandler,
@@ -131,6 +133,7 @@ var ProviderSet = wire.NewSet(
 	admin.NewUsageHandler,
 	admin.NewUserAttributeHandler,
 	admin.NewErrorPassthroughHandler,
+	admin.NewPromoHandler,
 
 	// AdminHandlers and Handlers constructors
 	ProvideAdminHandlers,

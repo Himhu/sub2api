@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	pkgerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
@@ -33,8 +31,6 @@ type GatewayHandler struct {
 	userService               *service.UserService
 	billingCacheService       *service.BillingCacheService
 	usageService              *service.UsageService
-	apiKeyService             *service.APIKeyService
-	errorPassthroughService   *service.ErrorPassthroughService
 	concurrencyHelper         *ConcurrencyHelper
 	maxAccountSwitches        int
 	maxAccountSwitchesGemini  int
@@ -49,8 +45,6 @@ func NewGatewayHandler(
 	concurrencyService *service.ConcurrencyService,
 	billingCacheService *service.BillingCacheService,
 	usageService *service.UsageService,
-	apiKeyService *service.APIKeyService,
-	errorPassthroughService *service.ErrorPassthroughService,
 	cfg *config.Config,
 ) *GatewayHandler {
 	pingInterval := time.Duration(0)
@@ -72,8 +66,6 @@ func NewGatewayHandler(
 		userService:               userService,
 		billingCacheService:       billingCacheService,
 		usageService:              usageService,
-		apiKeyService:             apiKeyService,
-		errorPassthroughService:   errorPassthroughService,
 		concurrencyHelper:         NewConcurrencyHelper(concurrencyService, SSEPingFormatClaude, pingInterval),
 		maxAccountSwitches:        maxAccountSwitches,
 		maxAccountSwitchesGemini:  maxAccountSwitchesGemini,
@@ -112,6 +104,9 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		return
 	}
 
+	// 检查是否为 Claude Code 客户端，设置到 context 中
+	SetClaudeCodeClientContext(c, body)
+
 	setOpsRequestContext(c, "", false, body)
 
 	parsedReq, err := service.ParseGatewayRequest(body)
@@ -121,20 +116,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 	}
 	reqModel := parsedReq.Model
 	reqStream := parsedReq.Stream
-
-	// 设置 max_tokens=1 + haiku 探测请求标识到 context 中
-	// 必须在 SetClaudeCodeClientContext 之前设置，因为 ClaudeCodeValidator 需要读取此标识进行绕过判断
-	if isMaxTokensOneHaikuRequest(reqModel, parsedReq.MaxTokens, reqStream) {
-		ctx := context.WithValue(c.Request.Context(), ctxkey.IsMaxTokensOneHaikuRequest, true)
-		c.Request = c.Request.WithContext(ctx)
-	}
-
-	// 检查是否为 Claude Code 客户端，设置到 context 中
-	SetClaudeCodeClientContext(c, body)
-	isClaudeCodeClient := service.IsClaudeCodeClient(c.Request.Context())
-
-	// 在请求上下文中记录 thinking 状态，供 Antigravity 最终模型 key 推导/模型维度限流使用
-	c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxkey.ThinkingEnabled, parsedReq.ThinkingEnabled))
+	isClaudeCode := service.IsClaudeCodeClient(c.Request.Context())
 
 	setOpsRequestContext(c, reqModel, reqStream, body)
 
@@ -146,11 +128,6 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 
 	// Track if we've started streaming (for error handling)
 	streamStarted := false
-
-	// 绑定错误透传服务，允许 service 层在非 failover 错误场景复用规则。
-	if h.errorPassthroughService != nil {
-		service.BindErrorPassthroughService(c, h.errorPassthroughService)
-	}
 
 	// 获取订阅信息（可能为nil）- 提前获取用于后续检查
 	subscription, _ := middleware2.GetSubscriptionFromContext(c)
@@ -195,7 +172,8 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 	}
 
 	// 2. 【新增】Wait后二次检查余额/订阅
-	if err := h.billingCacheService.CheckBillingEligibility(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription); err != nil {
+	billingDecision, err := h.billingCacheService.CheckBillingEligibilityDecision(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription)
+	if err != nil {
 		log.Printf("Billing eligibility check failed after wait: %v", err)
 		status, code, message := billingErrorDetails(err)
 		h.handleStreamingAwareError(c, status, code, message, streamStarted)
@@ -217,20 +195,17 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		sessionKey = "gemini:" + sessionHash
 	}
 
-	// 查询粘性会话绑定的账号 ID
 	var sessionBoundAccountID int64
 	if sessionKey != "" {
 		sessionBoundAccountID, _ = h.gatewayService.GetCachedSessionAccountID(c.Request.Context(), apiKey.GroupID, sessionKey)
 	}
-	// 判断是否真的绑定了粘性会话：有 sessionKey 且已经绑定到某个账号
 	hasBoundSession := sessionKey != "" && sessionBoundAccountID > 0
 
 	if platform == service.PlatformGemini {
 		maxAccountSwitches := h.maxAccountSwitchesGemini
 		switchCount := 0
 		failedAccountIDs := make(map[int64]struct{})
-		var lastFailoverErr *service.UpstreamFailoverError
-		var forceCacheBilling bool // 粘性会话切换时的缓存计费标记
+		lastFailoverStatus := 0
 
 		for {
 			selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs, "") // Gemini 不使用会话限制
@@ -239,11 +214,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
 					return
 				}
-				if lastFailoverErr != nil {
-					h.handleFailoverExhausted(c, lastFailoverErr, service.PlatformGemini, streamStarted)
-				} else {
-					h.handleFailoverExhaustedSimple(c, 502, streamStarted)
-				}
+				h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 				return
 			}
 			account := selection.Account
@@ -251,7 +222,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 
 			// 检查请求拦截（预热请求、SUGGESTION MODE等）
 			if account.IsInterceptWarmupEnabled() {
-				interceptType := detectInterceptType(body, reqModel, parsedReq.MaxTokens, reqStream, isClaudeCodeClient)
+				interceptType := detectInterceptType(body, reqModel, parsedReq.MaxTokens, false, isClaudeCode)
 				if interceptType != InterceptTypeNone {
 					if selection.Acquired && selection.ReleaseFunc != nil {
 						selection.ReleaseFunc()
@@ -318,14 +289,10 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 
 			// 转发请求 - 根据账号平台分流
 			var result *service.ForwardResult
-			requestCtx := c.Request.Context()
-			if switchCount > 0 {
-				requestCtx = context.WithValue(requestCtx, ctxkey.AccountSwitchCount, switchCount)
-			}
 			if account.Platform == service.PlatformAntigravity {
-				result, err = h.antigravityGatewayService.ForwardGemini(requestCtx, c, account, reqModel, "generateContent", reqStream, body, hasBoundSession)
+				result, err = h.antigravityGatewayService.ForwardGemini(c.Request.Context(), c, account, reqModel, "generateContent", reqStream, body, hasBoundSession)
 			} else {
-				result, err = h.geminiCompatService.Forward(requestCtx, c, account, body)
+				result, err = h.geminiCompatService.Forward(c.Request.Context(), c, account, body)
 			}
 			if accountReleaseFunc != nil {
 				accountReleaseFunc()
@@ -334,12 +301,9 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 				var failoverErr *service.UpstreamFailoverError
 				if errors.As(err, &failoverErr) {
 					failedAccountIDs[account.ID] = struct{}{}
-					lastFailoverErr = failoverErr
-					if failoverErr.ForceCacheBilling {
-						forceCacheBilling = true
-					}
+					lastFailoverStatus = failoverErr.StatusCode
 					if switchCount >= maxAccountSwitches {
-						h.handleFailoverExhausted(c, failoverErr, service.PlatformGemini, streamStarted)
+						h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 						return
 					}
 					switchCount++
@@ -356,223 +320,160 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			clientIP := ip.GetClientIP(c)
 
 			// 异步记录使用量（subscription已在函数开头获取）
-			go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, fcb bool) {
+			go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, bt int8) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
-					Result:            result,
-					APIKey:            apiKey,
-					User:              apiKey.User,
-					Account:           usedAccount,
-					Subscription:      subscription,
-					UserAgent:         ua,
-					IPAddress:         clientIP,
-					ForceCacheBilling: fcb,
-					APIKeyService:     h.apiKeyService,
+					Result:              result,
+					APIKey:              apiKey,
+					User:                apiKey.User,
+					Account:             usedAccount,
+					Subscription:        subscription,
+					BillingTypeOverride: &bt,
+					UserAgent:           ua,
+					IPAddress:           clientIP,
 				}); err != nil {
 					log.Printf("Record usage failed: %v", err)
 				}
-			}(result, account, userAgent, clientIP, forceCacheBilling)
+			}(result, account, userAgent, clientIP, billingDecision.BillingType)
 			return
 		}
 	}
 
-	currentAPIKey := apiKey
-	currentSubscription := subscription
-	var fallbackGroupID *int64
-	if apiKey.Group != nil {
-		fallbackGroupID = apiKey.Group.FallbackGroupIDOnInvalidRequest
-	}
-	fallbackUsed := false
+	maxAccountSwitches := h.maxAccountSwitches
+	switchCount := 0
+	failedAccountIDs := make(map[int64]struct{})
+	lastFailoverStatus := 0
 
 	for {
-		maxAccountSwitches := h.maxAccountSwitches
-		switchCount := 0
-		failedAccountIDs := make(map[int64]struct{})
-		var lastFailoverErr *service.UpstreamFailoverError
-		retryWithFallback := false
-		var forceCacheBilling bool // 粘性会话切换时的缓存计费标记
+		// 选择支持该模型的账号
+		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs, parsedReq.MetadataUserID)
+		if err != nil {
+			if len(failedAccountIDs) == 0 {
+				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
+				return
+			}
+			h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+			return
+		}
+		account := selection.Account
+		setOpsSelectedAccount(c, account.ID)
 
-		for {
-			// 选择支持该模型的账号
-			selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), currentAPIKey.GroupID, sessionKey, reqModel, failedAccountIDs, parsedReq.MetadataUserID)
-			if err != nil {
-				if len(failedAccountIDs) == 0 {
-					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
-					return
+		// 检查请求拦截（预热请求、SUGGESTION MODE等）
+		if account.IsInterceptWarmupEnabled() {
+			interceptType := detectInterceptType(body, reqModel, parsedReq.MaxTokens, false, isClaudeCode)
+			if interceptType != InterceptTypeNone {
+				if selection.Acquired && selection.ReleaseFunc != nil {
+					selection.ReleaseFunc()
 				}
-				if lastFailoverErr != nil {
-					h.handleFailoverExhausted(c, lastFailoverErr, platform, streamStarted)
+				if reqStream {
+					sendMockInterceptStream(c, reqModel, interceptType)
 				} else {
-					h.handleFailoverExhaustedSimple(c, 502, streamStarted)
+					sendMockInterceptResponse(c, reqModel, interceptType)
 				}
 				return
 			}
-			account := selection.Account
-			setOpsSelectedAccount(c, account.ID)
+		}
 
-			// 检查请求拦截（预热请求、SUGGESTION MODE等）
-			if account.IsInterceptWarmupEnabled() {
-				interceptType := detectInterceptType(body, reqModel, parsedReq.MaxTokens, reqStream, isClaudeCodeClient)
-				if interceptType != InterceptTypeNone {
-					if selection.Acquired && selection.ReleaseFunc != nil {
-						selection.ReleaseFunc()
-					}
-					if reqStream {
-						sendMockInterceptStream(c, reqModel, interceptType)
-					} else {
-						sendMockInterceptResponse(c, reqModel, interceptType)
-					}
-					return
-				}
+		// 3. 获取账号并发槽位
+		accountReleaseFunc := selection.ReleaseFunc
+		if !selection.Acquired {
+			if selection.WaitPlan == nil {
+				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
+				return
 			}
-
-			// 3. 获取账号并发槽位
-			accountReleaseFunc := selection.ReleaseFunc
-			if !selection.Acquired {
-				if selection.WaitPlan == nil {
-					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
-					return
-				}
-				accountWaitCounted := false
-				canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
-				if err != nil {
-					log.Printf("Increment account wait count failed: %v", err)
-				} else if !canWait {
-					log.Printf("Account wait queue full: account=%d", account.ID)
-					h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
-					return
-				}
-				if err == nil && canWait {
-					accountWaitCounted = true
-				}
-				defer func() {
-					if accountWaitCounted {
-						h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
-					}
-				}()
-
-				accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
-					c,
-					account.ID,
-					selection.WaitPlan.MaxConcurrency,
-					selection.WaitPlan.Timeout,
-					reqStream,
-					&streamStarted,
-				)
-				if err != nil {
-					log.Printf("Account concurrency acquire failed: %v", err)
-					h.handleConcurrencyError(c, err, "account", streamStarted)
-					return
-				}
+			accountWaitCounted := false
+			canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
+			if err != nil {
+				log.Printf("Increment account wait count failed: %v", err)
+			} else if !canWait {
+				log.Printf("Account wait queue full: account=%d", account.ID)
+				h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
+				return
+			}
+			if err == nil && canWait {
+				accountWaitCounted = true
+			}
+			defer func() {
 				if accountWaitCounted {
 					h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
-					accountWaitCounted = false
 				}
-				if err := h.gatewayService.BindStickySession(c.Request.Context(), currentAPIKey.GroupID, sessionKey, account.ID); err != nil {
-					log.Printf("Bind sticky session failed: %v", err)
-				}
-			}
-			// 账号槽位/等待计数需要在超时或断开时安全回收
-			accountReleaseFunc = wrapReleaseOnDone(c.Request.Context(), accountReleaseFunc)
+			}()
 
-			// 转发请求 - 根据账号平台分流
-			var result *service.ForwardResult
-			requestCtx := c.Request.Context()
-			if switchCount > 0 {
-				requestCtx = context.WithValue(requestCtx, ctxkey.AccountSwitchCount, switchCount)
-			}
-			if account.Platform == service.PlatformAntigravity {
-				result, err = h.antigravityGatewayService.Forward(requestCtx, c, account, body, hasBoundSession)
-			} else {
-				result, err = h.gatewayService.Forward(requestCtx, c, account, parsedReq)
-			}
-			if accountReleaseFunc != nil {
-				accountReleaseFunc()
-			}
+			accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
+				c,
+				account.ID,
+				selection.WaitPlan.MaxConcurrency,
+				selection.WaitPlan.Timeout,
+				reqStream,
+				&streamStarted,
+			)
 			if err != nil {
-				var promptTooLongErr *service.PromptTooLongError
-				if errors.As(err, &promptTooLongErr) {
-					log.Printf("Prompt too long from antigravity: group=%d fallback_group_id=%v fallback_used=%v", currentAPIKey.GroupID, fallbackGroupID, fallbackUsed)
-					if !fallbackUsed && fallbackGroupID != nil && *fallbackGroupID > 0 {
-						fallbackGroup, err := h.gatewayService.ResolveGroupByID(c.Request.Context(), *fallbackGroupID)
-						if err != nil {
-							log.Printf("Resolve fallback group failed: %v", err)
-							_ = h.antigravityGatewayService.WriteMappedClaudeError(c, account, promptTooLongErr.StatusCode, promptTooLongErr.RequestID, promptTooLongErr.Body)
-							return
-						}
-						if fallbackGroup.Platform != service.PlatformAnthropic ||
-							fallbackGroup.SubscriptionType == service.SubscriptionTypeSubscription ||
-							fallbackGroup.FallbackGroupIDOnInvalidRequest != nil {
-							log.Printf("Fallback group invalid: group=%d platform=%s subscription=%s", fallbackGroup.ID, fallbackGroup.Platform, fallbackGroup.SubscriptionType)
-							_ = h.antigravityGatewayService.WriteMappedClaudeError(c, account, promptTooLongErr.StatusCode, promptTooLongErr.RequestID, promptTooLongErr.Body)
-							return
-						}
-						fallbackAPIKey := cloneAPIKeyWithGroup(apiKey, fallbackGroup)
-						if err := h.billingCacheService.CheckBillingEligibility(c.Request.Context(), fallbackAPIKey.User, fallbackAPIKey, fallbackGroup, nil); err != nil {
-							status, code, message := billingErrorDetails(err)
-							h.handleStreamingAwareError(c, status, code, message, streamStarted)
-							return
-						}
-						// 兜底重试按“直接请求兜底分组”处理：清除强制平台，允许按分组平台调度
-						ctx := context.WithValue(c.Request.Context(), ctxkey.ForcePlatform, "")
-						c.Request = c.Request.WithContext(ctx)
-						currentAPIKey = fallbackAPIKey
-						currentSubscription = nil
-						fallbackUsed = true
-						retryWithFallback = true
-						break
-					}
-					_ = h.antigravityGatewayService.WriteMappedClaudeError(c, account, promptTooLongErr.StatusCode, promptTooLongErr.RequestID, promptTooLongErr.Body)
-					return
-				}
-				var failoverErr *service.UpstreamFailoverError
-				if errors.As(err, &failoverErr) {
-					failedAccountIDs[account.ID] = struct{}{}
-					lastFailoverErr = failoverErr
-					if failoverErr.ForceCacheBilling {
-						forceCacheBilling = true
-					}
-					if switchCount >= maxAccountSwitches {
-						h.handleFailoverExhausted(c, failoverErr, account.Platform, streamStarted)
-						return
-					}
-					switchCount++
-					log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
-					continue
-				}
-				// 错误响应已在Forward中处理，这里只记录日志
-				log.Printf("Account %d: Forward request failed: %v", account.ID, err)
+				log.Printf("Account concurrency acquire failed: %v", err)
+				h.handleConcurrencyError(c, err, "account", streamStarted)
 				return
 			}
+			if accountWaitCounted {
+				h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+				accountWaitCounted = false
+			}
+			if err := h.gatewayService.BindStickySession(c.Request.Context(), apiKey.GroupID, sessionKey, account.ID); err != nil {
+				log.Printf("Bind sticky session failed: %v", err)
+			}
+		}
+		// 账号槽位/等待计数需要在超时或断开时安全回收
+		accountReleaseFunc = wrapReleaseOnDone(c.Request.Context(), accountReleaseFunc)
 
-			// 捕获请求信息（用于异步记录，避免在 goroutine 中访问 gin.Context）
-			userAgent := c.GetHeader("User-Agent")
-			clientIP := ip.GetClientIP(c)
-
-			// 异步记录使用量（subscription已在函数开头获取）
-			go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, fcb bool) {
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
-					Result:            result,
-					APIKey:            currentAPIKey,
-					User:              currentAPIKey.User,
-					Account:           usedAccount,
-					Subscription:      currentSubscription,
-					UserAgent:         ua,
-					IPAddress:         clientIP,
-					ForceCacheBilling: fcb,
-					APIKeyService:     h.apiKeyService,
-				}); err != nil {
-					log.Printf("Record usage failed: %v", err)
+		// 转发请求 - 根据账号平台分流
+		var result *service.ForwardResult
+		if account.Platform == service.PlatformAntigravity {
+			result, err = h.antigravityGatewayService.Forward(c.Request.Context(), c, account, body, hasBoundSession)
+		} else {
+			result, err = h.gatewayService.Forward(c.Request.Context(), c, account, parsedReq)
+		}
+		if accountReleaseFunc != nil {
+			accountReleaseFunc()
+		}
+		if err != nil {
+			var failoverErr *service.UpstreamFailoverError
+			if errors.As(err, &failoverErr) {
+				failedAccountIDs[account.ID] = struct{}{}
+				lastFailoverStatus = failoverErr.StatusCode
+				if switchCount >= maxAccountSwitches {
+					h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+					return
 				}
-			}(result, account, userAgent, clientIP, forceCacheBilling)
+				switchCount++
+				log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
+				continue
+			}
+			// 错误响应已在Forward中处理，这里只记录日志
+			log.Printf("Account %d: Forward request failed: %v", account.ID, err)
 			return
 		}
-		if !retryWithFallback {
-			return
-		}
+
+		// 捕获请求信息（用于异步记录，避免在 goroutine 中访问 gin.Context）
+		userAgent := c.GetHeader("User-Agent")
+		clientIP := ip.GetClientIP(c)
+
+		// 异步记录使用量（subscription已在函数开头获取）
+		go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, bt int8) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
+				Result:              result,
+				APIKey:              apiKey,
+				User:                apiKey.User,
+				Account:             usedAccount,
+				Subscription:        subscription,
+				BillingTypeOverride: &bt,
+				UserAgent:           ua,
+				IPAddress:           clientIP,
+			}); err != nil {
+				log.Printf("Record usage failed: %v", err)
+			}
+		}(result, account, userAgent, clientIP, billingDecision.BillingType)
+		return
 	}
 }
 
@@ -592,7 +493,11 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 	}
 
 	// Get available models from account configurations (without platform filter)
-	availableModels := h.gatewayService.GetAvailableModels(c.Request.Context(), groupID, "")
+	result := h.gatewayService.GetAvailableModelsWithSource(c.Request.Context(), groupID, "")
+	if result.Source == "error" {
+		log.Printf("[Models] failed to query available models for group=%v platform=%s, falling back to defaults", groupID, platform)
+	}
+	availableModels := result.Models
 
 	if len(availableModels) > 0 {
 		// Build model list from whitelist
@@ -636,17 +541,6 @@ func (h *GatewayHandler) AntigravityModels(c *gin.Context) {
 	})
 }
 
-func cloneAPIKeyWithGroup(apiKey *service.APIKey, group *service.Group) *service.APIKey {
-	if apiKey == nil || group == nil {
-		return apiKey
-	}
-	cloned := *apiKey
-	groupID := group.ID
-	cloned.GroupID = &groupID
-	cloned.Group = group
-	return &cloned
-}
-
 // Usage handles getting account balance and usage statistics for CC Switch integration
 // GET /v1/usage
 func (h *GatewayHandler) Usage(c *gin.Context) {
@@ -662,10 +556,10 @@ func (h *GatewayHandler) Usage(c *gin.Context) {
 		return
 	}
 
-	// Best-effort: 获取用量统计（按当前 API Key 过滤），失败不影响基础响应
+	// Best-effort: 获取用量统计，失败不影响基础响应
 	var usageData gin.H
 	if h.usageService != nil {
-		dashStats, err := h.usageService.GetAPIKeyDashboardStats(c.Request.Context(), apiKey.ID)
+		dashStats, err := h.usageService.GetUserDashboardStats(c.Request.Context(), subject.UserID)
 		if err == nil && dashStats != nil {
 			usageData = gin.H{
 				"today": gin.H{
@@ -801,37 +695,7 @@ func (h *GatewayHandler) handleConcurrencyError(c *gin.Context, err error, slotT
 		fmt.Sprintf("Concurrency limit exceeded for %s, please retry later", slotType), streamStarted)
 }
 
-func (h *GatewayHandler) handleFailoverExhausted(c *gin.Context, failoverErr *service.UpstreamFailoverError, platform string, streamStarted bool) {
-	statusCode := failoverErr.StatusCode
-	responseBody := failoverErr.ResponseBody
-
-	// 先检查透传规则
-	if h.errorPassthroughService != nil && len(responseBody) > 0 {
-		if rule := h.errorPassthroughService.MatchRule(platform, statusCode, responseBody); rule != nil {
-			// 确定响应状态码
-			respCode := statusCode
-			if !rule.PassthroughCode && rule.ResponseCode != nil {
-				respCode = *rule.ResponseCode
-			}
-
-			// 确定响应消息
-			msg := service.ExtractUpstreamErrorMessage(responseBody)
-			if !rule.PassthroughBody && rule.CustomMessage != nil {
-				msg = *rule.CustomMessage
-			}
-
-			h.handleStreamingAwareError(c, respCode, "upstream_error", msg, streamStarted)
-			return
-		}
-	}
-
-	// 使用默认的错误映射
-	status, errType, errMsg := h.mapUpstreamError(statusCode)
-	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
-}
-
-// handleFailoverExhaustedSimple 简化版本，用于没有响应体的情况
-func (h *GatewayHandler) handleFailoverExhaustedSimple(c *gin.Context, statusCode int, streamStarted bool) {
+func (h *GatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, streamStarted bool) {
 	status, errType, errMsg := h.mapUpstreamError(statusCode)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
 }
@@ -929,9 +793,6 @@ func (h *GatewayHandler) CountTokens(c *gin.Context) {
 		return
 	}
 
-	// 检查是否为 Claude Code 客户端，设置到 context 中
-	SetClaudeCodeClientContext(c, body)
-
 	setOpsRequestContext(c, "", false, body)
 
 	parsedReq, err := service.ParseGatewayRequest(body)
@@ -939,8 +800,6 @@ func (h *GatewayHandler) CountTokens(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 	}
-	// 在请求上下文中记录 thinking 状态，供 Antigravity 最终模型 key 推导/模型维度限流使用
-	c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxkey.ThinkingEnabled, parsedReq.ThinkingEnabled))
 
 	// 验证 model 必填
 	if parsedReq.Model == "" {
@@ -987,33 +846,12 @@ const (
 	InterceptTypeNone              InterceptType = iota
 	InterceptTypeWarmup                          // 预热请求（返回 "New Conversation"）
 	InterceptTypeSuggestionMode                  // SUGGESTION MODE（返回空字符串）
-	InterceptTypeMaxTokensOneHaiku               // max_tokens=1 + haiku 探测请求（返回 "#"）
+	InterceptTypeMaxTokensOneHaiku               // max_tokens=1 + haiku 探测请求（Claude Code）
 )
 
-// isHaikuModel 检查模型名称是否包含 "haiku"（大小写不敏感）
-func isHaikuModel(model string) bool {
-	return strings.Contains(strings.ToLower(model), "haiku")
-}
-
-// isMaxTokensOneHaikuRequest 检查是否为 max_tokens=1 + haiku 模型的探测请求
-// 这类请求用于 Claude Code 验证 API 连通性
-// 条件：max_tokens == 1 且 model 包含 "haiku" 且非流式请求
-func isMaxTokensOneHaikuRequest(model string, maxTokens int, isStream bool) bool {
-	return maxTokens == 1 && isHaikuModel(model) && !isStream
-}
-
 // detectInterceptType 检测请求是否需要拦截，返回拦截类型
-// 参数说明：
-//   - body: 请求体字节
-//   - model: 请求的模型名称
-//   - maxTokens: max_tokens 值
-//   - isStream: 是否为流式请求
-//   - isClaudeCodeClient: 是否已通过 Claude Code 客户端校验
-func detectInterceptType(body []byte, model string, maxTokens int, isStream bool, isClaudeCodeClient bool) InterceptType {
-	// 优先检查 max_tokens=1 + haiku 探测请求（仅非流式）
-	if isClaudeCodeClient && isMaxTokensOneHaikuRequest(model, maxTokens, isStream) {
-		return InterceptTypeMaxTokensOneHaiku
-	}
+func detectInterceptType(body []byte, model string, maxTokens int, isSuggestion bool, isClaudeCode bool) InterceptType {
+	isMaxTokensOneHaiku := isClaudeCode && maxTokens == 1 && strings.Contains(strings.ToLower(model), "haiku")
 
 	// 快速检查：如果不包含任何关键字，直接返回
 	bodyStr := string(body)
@@ -1021,6 +859,9 @@ func detectInterceptType(body []byte, model string, maxTokens int, isStream bool
 	hasWarmupKeyword := strings.Contains(bodyStr, "title") || strings.Contains(bodyStr, "Warmup")
 
 	if !hasSuggestionMode && !hasWarmupKeyword {
+		if isMaxTokensOneHaiku {
+			return InterceptTypeMaxTokensOneHaiku
+		}
 		return InterceptTypeNone
 	}
 
@@ -1072,6 +913,9 @@ func detectInterceptType(body []byte, model string, maxTokens int, isStream bool
 		}
 	}
 
+	if isMaxTokensOneHaiku {
+		return InterceptTypeMaxTokensOneHaiku
+	}
 	return InterceptTypeNone
 }
 
@@ -1164,22 +1008,6 @@ func sendMockInterceptStream(c *gin.Context, model string, interceptType Interce
 	}
 }
 
-// generateRealisticMsgID 生成仿真的消息 ID（msg_bdrk_XXXXXXX 格式）
-// 格式与 Claude API 真实响应一致，24 位随机字母数字
-func generateRealisticMsgID() string {
-	const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	const idLen = 24
-	randomBytes := make([]byte, idLen)
-	if _, err := rand.Read(randomBytes); err != nil {
-		return fmt.Sprintf("msg_bdrk_%d", time.Now().UnixNano())
-	}
-	b := make([]byte, idLen)
-	for i := range b {
-		b[i] = charset[int(randomBytes[i])%len(charset)]
-	}
-	return "msg_bdrk_" + string(b)
-}
-
 // sendMockInterceptResponse 发送非流式 mock 响应（用于请求拦截）
 func sendMockInterceptResponse(c *gin.Context, model string, interceptType InterceptType) {
 	var msgID, text, stopReason string
@@ -1192,10 +1020,10 @@ func sendMockInterceptResponse(c *gin.Context, model string, interceptType Inter
 		outputTokens = 1
 		stopReason = "end_turn"
 	case InterceptTypeMaxTokensOneHaiku:
-		msgID = generateRealisticMsgID()
+		msgID = fmt.Sprintf("msg_bdrk_%d", time.Now().UnixNano())
 		text = "#"
 		outputTokens = 1
-		stopReason = "max_tokens" // max_tokens=1 探测请求的 stop_reason 应为 max_tokens
+		stopReason = "max_tokens"
 	default: // InterceptTypeWarmup
 		msgID = "msg_mock_warmup"
 		text = "New Conversation"
@@ -1203,29 +1031,18 @@ func sendMockInterceptResponse(c *gin.Context, model string, interceptType Inter
 		stopReason = "end_turn"
 	}
 
-	// 构建完整的响应格式（与 Claude API 响应格式一致）
-	response := gin.H{
-		"model":         model,
-		"id":            msgID,
-		"type":          "message",
-		"role":          "assistant",
-		"content":       []gin.H{{"type": "text", "text": text}},
-		"stop_reason":   stopReason,
-		"stop_sequence": nil,
+	c.JSON(http.StatusOK, gin.H{
+		"id":          msgID,
+		"type":        "message",
+		"role":        "assistant",
+		"model":       model,
+		"content":     []gin.H{{"type": "text", "text": text}},
+		"stop_reason": stopReason,
 		"usage": gin.H{
-			"input_tokens":                10,
-			"cache_creation_input_tokens": 0,
-			"cache_read_input_tokens":     0,
-			"cache_creation": gin.H{
-				"ephemeral_5m_input_tokens": 0,
-				"ephemeral_1h_input_tokens": 0,
-			},
+			"input_tokens":  10,
 			"output_tokens": outputTokens,
-			"total_tokens":  10 + outputTokens,
 		},
-	}
-
-	c.JSON(http.StatusOK, response)
+	})
 }
 
 func billingErrorDetails(err error) (status int, code, message string) {

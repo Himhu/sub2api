@@ -124,8 +124,8 @@ type CreateGroupInput struct {
 	MCPXMLInject         *bool
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes []string
-	// 新人专属分组
-	IsNewbieOnly bool
+	// 积分专用分组
+	IsPointsOnly bool
 	// 从指定分组复制账号（创建分组后在同一事务内绑定）
 	CopyAccountsFromGroupIDs []int64
 }
@@ -155,8 +155,8 @@ type UpdateGroupInput struct {
 	MCPXMLInject         *bool
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes *[]string
-	// 新人专属分组
-	IsNewbieOnly *bool
+	// 积分专用分组
+	IsPointsOnly *bool
 	// 从指定分组复制账号（同步操作：先清空当前分组的账号绑定，再绑定源分组的账号）
 	CopyAccountsFromGroupIDs []int64
 }
@@ -255,6 +255,7 @@ type UpdateProxyInput struct {
 type GenerateRedeemCodesInput struct {
 	Count        int
 	Type         string
+	Source       string // 兑换码来源：paid/gift，空值默认 paid
 	Value        float64
 	GroupID      *int64 // 订阅类型专用：关联的分组ID
 	ValidityDays int    // 订阅类型专用：有效天数
@@ -400,7 +401,7 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 	if err := user.SetPassword(input.Password); err != nil {
 		return nil, err
 	}
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := s.createUserWithInviteCodeRetry(ctx, user); err != nil {
 		return nil, err
 	}
 	return user, nil
@@ -707,6 +708,11 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		}
 	}
 
+	// 积分专用分组不能同时为订阅类型
+	if input.IsPointsOnly && subscriptionType == SubscriptionTypeSubscription {
+		return nil, fmt.Errorf("points-only group cannot be a subscription type group")
+	}
+
 	group := &Group{
 		Name:                            input.Name,
 		Description:                     input.Description,
@@ -728,7 +734,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		ModelRoutingEnabled:             input.ModelRoutingEnabled,
 		MCPXMLInject:                    mcpXMLInject,
 		SupportedModelScopes:            input.SupportedModelScopes,
-		IsNewbieOnly:                    input.IsNewbieOnly,
+		IsPointsOnly:                    input.IsPointsOnly,
 	}
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
@@ -927,9 +933,14 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 		group.SupportedModelScopes = *input.SupportedModelScopes
 	}
 
-	// 新人专属分组
-	if input.IsNewbieOnly != nil {
-		group.IsNewbieOnly = *input.IsNewbieOnly
+	// 积分专用分组
+	if input.IsPointsOnly != nil {
+		group.IsPointsOnly = *input.IsPointsOnly
+	}
+
+	// 积分专用分组不能同时为订阅类型
+	if group.IsPointsOnly && group.SubscriptionType == SubscriptionTypeSubscription {
+		return nil, fmt.Errorf("points-only group cannot be a subscription type group")
 	}
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
@@ -1536,6 +1547,16 @@ func (s *adminServiceImpl) GetRedeemCode(ctx context.Context, id int64) (*Redeem
 }
 
 func (s *adminServiceImpl) GenerateRedeemCodes(ctx context.Context, input *GenerateRedeemCodesInput) ([]RedeemCode, error) {
+	source := input.Source
+	switch source {
+	case RedeemSourcePaid, RedeemSourceGift:
+		// valid
+	case "":
+		source = RedeemSourcePaid
+	default:
+		return nil, errors.New("source must be paid or gift")
+	}
+
 	// 如果是订阅类型，验证必须有 GroupID
 	if input.Type == RedeemTypeSubscription {
 		if input.GroupID == nil {
@@ -1560,6 +1581,7 @@ func (s *adminServiceImpl) GenerateRedeemCodes(ctx context.Context, input *Gener
 		code := RedeemCode{
 			Code:   codeValue,
 			Type:   input.Type,
+			Source: source,
 			Value:  input.Value,
 			Status: StatusUnused,
 		}
@@ -1794,6 +1816,29 @@ type MixedChannelError struct {
 func (e *MixedChannelError) Error() string {
 	return fmt.Sprintf("mixed_channel_warning: Group '%s' contains both %s and %s accounts. Using mixed channels in the same context may cause thinking block signature validation issues, which will fallback to non-thinking mode for historical messages.",
 		e.GroupName, e.CurrentPlatform, e.OtherPlatform)
+}
+
+// createUserWithInviteCodeRetry 创建用户，遇到 invite_code 碰撞时自动重试。
+func (s *adminServiceImpl) createUserWithInviteCodeRetry(ctx context.Context, user *User) error {
+	const maxRetries = 3
+	for i := 0; i < maxRetries; i++ {
+		if err := s.userRepo.Create(ctx, user); err != nil {
+			if !errors.Is(err, ErrInviteCodeExists) {
+				return err
+			}
+			if i == maxRetries-1 {
+				return err
+			}
+			code, genErr := s.generateUniqueInviteCode(ctx)
+			if genErr != nil {
+				return genErr
+			}
+			user.InviteCode = &code
+			continue
+		}
+		return nil
+	}
+	return ErrInviteCodeExists
 }
 
 // generateUniqueInviteCode 生成唯一邀请码（带冲突重试）

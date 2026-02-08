@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -107,6 +108,20 @@ func (_c *UserCreate) SetBalance(v float64) *UserCreate {
 func (_c *UserCreate) SetNillableBalance(v *float64) *UserCreate {
 	if v != nil {
 		_c.SetBalance(*v)
+	}
+	return _c
+}
+
+// SetPoints sets the "points" field.
+func (_c *UserCreate) SetPoints(v float64) *UserCreate {
+	_c.mutation.SetPoints(v)
+	return _c
+}
+
+// SetNillablePoints sets the "points" field if the given value is not nil.
+func (_c *UserCreate) SetNillablePoints(v *float64) *UserCreate {
+	if v != nil {
+		_c.SetPoints(*v)
 	}
 	return _c
 }
@@ -399,6 +414,21 @@ func (_c *UserCreate) AddAttributeValues(v ...*UserAttributeValue) *UserCreate {
 	return _c.AddAttributeValueIDs(ids...)
 }
 
+// AddPromoCodeUsageIDs adds the "promo_code_usages" edge to the PromoCodeUsage entity by IDs.
+func (_c *UserCreate) AddPromoCodeUsageIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddPromoCodeUsageIDs(ids...)
+	return _c
+}
+
+// AddPromoCodeUsages adds the "promo_code_usages" edges to the PromoCodeUsage entity.
+func (_c *UserCreate) AddPromoCodeUsages(v ...*PromoCodeUsage) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPromoCodeUsageIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_c *UserCreate) Mutation() *UserMutation {
 	return _c.mutation
@@ -457,6 +487,10 @@ func (_c *UserCreate) defaults() error {
 	if _, ok := _c.mutation.Balance(); !ok {
 		v := user.DefaultBalance
 		_c.mutation.SetBalance(v)
+	}
+	if _, ok := _c.mutation.Points(); !ok {
+		v := user.DefaultPoints
+		_c.mutation.SetPoints(v)
 	}
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		v := user.DefaultConcurrency
@@ -519,6 +553,9 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.Balance(); !ok {
 		return &ValidationError{Name: "balance", err: errors.New(`ent: missing required field "User.balance"`)}
+	}
+	if _, ok := _c.mutation.Points(); !ok {
+		return &ValidationError{Name: "points", err: errors.New(`ent: missing required field "User.points"`)}
 	}
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		return &ValidationError{Name: "concurrency", err: errors.New(`ent: missing required field "User.concurrency"`)}
@@ -607,6 +644,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Balance(); ok {
 		_spec.SetField(user.FieldBalance, field.TypeFloat64, value)
 		_node.Balance = value
+	}
+	if value, ok := _c.mutation.Points(); ok {
+		_spec.SetField(user.FieldPoints, field.TypeFloat64, value)
+		_node.Points = value
 	}
 	if value, ok := _c.mutation.Concurrency(); ok {
 		_spec.SetField(user.FieldConcurrency, field.TypeInt, value)
@@ -788,6 +829,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := _c.mutation.PromoCodeUsagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PromoCodeUsagesTable,
+			Columns: []string{user.PromoCodeUsagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -921,6 +978,24 @@ func (u *UserUpsert) UpdateBalance() *UserUpsert {
 // AddBalance adds v to the "balance" field.
 func (u *UserUpsert) AddBalance(v float64) *UserUpsert {
 	u.Add(user.FieldBalance, v)
+	return u
+}
+
+// SetPoints sets the "points" field.
+func (u *UserUpsert) SetPoints(v float64) *UserUpsert {
+	u.Set(user.FieldPoints, v)
+	return u
+}
+
+// UpdatePoints sets the "points" field to the value that was provided on create.
+func (u *UserUpsert) UpdatePoints() *UserUpsert {
+	u.SetExcluded(user.FieldPoints)
+	return u
+}
+
+// AddPoints adds v to the "points" field.
+func (u *UserUpsert) AddPoints(v float64) *UserUpsert {
+	u.Add(user.FieldPoints, v)
 	return u
 }
 
@@ -1268,6 +1343,27 @@ func (u *UserUpsertOne) AddBalance(v float64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateBalance() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetPoints sets the "points" field.
+func (u *UserUpsertOne) SetPoints(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetPoints(v)
+	})
+}
+
+// AddPoints adds v to the "points" field.
+func (u *UserUpsertOne) AddPoints(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddPoints(v)
+	})
+}
+
+// UpdatePoints sets the "points" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdatePoints() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdatePoints()
 	})
 }
 
@@ -1815,6 +1911,27 @@ func (u *UserUpsertBulk) AddBalance(v float64) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateBalance() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetPoints sets the "points" field.
+func (u *UserUpsertBulk) SetPoints(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetPoints(v)
+	})
+}
+
+// AddPoints adds v to the "points" field.
+func (u *UserUpsertBulk) AddPoints(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddPoints(v)
+	})
+}
+
+// UpdatePoints sets the "points" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdatePoints() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdatePoints()
 	})
 }
 

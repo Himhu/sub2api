@@ -42,6 +42,18 @@ const (
 	RedeemTypeInvitation   = domain.RedeemTypeInvitation
 )
 
+// Redeem source constants
+const (
+	RedeemSourcePaid = "paid"
+	RedeemSourceGift = "gift"
+)
+
+// PromoCode status constants
+const (
+	PromoCodeStatusActive   = domain.PromoCodeStatusActive
+	PromoCodeStatusDisabled = domain.PromoCodeStatusDisabled
+)
+
 // Admin adjustment type constants
 const (
 	AdjustmentTypeAdminBalance     = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
@@ -59,6 +71,12 @@ const (
 	SubscriptionStatusActive    = domain.SubscriptionStatusActive
 	SubscriptionStatusExpired   = domain.SubscriptionStatusExpired
 	SubscriptionStatusSuspended = domain.SubscriptionStatusSuspended
+)
+
+// Subscription source constants
+const (
+	SubscriptionSourcePaid   = "paid"
+	SubscriptionSourceGifted = "gifted"
 )
 
 // LinuxDoConnectSyntheticEmailDomain 是 LinuxDo Connect 用户的合成邮箱后缀（RFC 保留域名）。

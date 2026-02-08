@@ -13,6 +13,7 @@ import (
 
 type billingCacheWorkerStub struct {
 	balanceUpdates      int64
+	pointsUpdates       int64
 	subscriptionUpdates int64
 }
 
@@ -31,6 +32,24 @@ func (b *billingCacheWorkerStub) DeductUserBalance(ctx context.Context, userID i
 }
 
 func (b *billingCacheWorkerStub) InvalidateUserBalance(ctx context.Context, userID int64) error {
+	return nil
+}
+
+func (b *billingCacheWorkerStub) GetUserPoints(ctx context.Context, userID int64) (float64, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (b *billingCacheWorkerStub) SetUserPoints(ctx context.Context, userID int64, points float64) error {
+	atomic.AddInt64(&b.pointsUpdates, 1)
+	return nil
+}
+
+func (b *billingCacheWorkerStub) DeductUserPoints(ctx context.Context, userID int64, amount float64) error {
+	atomic.AddInt64(&b.pointsUpdates, 1)
+	return nil
+}
+
+func (b *billingCacheWorkerStub) InvalidateUserPoints(ctx context.Context, userID int64) error {
 	return nil
 }
 

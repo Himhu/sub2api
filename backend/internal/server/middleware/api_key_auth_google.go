@@ -69,6 +69,7 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 		}
 
 		isSubscriptionType := apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
+		subscriptionValidated := false
 		if isSubscriptionType && subscriptionService != nil {
 			subscription, err := subscriptionService.GetActiveSubscription(
 				c.Request.Context(),
@@ -83,17 +84,37 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 				abortWithGoogleError(c, 403, err.Error())
 				return
 			}
+			subscriptionValidated = true
 			_ = subscriptionService.CheckAndActivateWindow(c.Request.Context(), subscription)
 			_ = subscriptionService.CheckAndResetWindows(c.Request.Context(), subscription)
 			if err := subscriptionService.CheckUsageLimits(c.Request.Context(), subscription, apiKey.Group, 0); err != nil {
-				abortWithGoogleError(c, 429, err.Error())
-				return
+				if apiKey.User.Points <= 0 {
+					abortWithGoogleError(c, 429, err.Error())
+					return
+				}
 			}
 			c.Set(string(ContextKeySubscription), subscription)
 		} else {
-			if apiKey.User.Balance <= 0 {
+			if apiKey.User.Balance <= 0 && apiKey.User.Points <= 0 {
 				abortWithGoogleError(c, 403, "Insufficient account balance")
 				return
+			}
+		}
+
+		// 分组类型运行时检查（能力模型）
+		if apiKey.Group != nil {
+			canUsePointsOnly := apiKey.User.Points > 0
+			canUseNormal := apiKey.User.Balance > 0 || subscriptionValidated
+			if apiKey.Group.IsPointsOnly {
+				if !canUsePointsOnly {
+					abortWithGoogleError(c, 403, "Points-only group requires points balance")
+					return
+				}
+			} else {
+				if !canUseNormal {
+					abortWithGoogleError(c, 403, "Normal group requires balance or valid subscription")
+					return
+				}
 			}
 		}
 

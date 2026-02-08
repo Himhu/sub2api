@@ -122,10 +122,10 @@ func (Group) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
 			Comment("支持的模型系列：claude, gemini_text, gemini_image"),
 
-		// 新人专属分组 (added by migration 047)
-		field.Bool("is_newbie_only").
+		// 积分专用分组 (added by migration 047, renamed by migration 051)
+		field.Bool("is_points_only").
 			Default(false).
-			Comment("是否仅对未使用过兑换码的新用户可见"),
+			Comment("是否为积分专用分组"),
 	}
 }
 

@@ -222,30 +222,20 @@ func (s *APIKeyService) incrementAPIKeyErrorCount(ctx context.Context, userID in
 
 // canUserBindGroup 检查用户是否可以绑定指定分组
 // 检查顺序：
-// 1. 新人专属分组限制（未兑换用户只能绑定新人专属分组）
+// 1. 付费访问限制（非付费用户只能绑定新人专属分组，付费用户不能绑定新人专属分组）
 // 2. 订阅类型分组：检查用户是否有有效订阅
 // 3. 标准类型分组：使用原有的 AllowedGroups 和 IsExclusive 逻辑
 func (s *APIKeyService) canUserBindGroup(ctx context.Context, user *User, group *Group) bool {
-	// 1. 检查新人专属分组限制
-	hasRedeemed, err := s.hasUserRedeemed(ctx, user.ID)
+	// 1. 检查付费访问限制
+	hasPaid, err := s.hasPaidAccess(ctx, user)
 	if err != nil {
-		// Fail-closed: 查询失败时视为未兑换，限制访问非新人分组
-		hasRedeemed = false
+		// Fail-closed: 查询失败时视为未付费，限制访问普通分组
+		hasPaid = false
 	}
+	hasPoints := user.Points > 0
 
-	// 检查是否存在新人专属分组
-	hasNewbieGroups := false
-	if !hasRedeemed {
-		var newbieErr error
-		hasNewbieGroups, newbieErr = s.hasAnyNewbieGroups(ctx)
-		if newbieErr != nil {
-			// Fail-closed: 查询失败时视为存在新人分组，限制用户只能使用新人分组
-			hasNewbieGroups = true
-		}
-	}
-
-	// 应用新人分组限制检查
-	if !s.canUseGroupByRedeemStatus(group, hasRedeemed, hasNewbieGroups) {
+	// 应用付费访问限制检查（能力模型）
+	if !s.canUseGroupByPaidStatus(group, hasPaid, hasPoints) {
 		return false
 	}
 
@@ -605,9 +595,9 @@ func (s *APIKeyService) IncrementUsage(ctx context.Context, keyID int64) error {
 // 返回用户可以选择的分组：
 // - 标准类型分组：公开的（非专属）或用户被明确允许的
 // - 订阅类型分组：用户有有效订阅的
-// - 新人专属分组逻辑：
-//   - 已兑换用户：可以使用所有分组（无限制）
-//   - 未兑换用户：如果存在新人专属分组则只能看到这些分组，否则看普通分组（无感兼容）
+// - 付费访问逻辑：
+//   - 付费用户：可以使用普通分组，不可使用新人专属分组
+//   - 非付费用户：只能看到新人专属分组
 func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([]Group, error) {
 	// 获取用户信息
 	user, err := s.userRepo.GetByID(ctx, userID)
@@ -615,12 +605,13 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	// 检查用户是否使用过兑换码
-	// Fail-closed: 查询失败时视为未兑换，返回受限分组列表
-	hasRedeemed, err := s.hasUserRedeemed(ctx, userID)
+	// 检查用户是否具备付费访问权限（付费订阅或余额>0）
+	// Fail-closed: 查询失败时视为未付费，返回受限分组列表
+	hasPaid, err := s.hasPaidAccess(ctx, user)
 	if err != nil {
-		hasRedeemed = false
+		hasPaid = false
 	}
+	hasPoints := user.Points > 0
 
 	// 获取所有活跃分组
 	allGroups, err := s.groupRepo.ListActive(ctx)
@@ -641,21 +632,10 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 		subscribedGroupIDs[sub.GroupID] = true
 	}
 
-	// 检查是否存在新人专属分组（用于未兑换用户的无感兼容）
-	hasNewbieGroups := false
-	if !hasRedeemed {
-		for _, group := range allGroups {
-			if group.IsNewbieOnly {
-				hasNewbieGroups = true
-				break
-			}
-		}
-	}
-
 	// 过滤出用户有权限的分组
 	availableGroups := make([]Group, 0)
 	for _, group := range allGroups {
-		if s.canUserBindGroupInternal(user, &group, subscribedGroupIDs, hasRedeemed, hasNewbieGroups) {
+		if s.canUserBindGroupInternal(user, &group, subscribedGroupIDs, hasPaid, hasPoints) {
 			availableGroups = append(availableGroups, group)
 		}
 	}
@@ -664,9 +644,9 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 }
 
 // canUserBindGroupInternal 内部方法，检查用户是否可以绑定分组（使用预加载的订阅数据）
-func (s *APIKeyService) canUserBindGroupInternal(user *User, group *Group, subscribedGroupIDs map[int64]bool, hasRedeemed bool, hasNewbieGroups bool) bool {
-	// 新人专属分组检查
-	if !s.canUseGroupByRedeemStatus(group, hasRedeemed, hasNewbieGroups) {
+func (s *APIKeyService) canUserBindGroupInternal(user *User, group *Group, subscribedGroupIDs map[int64]bool, hasPaidAccess bool, hasPoints bool) bool {
+	// 付费访问限制检查（能力模型）
+	if !s.canUseGroupByPaidStatus(group, hasPaidAccess, hasPoints) {
 		return false
 	}
 	// 订阅类型分组：需要有效订阅
@@ -677,50 +657,32 @@ func (s *APIKeyService) canUserBindGroupInternal(user *User, group *Group, subsc
 	return user.CanBindGroup(group.ID, group.IsExclusive)
 }
 
-// canUseGroupByRedeemStatus 根据用户兑换状态检查是否可以使用分组
-// 逻辑：
-// - 已兑换用户：可以使用所有分组（无限制）
-// - 未兑换用户：
-//   - 如果存在新人专属分组(hasNewbieGroups=true)：只能使用 is_newbie_only=true 的分组
-//   - 如果不存在新人专属分组(hasNewbieGroups=false)：可以使用普通分组（无感兼容）
-func (s *APIKeyService) canUseGroupByRedeemStatus(group *Group, hasRedeemed bool, hasNewbieGroups bool) bool {
+// canUseGroupByPaidStatus 根据用户能力检查是否可以使用分组（能力模型）
+// - 积分专用分组：需要 hasPoints=true
+// - 普通分组：需要 hasPaidAccess=true
+func (s *APIKeyService) canUseGroupByPaidStatus(group *Group, hasPaidAccess bool, hasPoints bool) bool {
 	if group == nil {
 		return false
 	}
-	if hasRedeemed {
-		// 已兑换用户：可以使用所有分组
-		return true
+	if group.IsPointsOnly {
+		return hasPoints
 	}
-	// 未兑换用户
-	if hasNewbieGroups {
-		// 存在新人专属分组：只能使用新人专属分组（限制新用户）
-		return group.IsNewbieOnly
-	}
-	// 不存在新人专属分组：可以使用普通分组（无感兼容旧逻辑）
-	return !group.IsNewbieOnly
+	return hasPaidAccess
 }
 
-// hasUserRedeemed 检查用户是否使用过兑换码
-func (s *APIKeyService) hasUserRedeemed(ctx context.Context, userID int64) (bool, error) {
-	if s.redeemRepo == nil {
-		// Fail-closed: redeemRepo 未注入时视为未兑换，限制访问非新人分组
+// hasPaidAccess 检查用户是否具备付费访问权限
+// 逻辑：有付费订阅或余额>0
+func (s *APIKeyService) hasPaidAccess(ctx context.Context, user *User) (bool, error) {
+	if user == nil {
 		return false, nil
 	}
-	return s.redeemRepo.HasUsedByUser(ctx, userID)
-}
-
-// hasAnyNewbieGroups 检查是否存在任何新人专属分组
-func (s *APIKeyService) hasAnyNewbieGroups(ctx context.Context) (bool, error) {
-	allGroups, err := s.groupRepo.ListActive(ctx)
-	if err != nil {
-		return false, err
+	if user.Balance > 0 {
+		return true, nil
 	}
-	for _, group := range allGroups {
-		if group.IsNewbieOnly {
-			return true, nil
-		}
+	if s.userSubRepo == nil {
+		return false, nil
 	}
-	return false, nil
+	return s.userSubRepo.HasPaidActiveByUserID(ctx, user.ID)
 }
 
 func (s *APIKeyService) SearchAPIKeys(ctx context.Context, userID int64, keyword string, limit int) ([]APIKey, error) {

@@ -18,6 +18,12 @@ type BillingCache interface {
 	DeductUserBalance(ctx context.Context, userID int64, amount float64) error
 	InvalidateUserBalance(ctx context.Context, userID int64) error
 
+	// Points operations
+	GetUserPoints(ctx context.Context, userID int64) (float64, error)
+	SetUserPoints(ctx context.Context, userID int64, points float64) error
+	DeductUserPoints(ctx context.Context, userID int64, amount float64) error
+	InvalidateUserPoints(ctx context.Context, userID int64) error
+
 	// Subscription operations
 	GetSubscriptionCache(ctx context.Context, userID, groupID int64) (*SubscriptionCacheData, error)
 	SetSubscriptionCache(ctx context.Context, userID, groupID int64, data *SubscriptionCacheData) error

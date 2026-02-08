@@ -66,6 +66,8 @@ type Group struct {
 	McpXMLInject bool `json:"mcp_xml_inject,omitempty"`
 	// 支持的模型系列：claude, gemini_text, gemini_image
 	SupportedModelScopes []string `json:"supported_model_scopes,omitempty"`
+	// 是否为积分专用分组
+	IsPointsOnly bool `json:"is_points_only,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroupQuery when eager-loading is set.
 	Edges        GroupEdges `json:"edges"`
@@ -174,7 +176,7 @@ func (*Group) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case group.FieldModelRouting, group.FieldSupportedModelScopes:
 			values[i] = new([]byte)
-		case group.FieldIsExclusive, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject:
+		case group.FieldIsExclusive, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject, group.FieldIsPointsOnly:
 			values[i] = new(sql.NullBool)
 		case group.FieldRateMultiplier, group.FieldDailyLimitUsd, group.FieldWeeklyLimitUsd, group.FieldMonthlyLimitUsd, group.FieldImagePrice1k, group.FieldImagePrice2k, group.FieldImagePrice4k:
 			values[i] = new(sql.NullFloat64)
@@ -363,6 +365,12 @@ func (_m *Group) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field supported_model_scopes: %w", err)
 				}
 			}
+		case group.FieldIsPointsOnly:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_points_only", values[i])
+			} else if value.Valid {
+				_m.IsPointsOnly = value.Bool
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -530,6 +538,9 @@ func (_m *Group) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("supported_model_scopes=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SupportedModelScopes))
+	builder.WriteString(", ")
+	builder.WriteString("is_points_only=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsPointsOnly))
 	builder.WriteByte(')')
 	return builder.String()
 }

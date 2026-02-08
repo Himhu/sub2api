@@ -2,7 +2,25 @@
   <AppLayout>
     <div class="mx-auto max-w-4xl space-y-6">
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <StatCard :title="t('profile.accountBalance')" :value="formatCurrency(user?.balance || 0)" :icon="WalletIcon" icon-variant="success" />
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-success">
+            <WalletIcon class="h-6 w-6" aria-hidden="true" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="stat-label truncate">{{ t('profile.accountBalance') }}</p>
+            <div class="mt-2 grid gap-2">
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('profile.balance') }}</span>
+                <span class="stat-value">{{ formatCurrency(user?.balance || 0) }}</span>
+              </div>
+              <div class="h-px bg-gray-200/70 dark:bg-white/10"></div>
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('profile.accountPoints') }}</span>
+                <span class="text-lg font-semibold text-gray-700 dark:text-gray-200">{{ formatCurrency(user?.points || 0) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <StatCard :title="t('profile.concurrencyLimit')" :value="user?.concurrency || 0" :icon="BoltIcon" icon-variant="warning" />
         <StatCard :title="t('profile.memberSince')" :value="formatDate(user?.created_at || '', { year: 'numeric', month: 'long' })" :icon="CalendarIcon" icon-variant="primary" />
       </div>

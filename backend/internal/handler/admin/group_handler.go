@@ -47,8 +47,8 @@ type CreateGroupRequest struct {
 	MCPXMLInject         *bool              `json:"mcp_xml_inject"`
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes []string `json:"supported_model_scopes"`
-	// 新人专属分组
-	IsNewbieOnly bool `json:"is_newbie_only"`
+	// 积分专用分组
+	IsPointsOnly bool `json:"is_points_only"`
 	// 从指定分组复制账号（创建后自动绑定）
 	CopyAccountsFromGroupIDs []int64 `json:"copy_accounts_from_group_ids"`
 }
@@ -78,8 +78,8 @@ type UpdateGroupRequest struct {
 	MCPXMLInject         *bool              `json:"mcp_xml_inject"`
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes *[]string `json:"supported_model_scopes"`
-	// 新人专属分组
-	IsNewbieOnly *bool `json:"is_newbie_only"`
+	// 积分专用分组
+	IsPointsOnly *bool `json:"is_points_only"`
 	// 从指定分组复制账号（同步操作：先清空当前分组的账号绑定，再绑定源分组的账号）
 	CopyAccountsFromGroupIDs []int64 `json:"copy_accounts_from_group_ids"`
 }
@@ -170,6 +170,12 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 积分专用分组与订阅类型互斥
+	if req.IsPointsOnly && req.SubscriptionType == "subscription" {
+		response.BadRequest(c, "Points-only group cannot be a subscription type group")
+		return
+	}
+
 	group, err := h.adminService.CreateGroup(c.Request.Context(), &service.CreateGroupInput{
 		Name:                            req.Name,
 		Description:                     req.Description,
@@ -190,7 +196,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		ModelRoutingEnabled:             req.ModelRoutingEnabled,
 		MCPXMLInject:                    req.MCPXMLInject,
 		SupportedModelScopes:            req.SupportedModelScopes,
-		IsNewbieOnly:                    req.IsNewbieOnly,
+		IsPointsOnly:                    req.IsPointsOnly,
 		CopyAccountsFromGroupIDs:        req.CopyAccountsFromGroupIDs,
 	})
 	if err != nil {
@@ -216,6 +222,12 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 积分专用分组与订阅类型互斥（请求层快速拦截，完整校验在 service 层合并字段后执行）
+	if req.IsPointsOnly != nil && *req.IsPointsOnly && req.SubscriptionType == "subscription" {
+		response.BadRequest(c, "Points-only group cannot be a subscription type group")
+		return
+	}
+
 	group, err := h.adminService.UpdateGroup(c.Request.Context(), groupID, &service.UpdateGroupInput{
 		Name:                            req.Name,
 		Description:                     req.Description,
@@ -237,7 +249,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		ModelRoutingEnabled:             req.ModelRoutingEnabled,
 		MCPXMLInject:                    req.MCPXMLInject,
 		SupportedModelScopes:            req.SupportedModelScopes,
-		IsNewbieOnly:                    req.IsNewbieOnly,
+		IsPointsOnly:                    req.IsPointsOnly,
 		CopyAccountsFromGroupIDs:        req.CopyAccountsFromGroupIDs,
 	})
 	if err != nil {

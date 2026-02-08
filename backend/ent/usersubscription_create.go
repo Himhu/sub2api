@@ -105,6 +105,20 @@ func (_c *UserSubscriptionCreate) SetNillableStatus(v *string) *UserSubscription
 	return _c
 }
 
+// SetSource sets the "source" field.
+func (_c *UserSubscriptionCreate) SetSource(v string) *UserSubscriptionCreate {
+	_c.mutation.SetSource(v)
+	return _c
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillableSource(v *string) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetSource(*v)
+	}
+	return _c
+}
+
 // SetDailyWindowStart sets the "daily_window_start" field.
 func (_c *UserSubscriptionCreate) SetDailyWindowStart(v time.Time) *UserSubscriptionCreate {
 	_c.mutation.SetDailyWindowStart(v)
@@ -330,6 +344,10 @@ func (_c *UserSubscriptionCreate) defaults() error {
 		v := usersubscription.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.Source(); !ok {
+		v := usersubscription.DefaultSource
+		_c.mutation.SetSource(v)
+	}
 	if _, ok := _c.mutation.DailyUsageUsd(); !ok {
 		v := usersubscription.DefaultDailyUsageUsd
 		_c.mutation.SetDailyUsageUsd(v)
@@ -378,6 +396,14 @@ func (_c *UserSubscriptionCreate) check() error {
 	if v, ok := _c.mutation.Status(); ok {
 		if err := usersubscription.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Source(); !ok {
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "UserSubscription.source"`)}
+	}
+	if v, ok := _c.mutation.Source(); ok {
+		if err := usersubscription.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.source": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.DailyUsageUsd(); !ok {
@@ -448,6 +474,10 @@ func (_c *UserSubscriptionCreate) createSpec() (*UserSubscription, *sqlgraph.Cre
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(usersubscription.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.Source(); ok {
+		_spec.SetField(usersubscription.FieldSource, field.TypeString, value)
+		_node.Source = value
 	}
 	if value, ok := _c.mutation.DailyWindowStart(); ok {
 		_spec.SetField(usersubscription.FieldDailyWindowStart, field.TypeTime, value)
@@ -687,6 +717,18 @@ func (u *UserSubscriptionUpsert) SetStatus(v string) *UserSubscriptionUpsert {
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *UserSubscriptionUpsert) UpdateStatus() *UserSubscriptionUpsert {
 	u.SetExcluded(usersubscription.FieldStatus)
+	return u
+}
+
+// SetSource sets the "source" field.
+func (u *UserSubscriptionUpsert) SetSource(v string) *UserSubscriptionUpsert {
+	u.Set(usersubscription.FieldSource, v)
+	return u
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *UserSubscriptionUpsert) UpdateSource() *UserSubscriptionUpsert {
+	u.SetExcluded(usersubscription.FieldSource)
 	return u
 }
 
@@ -993,6 +1035,20 @@ func (u *UserSubscriptionUpsertOne) SetStatus(v string) *UserSubscriptionUpsertO
 func (u *UserSubscriptionUpsertOne) UpdateStatus() *UserSubscriptionUpsertOne {
 	return u.Update(func(s *UserSubscriptionUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *UserSubscriptionUpsertOne) SetSource(v string) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertOne) UpdateSource() *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateSource()
 	})
 }
 
@@ -1491,6 +1547,20 @@ func (u *UserSubscriptionUpsertBulk) SetStatus(v string) *UserSubscriptionUpsert
 func (u *UserSubscriptionUpsertBulk) UpdateStatus() *UserSubscriptionUpsertBulk {
 	return u.Update(func(s *UserSubscriptionUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *UserSubscriptionUpsertBulk) SetSource(v string) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertBulk) UpdateSource() *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateSource()
 	})
 }
 

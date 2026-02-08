@@ -17,6 +17,7 @@ func UserFromServiceShallow(u *service.User) *User {
 		Username:      u.Username,
 		Role:          u.Role,
 		Balance:       u.Balance,
+		Points:        u.Points,
 		Concurrency:   u.Concurrency,
 		Status:        u.Status,
 		AllowedGroups: u.AllowedGroups,
@@ -65,9 +66,8 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		return nil
 	}
 	return &AdminUser{
-		User:       *base,
-		Notes:      u.Notes,
-		GroupRates: u.GroupRates,
+		User:  *base,
+		Notes: u.Notes,
 	}
 }
 
@@ -84,9 +84,6 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		Status:      k.Status,
 		IPWhitelist: k.IPWhitelist,
 		IPBlacklist: k.IPBlacklist,
-		Quota:       k.Quota,
-		QuotaUsed:   k.QuotaUsed,
-		ExpiresAt:   k.ExpiresAt,
 		CreatedAt:   k.CreatedAt,
 		UpdatedAt:   k.UpdatedAt,
 		User:        UserFromServiceShallow(k.User),
@@ -116,12 +113,12 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		return nil
 	}
 	out := &AdminGroup{
-		Group:                groupFromServiceBase(g),
-		ModelRouting:         g.ModelRouting,
-		ModelRoutingEnabled:  g.ModelRoutingEnabled,
-		MCPXMLInject:         g.MCPXMLInject,
+		Group:               groupFromServiceBase(g),
+		ModelRouting:        g.ModelRouting,
+		ModelRoutingEnabled: g.ModelRoutingEnabled,
+		MCPXMLInject:        g.MCPXMLInject,
 		SupportedModelScopes: g.SupportedModelScopes,
-		AccountCount:         g.AccountCount,
+		AccountCount:        g.AccountCount,
 	}
 	if len(g.AccountGroups) > 0 {
 		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))
@@ -149,13 +146,12 @@ func groupFromServiceBase(g *service.Group) Group {
 		ImagePrice1K:     g.ImagePrice1K,
 		ImagePrice2K:     g.ImagePrice2K,
 		ImagePrice4K:     g.ImagePrice4K,
-		ClaudeCodeOnly:   g.ClaudeCodeOnly,
-		FallbackGroupID:  g.FallbackGroupID,
-		// 无效请求兜底分组
+		ClaudeCodeOnly:                  g.ClaudeCodeOnly,
+		FallbackGroupID:                 g.FallbackGroupID,
 		FallbackGroupIDOnInvalidRequest: g.FallbackGroupIDOnInvalidRequest,
-		IsNewbieOnly:                    g.IsNewbieOnly,
-		CreatedAt:                       g.CreatedAt,
-		UpdatedAt:                       g.UpdatedAt,
+		IsPointsOnly:                    g.IsPointsOnly,
+		CreatedAt:        g.CreatedAt,
+		UpdatedAt:        g.UpdatedAt,
 	}
 }
 
@@ -341,6 +337,7 @@ func redeemCodeFromServiceBase(rc *service.RedeemCode) RedeemCode {
 		ID:           rc.ID,
 		Code:         rc.Code,
 		Type:         rc.Type,
+		Source:       rc.Source,
 		Value:        rc.Value,
 		Status:       rc.Status,
 		UsedBy:       rc.UsedBy,
@@ -382,7 +379,6 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		AccountID:             l.AccountID,
 		RequestID:             l.RequestID,
 		Model:                 l.Model,
-		ReasoningEffort:       l.ReasoningEffort,
 		GroupID:               l.GroupID,
 		SubscriptionID:        l.SubscriptionID,
 		InputTokens:           l.InputTokens,
@@ -536,5 +532,37 @@ func BulkAssignResultFromService(r *service.BulkAssignResult) *BulkAssignResult 
 		FailedCount:   r.FailedCount,
 		Subscriptions: subs,
 		Errors:        r.Errors,
+	}
+}
+
+func PromoCodeFromService(pc *service.PromoCode) *PromoCode {
+	if pc == nil {
+		return nil
+	}
+	return &PromoCode{
+		ID:          pc.ID,
+		Code:        pc.Code,
+		BonusAmount: pc.BonusAmount,
+		MaxUses:     pc.MaxUses,
+		UsedCount:   pc.UsedCount,
+		Status:      pc.Status,
+		ExpiresAt:   pc.ExpiresAt,
+		Notes:       pc.Notes,
+		CreatedAt:   pc.CreatedAt,
+		UpdatedAt:   pc.UpdatedAt,
+	}
+}
+
+func PromoCodeUsageFromService(u *service.PromoCodeUsage) *PromoCodeUsage {
+	if u == nil {
+		return nil
+	}
+	return &PromoCodeUsage{
+		ID:          u.ID,
+		PromoCodeID: u.PromoCodeID,
+		UserID:      u.UserID,
+		BonusAmount: u.BonusAmount,
+		UsedAt:      u.UsedAt,
+		User:        UserFromServiceShallow(u.User),
 	}
 }

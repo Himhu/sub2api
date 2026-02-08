@@ -44,6 +44,20 @@ func (_c *RedeemCodeCreate) SetNillableType(v *string) *RedeemCodeCreate {
 	return _c
 }
 
+// SetSource sets the "source" field.
+func (_c *RedeemCodeCreate) SetSource(v string) *RedeemCodeCreate {
+	_c.mutation.SetSource(v)
+	return _c
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_c *RedeemCodeCreate) SetNillableSource(v *string) *RedeemCodeCreate {
+	if v != nil {
+		_c.SetSource(*v)
+	}
+	return _c
+}
+
 // SetValue sets the "value" field.
 func (_c *RedeemCodeCreate) SetValue(v float64) *RedeemCodeCreate {
 	_c.mutation.SetValue(v)
@@ -219,6 +233,10 @@ func (_c *RedeemCodeCreate) defaults() {
 		v := redeemcode.DefaultType
 		_c.mutation.SetType(v)
 	}
+	if _, ok := _c.mutation.Source(); !ok {
+		v := redeemcode.DefaultSource
+		_c.mutation.SetSource(v)
+	}
 	if _, ok := _c.mutation.Value(); !ok {
 		v := redeemcode.DefaultValue
 		_c.mutation.SetValue(v)
@@ -253,6 +271,14 @@ func (_c *RedeemCodeCreate) check() error {
 	if v, ok := _c.mutation.GetType(); ok {
 		if err := redeemcode.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.type": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Source(); !ok {
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "RedeemCode.source"`)}
+	}
+	if v, ok := _c.mutation.Source(); ok {
+		if err := redeemcode.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "RedeemCode.source": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Value(); !ok {
@@ -306,6 +332,10 @@ func (_c *RedeemCodeCreate) createSpec() (*RedeemCode, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(redeemcode.FieldType, field.TypeString, value)
 		_node.Type = value
+	}
+	if value, ok := _c.mutation.Source(); ok {
+		_spec.SetField(redeemcode.FieldSource, field.TypeString, value)
+		_node.Source = value
 	}
 	if value, ok := _c.mutation.Value(); ok {
 		_spec.SetField(redeemcode.FieldValue, field.TypeFloat64, value)
@@ -438,6 +468,18 @@ func (u *RedeemCodeUpsert) SetType(v string) *RedeemCodeUpsert {
 // UpdateType sets the "type" field to the value that was provided on create.
 func (u *RedeemCodeUpsert) UpdateType() *RedeemCodeUpsert {
 	u.SetExcluded(redeemcode.FieldType)
+	return u
+}
+
+// SetSource sets the "source" field.
+func (u *RedeemCodeUpsert) SetSource(v string) *RedeemCodeUpsert {
+	u.Set(redeemcode.FieldSource, v)
+	return u
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *RedeemCodeUpsert) UpdateSource() *RedeemCodeUpsert {
+	u.SetExcluded(redeemcode.FieldSource)
 	return u
 }
 
@@ -631,6 +673,20 @@ func (u *RedeemCodeUpsertOne) SetType(v string) *RedeemCodeUpsertOne {
 func (u *RedeemCodeUpsertOne) UpdateType() *RedeemCodeUpsertOne {
 	return u.Update(func(s *RedeemCodeUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *RedeemCodeUpsertOne) SetSource(v string) *RedeemCodeUpsertOne {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *RedeemCodeUpsertOne) UpdateSource() *RedeemCodeUpsertOne {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.UpdateSource()
 	})
 }
 
@@ -1010,6 +1066,20 @@ func (u *RedeemCodeUpsertBulk) SetType(v string) *RedeemCodeUpsertBulk {
 func (u *RedeemCodeUpsertBulk) UpdateType() *RedeemCodeUpsertBulk {
 	return u.Update(func(s *RedeemCodeUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *RedeemCodeUpsertBulk) SetSource(v string) *RedeemCodeUpsertBulk {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *RedeemCodeUpsertBulk) UpdateSource() *RedeemCodeUpsertBulk {
+	return u.Update(func(s *RedeemCodeUpsert) {
+		s.UpdateSource()
 	})
 }
 

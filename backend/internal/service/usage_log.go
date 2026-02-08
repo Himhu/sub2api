@@ -5,6 +5,7 @@ import "time"
 const (
 	BillingTypeBalance      int8 = 0 // 钱包余额
 	BillingTypeSubscription int8 = 1 // 订阅套餐
+	BillingTypePoints       int8 = 2 // 赠送积分
 )
 
 type UsageLog struct {

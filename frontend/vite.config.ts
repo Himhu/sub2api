@@ -46,7 +46,8 @@ export default defineConfig(({ mode }) => {
         typescript: true,
         vueTsc: true
       }),
-      injectPublicSettings(backendUrl)
+      // 仅开发模式注入配置；生产模式由 Go 服务器带 nonce 注入
+      ...(mode === 'development' ? [injectPublicSettings(backendUrl)] : [])
     ],
   resolve: {
     alias: {

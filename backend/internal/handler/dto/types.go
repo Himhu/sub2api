@@ -13,6 +13,7 @@ type User struct {
 	Username      string    `json:"username"`
 	Role          string    `json:"role"`
 	Balance       float64   `json:"balance"`
+	Points        float64   `json:"points"`
 	Concurrency   int       `json:"concurrency"`
 	Status        string    `json:"status"`
 	AllowedGroups []int64   `json:"allowed_groups"`
@@ -85,8 +86,8 @@ type Group struct {
 	// 无效请求兜底分组
 	FallbackGroupIDOnInvalidRequest *int64 `json:"fallback_group_id_on_invalid_request"`
 
-	// 新人专属分组
-	IsNewbieOnly bool `json:"is_newbie_only"`
+	// 积分专用分组
+	IsPointsOnly bool `json:"is_points_only"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -220,6 +221,7 @@ type RedeemCode struct {
 	ID        int64      `json:"id"`
 	Code      string     `json:"code"`
 	Type      string     `json:"type"`
+	Source    string     `json:"source"`
 	Value     float64    `json:"value"`
 	Status    string     `json:"status"`
 	UsedBy    *int64     `json:"used_by"`
@@ -392,4 +394,27 @@ type BulkAssignResult struct {
 	FailedCount   int                     `json:"failed_count"`
 	Subscriptions []AdminUserSubscription `json:"subscriptions"`
 	Errors        []string                `json:"errors"`
+}
+
+type PromoCode struct {
+	ID          int64      `json:"id"`
+	Code        string     `json:"code"`
+	BonusAmount float64    `json:"bonus_amount"`
+	MaxUses     int        `json:"max_uses"`
+	UsedCount   int        `json:"used_count"`
+	Status      string     `json:"status"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+	Notes       string     `json:"notes"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type PromoCodeUsage struct {
+	ID          int64     `json:"id"`
+	PromoCodeID int64     `json:"promo_code_id"`
+	UserID      int64     `json:"user_id"`
+	BonusAmount float64   `json:"bonus_amount"`
+	UsedAt      time.Time `json:"used_at"`
+
+	User *User `json:"user,omitempty"`
 }

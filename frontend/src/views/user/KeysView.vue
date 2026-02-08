@@ -991,6 +991,12 @@ const formatDateTimeLocal = (isoDate: string): string => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+// Helper to format date for display
+const formatDateTime = (isoDate: string): string => {
+  const date = new Date(isoDate)
+  return date.toLocaleString()
+}
+
 interface GroupOption {
   value: number
   label: string

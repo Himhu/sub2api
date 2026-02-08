@@ -65,6 +65,13 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 		SetNillableInviteCode(userIn.InviteCode).
 		Save(ctx)
 	if err != nil {
+		// 精确区分约束：invite_code 碰撞 vs email 冲突
+		if isUniqueConstraintViolationOn(err, "users_invite_code_key") {
+			return service.ErrInviteCodeExists.WithCause(err)
+		}
+		if isUniqueConstraintViolationOn(err, "users_email_unique_active") {
+			return service.ErrEmailExists.WithCause(err)
+		}
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
 	}
 
@@ -349,6 +356,43 @@ func (r *userRepository) DeductBalance(ctx context.Context, id int64, amount flo
 		Save(ctx)
 	if err != nil {
 		return err
+	}
+	if n == 0 {
+		return service.ErrUserNotFound
+	}
+	return nil
+}
+
+// TryDeductPoints 原子扣除用户积分（仅当积分足够时扣除）
+// 返回 (true, nil) 表示扣除成功
+// 返回 (false, nil) 表示积分不足
+func (r *userRepository) TryDeductPoints(ctx context.Context, id int64, amount float64) (bool, error) {
+	if r.sql == nil {
+		return false, fmt.Errorf("sql executor is not configured")
+	}
+
+	var updatedID int64
+	err := scanSingleRow(ctx, r.sql, `
+		UPDATE users
+		SET points = points - $1
+		WHERE id = $2 AND points >= $1
+		RETURNING id
+	`, []any{amount, id}, &updatedID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// AddPoints 增加用户积分
+func (r *userRepository) AddPoints(ctx context.Context, id int64, amount float64) error {
+	client := clientFromContext(ctx, r.client)
+	n, err := client.User.Update().Where(dbuser.IDEQ(id)).AddPoints(amount).Save(ctx)
+	if err != nil {
+		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 	}
 	if n == 0 {
 		return service.ErrUserNotFound

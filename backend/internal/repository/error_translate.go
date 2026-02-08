@@ -95,3 +95,19 @@ func isUniqueConstraintViolation(err error) bool {
 		strings.Contains(msg, "unique constraint") ||
 		strings.Contains(msg, "duplicate entry")
 }
+
+// isUniqueConstraintViolationOn 判断错误是否为指定约束名的唯一约束冲突（PostgreSQL only）。
+func isUniqueConstraintViolationOn(err error, constraints ...string) bool {
+	if err == nil || len(constraints) == 0 {
+		return false
+	}
+	var pgErr *pq.Error
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		for _, c := range constraints {
+			if c != "" && pgErr.Constraint == c {
+				return true
+			}
+		}
+	}
+	return false
+}

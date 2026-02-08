@@ -401,6 +401,8 @@ export default {
     title: 'Dashboard',
     welcomeMessage: "Welcome back! Here's an overview of your account.",
     balance: 'Balance',
+    points: 'Points',
+    gift: 'Gift Credits',
     apiKeys: 'API Keys',
     todayRequests: 'Today Requests',
     todayCost: 'Today Cost',
@@ -705,6 +707,8 @@ export default {
     title: 'Profile Settings',
     description: 'Manage your account information and settings',
     accountBalance: 'Account Balance',
+    accountPoints: 'Account Points',
+    balance: 'Balance',
     concurrencyLimit: 'Concurrency Limit',
     memberSince: 'Member Since',
     administrator: 'Administrator',
@@ -1242,11 +1246,11 @@ export default {
         fallbackHint: 'Non-Claude Code requests will use this group. Leave empty to reject directly.',
         noFallback: 'No Fallback (Reject)'
       },
-      newbieOnly: {
-        title: 'Newbie Only Group',
-        tooltip: 'When enabled, this group is only visible to new users who have not used any redeem codes. Users who have redeemed codes will not see this group.',
-        enabled: 'Newbie Only',
-        disabled: 'Visible to All'
+      pointsOnly: {
+        title: 'Points-Only Group',
+        tooltip: 'When enabled, this group is only available to users with points and enforces points-based billing.',
+        enabled: 'Points Only',
+        disabled: 'Available to All'
       },
       invalidRequestFallback: {
         title: 'Invalid Request Fallback Group',
@@ -2250,6 +2254,11 @@ export default {
       generatedSuccessfully: 'Generated Successfully',
       codesCreated: '{count} redeem code(s) created',
       codeType: 'Code Type',
+      source: 'Source',
+      sources: {
+        paid: 'Paid',
+        gift: 'Gift'
+      },
       amount: 'Amount ($)',
       value: 'Value',
       count: 'Count',

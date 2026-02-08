@@ -47,6 +47,10 @@ func (User) Fields() []ent.Field {
 		field.Float("balance").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),
+		field.Float("points").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Default(0).
+			Comment("用户积分余额"),
 		field.Int("concurrency").
 			Default(5),
 		field.String("status").
@@ -73,24 +77,29 @@ func (User) Fields() []ent.Field {
 			Optional().
 			Nillable(),
 
-		// 代理相关字段
+		// 代理相关字段 (added by migration 045)
 		field.Bool("is_agent").
-			Default(false),
+			Default(false).
+			Comment("是否是代理"),
 		field.Int64("parent_agent_id").
 			Optional().
-			Nillable(),
+			Nillable().
+			Comment("上级代理用户ID"),
 
-		// 邀请相关字段
+		// 邀请相关字段 (added by migration 045)
 		field.String("invite_code").
 			MaxLen(32).
 			Optional().
-			Nillable(),
+			Nillable().
+			Comment("用户专属邀请码"),
 		field.Int64("invited_by_user_id").
 			Optional().
-			Nillable(),
+			Nillable().
+			Comment("邀请人用户ID"),
 		field.Int64("belong_agent_id").
 			Optional().
-			Nillable(),
+			Nillable().
+			Comment("所属代理用户ID"),
 	}
 }
 
@@ -105,6 +114,7 @@ func (User) Edges() []ent.Edge {
 			Through("user_allowed_groups", UserAllowedGroup.Type),
 		edge.To("usage_logs", UsageLog.Type),
 		edge.To("attribute_values", UserAttributeValue.Type),
+		edge.To("promo_code_usages", PromoCodeUsage.Type),
 	}
 }
 

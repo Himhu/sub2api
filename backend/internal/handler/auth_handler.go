@@ -122,6 +122,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		}
 	}
 
+	// 邀请注册启用时，邀请码必填
+	if h.settingSvc != nil && h.settingSvc.IsInviteRegistrationEnabled(c.Request.Context()) {
+		if req.PromoCode == "" {
+			response.BadRequest(c, "邀请码不能为空")
+			return
+		}
+	}
+
 	_, user, err := h.authService.RegisterWithVerification(c.Request.Context(), req.Email, req.Password, req.VerifyCode, req.PromoCode, req.InvitationCode)
 	if err != nil {
 		response.ErrorFrom(c, err)

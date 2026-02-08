@@ -291,7 +291,7 @@ import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-import { getPublicSettings, validateInviteCode, validatePromoCode, validateInvitationCode } from '@/api/auth'
+import { getPublicSettings, validateInviteCode, validateInvitationCode } from '@/api/auth'
 
 const { t } = useI18n()
 

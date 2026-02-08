@@ -108,6 +108,9 @@ func (m *mockAccountRepoForPlatform) SetError(ctx context.Context, id int64, err
 func (m *mockAccountRepoForPlatform) ClearError(ctx context.Context, id int64) error {
 	return nil
 }
+func (m *mockAccountRepoForPlatform) BatchClearErrors(ctx context.Context) (int64, error) {
+	return 0, nil
+}
 func (m *mockAccountRepoForPlatform) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
 	return nil
 }

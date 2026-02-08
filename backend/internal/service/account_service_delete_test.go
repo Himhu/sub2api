@@ -103,6 +103,10 @@ func (s *accountRepoStub) ClearError(ctx context.Context, id int64) error {
 	panic("unexpected ClearError call")
 }
 
+func (s *accountRepoStub) BatchClearErrors(ctx context.Context) (int64, error) {
+	panic("unexpected BatchClearErrors call")
+}
+
 func (s *accountRepoStub) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
 	panic("unexpected SetSchedulable call")
 }

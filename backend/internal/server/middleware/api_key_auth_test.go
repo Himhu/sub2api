@@ -367,6 +367,10 @@ func (r *stubUserSubscriptionRepo) ListActiveByUserID(ctx context.Context, userI
 	return nil, errors.New("not implemented")
 }
 
+func (r *stubUserSubscriptionRepo) HasPaidActiveByUserID(ctx context.Context, userID int64) (bool, error) {
+	return false, nil
+}
+
 func (r *stubUserSubscriptionRepo) ListByGroupID(ctx context.Context, groupID int64, params pagination.PaginationParams) ([]service.UserSubscription, *pagination.PaginationResult, error) {
 	return nil, nil, errors.New("not implemented")
 }

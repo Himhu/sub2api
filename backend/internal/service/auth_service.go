@@ -23,6 +23,7 @@ var (
 	ErrInvalidCredentials     = infraerrors.Unauthorized("INVALID_CREDENTIALS", "invalid email or password")
 	ErrUserNotActive          = infraerrors.Forbidden("USER_NOT_ACTIVE", "user is not active")
 	ErrEmailExists            = infraerrors.Conflict("EMAIL_EXISTS", "email already exists")
+	ErrInviteCodeExists       = infraerrors.Conflict("INVITE_CODE_EXISTS", "invite code already exists")
 	ErrEmailReserved          = infraerrors.BadRequest("EMAIL_RESERVED", "email is reserved")
 	ErrInvalidToken           = infraerrors.Unauthorized("INVALID_TOKEN", "invalid token")
 	ErrTokenExpired           = infraerrors.Unauthorized("TOKEN_EXPIRED", "token has expired")
@@ -147,8 +148,6 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 		invitationRedeemCode = redeemCode
 	}
-	}
-
 	// 检查是否需要邮件验证
 	if s.settingService != nil && s.settingService.IsEmailVerifyEnabled(ctx) {
 		// 如果邮件验证已开启但邮件服务未配置，拒绝注册
@@ -246,8 +245,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
-		// 优先检查邮箱冲突错误（竞态条件下可能发生）
+	if err := s.createUserWithInviteCodeRetry(ctx, user); err != nil {
 		if errors.Is(err, ErrEmailExists) {
 			return "", nil, ErrEmailExists
 		}
@@ -261,7 +259,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		if !inviter.IsAgent {
 			inviterBonus := s.settingService.GetInviterBonus(ctx)
 			if inviterBonus > 0 {
-				if err := s.userRepo.UpdateBalance(ctx, inviter.ID, inviterBonus); err != nil {
+				if err := s.userRepo.AddPoints(ctx, inviter.ID, inviterBonus); err != nil {
 					log.Printf("[Auth] Failed to add inviter bonus for user %d: %v", inviter.ID, err)
 				}
 			}
@@ -269,10 +267,11 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		// 被邀请人奖励：始终发放
 		inviteeBonus := s.settingService.GetInviteeBonus(ctx)
 		if inviteeBonus > 0 {
-			if err := s.userRepo.UpdateBalance(ctx, user.ID, inviteeBonus); err != nil {
+			if err := s.userRepo.AddPoints(ctx, user.ID, inviteeBonus); err != nil {
 				log.Printf("[Auth] Failed to add invitee bonus for user %d: %v", user.ID, err)
 			} else {
-				user.Balance += inviteeBonus
+				// 更新本地用户对象的积分，以便返回正确的值
+				user.Points += inviteeBonus
 			}
 		}
 	}
@@ -319,10 +318,6 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email string) error {
 		return ErrEmailReserved
 	}
 
-	if IsDisposableEmail(email) {
-		return ErrDisposableEmail
-	}
-
 	// 检查邮箱是否已存在
 	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
@@ -359,10 +354,6 @@ func (s *AuthService) SendVerifyCodeAsync(ctx context.Context, email string) (*S
 
 	if isReservedEmail(email) {
 		return nil, ErrEmailReserved
-	}
-
-	if IsDisposableEmail(email) {
-		return nil, ErrDisposableEmail
 	}
 
 	// 检查邮箱是否已存在
@@ -553,7 +544,7 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 				InviteCode:   &oauthInviteCode,
 			}
 
-			if err := s.userRepo.Create(ctx, newUser); err != nil {
+			if err := s.createUserWithInviteCodeRetry(ctx, newUser); err != nil {
 				if errors.Is(err, ErrEmailExists) {
 					// 并发场景：GetByEmail 与 Create 之间用户被创建。
 					user, err = s.userRepo.GetByEmail(ctx, email)
@@ -985,6 +976,29 @@ func (s *AuthService) ResetPassword(ctx context.Context, email, token, newPasswo
 
 	log.Printf("[Auth] Password reset successful for user: %s", email)
 	return nil
+}
+
+// createUserWithInviteCodeRetry 创建用户，遇到 invite_code 碰撞时自动重试。
+func (s *AuthService) createUserWithInviteCodeRetry(ctx context.Context, user *User) error {
+	const maxRetries = 3
+	for i := 0; i < maxRetries; i++ {
+		if err := s.userRepo.Create(ctx, user); err != nil {
+			if !errors.Is(err, ErrInviteCodeExists) {
+				return err
+			}
+			if i == maxRetries-1 {
+				return err
+			}
+			code, genErr := s.generateUniqueInviteCode(ctx)
+			if genErr != nil {
+				return genErr
+			}
+			user.InviteCode = &code
+			continue
+		}
+		return nil
+	}
+	return ErrInviteCodeExists
 }
 
 // generateUniqueInviteCode 生成唯一邀请码（带冲突重试）

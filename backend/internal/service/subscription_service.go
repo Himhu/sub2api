@@ -389,6 +389,14 @@ func (s *SubscriptionService) GetActiveSubscription(ctx context.Context, userID,
 	return sub, nil
 }
 
+// HasPaidActiveSubscription 检查用户是否有活跃的付费订阅
+func (s *SubscriptionService) HasPaidActiveSubscription(ctx context.Context, userID int64) (bool, error) {
+	if s.userSubRepo == nil {
+		return false, fmt.Errorf("user subscription repository not configured")
+	}
+	return s.userSubRepo.HasPaidActiveByUserID(ctx, userID)
+}
+
 // ListUserSubscriptions 获取用户的所有订阅
 func (s *SubscriptionService) ListUserSubscriptions(ctx context.Context, userID int64) ([]UserSubscription, error) {
 	subs, err := s.userSubRepo.ListByUserID(ctx, userID)

@@ -340,6 +340,20 @@ func (_c *GroupCreate) SetSupportedModelScopes(v []string) *GroupCreate {
 	return _c
 }
 
+// SetIsPointsOnly sets the "is_points_only" field.
+func (_c *GroupCreate) SetIsPointsOnly(v bool) *GroupCreate {
+	_c.mutation.SetIsPointsOnly(v)
+	return _c
+}
+
+// SetNillableIsPointsOnly sets the "is_points_only" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableIsPointsOnly(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetIsPointsOnly(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -521,6 +535,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultSupportedModelScopes
 		_c.mutation.SetSupportedModelScopes(v)
 	}
+	if _, ok := _c.mutation.IsPointsOnly(); !ok {
+		v := group.DefaultIsPointsOnly
+		_c.mutation.SetIsPointsOnly(v)
+	}
 	return nil
 }
 
@@ -584,6 +602,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.SupportedModelScopes(); !ok {
 		return &ValidationError{Name: "supported_model_scopes", err: errors.New(`ent: missing required field "Group.supported_model_scopes"`)}
+	}
+	if _, ok := _c.mutation.IsPointsOnly(); !ok {
+		return &ValidationError{Name: "is_points_only", err: errors.New(`ent: missing required field "Group.is_points_only"`)}
 	}
 	return nil
 }
@@ -707,6 +728,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SupportedModelScopes(); ok {
 		_spec.SetField(group.FieldSupportedModelScopes, field.TypeJSON, value)
 		_node.SupportedModelScopes = value
+	}
+	if value, ok := _c.mutation.IsPointsOnly(); ok {
+		_spec.SetField(group.FieldIsPointsOnly, field.TypeBool, value)
+		_node.IsPointsOnly = value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1266,6 +1291,18 @@ func (u *GroupUpsert) UpdateSupportedModelScopes() *GroupUpsert {
 	return u
 }
 
+// SetIsPointsOnly sets the "is_points_only" field.
+func (u *GroupUpsert) SetIsPointsOnly(v bool) *GroupUpsert {
+	u.Set(group.FieldIsPointsOnly, v)
+	return u
+}
+
+// UpdateIsPointsOnly sets the "is_points_only" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateIsPointsOnly() *GroupUpsert {
+	u.SetExcluded(group.FieldIsPointsOnly)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -1777,6 +1814,20 @@ func (u *GroupUpsertOne) SetSupportedModelScopes(v []string) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateSupportedModelScopes() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSupportedModelScopes()
+	})
+}
+
+// SetIsPointsOnly sets the "is_points_only" field.
+func (u *GroupUpsertOne) SetIsPointsOnly(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetIsPointsOnly(v)
+	})
+}
+
+// UpdateIsPointsOnly sets the "is_points_only" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateIsPointsOnly() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateIsPointsOnly()
 	})
 }
 
@@ -2457,6 +2508,20 @@ func (u *GroupUpsertBulk) SetSupportedModelScopes(v []string) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateSupportedModelScopes() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSupportedModelScopes()
+	})
+}
+
+// SetIsPointsOnly sets the "is_points_only" field.
+func (u *GroupUpsertBulk) SetIsPointsOnly(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetIsPointsOnly(v)
+	})
+}
+
+// UpdateIsPointsOnly sets the "is_points_only" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateIsPointsOnly() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateIsPointsOnly()
 	})
 }
 

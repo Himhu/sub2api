@@ -402,6 +402,8 @@ export default {
     title: '仪表盘',
     welcomeMessage: '欢迎回来！这是您账户的概览。',
     balance: '余额',
+    points: '积分',
+    gift: '赠送额度',
     apiKeys: 'API 密钥',
     todayRequests: '今日请求',
     todayCost: '今日消费',
@@ -711,6 +713,8 @@ export default {
     title: '个人设置',
     description: '管理您的账户信息和设置',
     accountBalance: '账户余额',
+    accountPoints: '账户积分',
+    balance: '余额',
     concurrencyLimit: '并发限制',
     memberSince: '注册时间',
     administrator: '管理员',
@@ -1330,11 +1334,11 @@ export default {
         fallbackHint: '非 Claude Code 请求将使用此分组，留空则直接拒绝',
         noFallback: '不降级（直接拒绝）'
       },
-      newbieOnly: {
-        title: '新人专属分组',
-        tooltip: '启用后，此分组仅对未使用过兑换码的新用户可见。已使用过兑换码的用户将无法看到此分组。',
-        enabled: '仅限新用户',
-        disabled: '所有用户可见'
+      pointsOnly: {
+        title: '积分专用分组',
+        tooltip: '启用后，此分组仅对拥有积分的用户可用，且强制使用积分计费。',
+        enabled: '仅限积分用户',
+        disabled: '所有用户可用'
       },
       invalidRequestFallback: {
         title: '无效请求兜底分组',
@@ -2391,6 +2395,11 @@ export default {
       generatedSuccessfully: '生成成功',
       codesCreated: '已创建 {count} 个兑换码',
       codeType: '类型',
+      source: '来源',
+      sources: {
+        paid: '付费',
+        gift: '赠送'
+      },
       amount: '金额 ($)',
       value: '面值',
       count: '数量',

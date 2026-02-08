@@ -66,6 +66,17 @@ func (s *AgentService) GetAgentByID(ctx context.Context, id int64) (*User, error
 func (s *AgentService) SetAgentStatus(ctx context.Context, userID int64, isAgent bool, parentAgentID *int64) (*User, error) {
 	var inviteCode *string
 
+	// When revoking agent status, verify the target is currently an agent.
+	if !isAgent {
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if !user.IsAgent {
+			return nil, ErrUserNotAgent
+		}
+	}
+
 	// Validate parent agent if setting as agent with a parent
 	if isAgent && parentAgentID != nil {
 		// Check for self-reference

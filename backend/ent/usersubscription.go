@@ -35,6 +35,8 @@ type UserSubscription struct {
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// Subscription source: paid, gift
+	Source string `json:"source,omitempty"`
 	// DailyWindowStart holds the value of the "daily_window_start" field.
 	DailyWindowStart *time.Time `json:"daily_window_start,omitempty"`
 	// WeeklyWindowStart holds the value of the "weekly_window_start" field.
@@ -125,7 +127,7 @@ func (*UserSubscription) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case usersubscription.FieldID, usersubscription.FieldUserID, usersubscription.FieldGroupID, usersubscription.FieldAssignedBy:
 			values[i] = new(sql.NullInt64)
-		case usersubscription.FieldStatus, usersubscription.FieldNotes:
+		case usersubscription.FieldStatus, usersubscription.FieldSource, usersubscription.FieldNotes:
 			values[i] = new(sql.NullString)
 		case usersubscription.FieldCreatedAt, usersubscription.FieldUpdatedAt, usersubscription.FieldDeletedAt, usersubscription.FieldStartsAt, usersubscription.FieldExpiresAt, usersubscription.FieldDailyWindowStart, usersubscription.FieldWeeklyWindowStart, usersubscription.FieldMonthlyWindowStart, usersubscription.FieldAssignedAt:
 			values[i] = new(sql.NullTime)
@@ -198,6 +200,12 @@ func (_m *UserSubscription) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = value.String
+			}
+		case usersubscription.FieldSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source", values[i])
+			} else if value.Valid {
+				_m.Source = value.String
 			}
 		case usersubscription.FieldDailyWindowStart:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -339,6 +347,9 @@ func (_m *UserSubscription) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
+	builder.WriteString(", ")
+	builder.WriteString("source=")
+	builder.WriteString(_m.Source)
 	builder.WriteString(", ")
 	if v := _m.DailyWindowStart; v != nil {
 		builder.WriteString("daily_window_start=")

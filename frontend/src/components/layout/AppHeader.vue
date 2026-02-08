@@ -123,6 +123,12 @@
           <span class="text-sm font-semibold text-primary-700 dark:text-primary-300">
             ${{ user.balance?.toFixed(2) || '0.00' }}
           </span>
+          <template v-if="user.points > 0">
+            <span class="text-sm text-primary-300 dark:text-primary-600">·</span>
+            <span class="text-xs font-semibold text-primary-600/80 dark:text-primary-300/80">
+              {{ t('dashboard.points') }} ${{ user.points?.toFixed(2) }}
+            </span>
+          </template>
         </div>
 
         <!-- User Dropdown -->
@@ -167,6 +173,12 @@
                 <div class="text-sm font-semibold text-primary-600 dark:text-primary-400">
                   ${{ user.balance?.toFixed(2) || '0.00' }}
                 </div>
+                <template v-if="user.points > 0">
+                  <div class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('dashboard.points') }}</div>
+                  <div class="text-sm font-semibold text-primary-500/90 dark:text-primary-300/90">
+                    ${{ user.points?.toFixed(2) }}
+                  </div>
+                </template>
               </div>
 
               <div class="py-1">

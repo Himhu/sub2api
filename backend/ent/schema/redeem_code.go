@@ -42,6 +42,10 @@ func (RedeemCode) Fields() []ent.Field {
 		field.String("type").
 			MaxLen(20).
 			Default(domain.RedeemTypeBalance),
+		field.String("source").
+			MaxLen(20).
+			Default("paid").
+			Comment("Redeem code source: paid, gift"),
 		field.Float("value").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),

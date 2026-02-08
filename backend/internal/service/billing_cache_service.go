@@ -18,6 +18,7 @@ import (
 var (
 	ErrSubscriptionInvalid       = infraerrors.Forbidden("SUBSCRIPTION_INVALID", "subscription is invalid or expired")
 	ErrBillingServiceUnavailable = infraerrors.ServiceUnavailable("BILLING_SERVICE_ERROR", "Billing service temporarily unavailable. Please retry later.")
+	ErrInsufficientPoints        = infraerrors.Forbidden("INSUFFICIENT_POINTS", "insufficient points for points-only group")
 )
 
 // subscriptionCacheData 订阅缓存数据结构（内部使用）
@@ -35,9 +36,11 @@ type cacheWriteKind int
 
 const (
 	cacheWriteSetBalance cacheWriteKind = iota
+	cacheWriteSetPoints
 	cacheWriteSetSubscription
 	cacheWriteUpdateSubscriptionUsage
 	cacheWriteDeductBalance
+	cacheWriteDeductPoints
 )
 
 // 异步缓存写入工作池配置
@@ -66,6 +69,7 @@ type cacheWriteTask struct {
 	userID           int64
 	groupID          int64
 	balance          float64
+	points           float64
 	amount           float64
 	subscriptionData *subscriptionCacheData
 }
@@ -151,6 +155,8 @@ func (s *BillingCacheService) cacheWriteWorker() {
 		switch task.kind {
 		case cacheWriteSetBalance:
 			s.setBalanceCache(ctx, task.userID, task.balance)
+		case cacheWriteSetPoints:
+			s.setPointsCache(ctx, task.userID, task.points)
 		case cacheWriteSetSubscription:
 			s.setSubscriptionCache(ctx, task.userID, task.groupID, task.subscriptionData)
 		case cacheWriteUpdateSubscriptionUsage:
@@ -165,6 +171,12 @@ func (s *BillingCacheService) cacheWriteWorker() {
 					log.Printf("Warning: deduct balance cache failed for user %d: %v", task.userID, err)
 				}
 			}
+		case cacheWriteDeductPoints:
+			if s.cache != nil {
+				if err := s.cache.DeductUserPoints(ctx, task.userID, task.amount); err != nil {
+					log.Printf("Warning: deduct points cache failed for user %d: %v", task.userID, err)
+				}
+			}
 		}
 		cancel()
 	}
@@ -175,12 +187,16 @@ func cacheWriteKindName(kind cacheWriteKind) string {
 	switch kind {
 	case cacheWriteSetBalance:
 		return "set_balance"
+	case cacheWriteSetPoints:
+		return "set_points"
 	case cacheWriteSetSubscription:
 		return "set_subscription"
 	case cacheWriteUpdateSubscriptionUsage:
 		return "update_subscription_usage"
 	case cacheWriteDeductBalance:
 		return "deduct_balance"
+	case cacheWriteDeductPoints:
+		return "deduct_points"
 	default:
 		return "unknown"
 	}
@@ -319,6 +335,93 @@ func (s *BillingCacheService) InvalidateUserBalance(ctx context.Context, userID 
 }
 
 // ============================================
+// 积分缓存方法
+// ============================================
+
+// GetUserPoints 获取用户积分（优先从缓存读取）
+func (s *BillingCacheService) GetUserPoints(ctx context.Context, userID int64) (float64, error) {
+	if s.cache == nil {
+		return s.getUserPointsFromDB(ctx, userID)
+	}
+
+	points, err := s.cache.GetUserPoints(ctx, userID)
+	if err == nil {
+		return points, nil
+	}
+
+	points, err = s.getUserPointsFromDB(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	_ = s.enqueueCacheWrite(cacheWriteTask{
+		kind:   cacheWriteSetPoints,
+		userID: userID,
+		points: points,
+	})
+
+	return points, nil
+}
+
+// getUserPointsFromDB 从数据库获取用户积分
+func (s *BillingCacheService) getUserPointsFromDB(ctx context.Context, userID int64) (float64, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("get user points: %w", err)
+	}
+	return user.Points, nil
+}
+
+// setPointsCache 设置积分缓存
+func (s *BillingCacheService) setPointsCache(ctx context.Context, userID int64, points float64) {
+	if s.cache == nil {
+		return
+	}
+	if err := s.cache.SetUserPoints(ctx, userID, points); err != nil {
+		log.Printf("Warning: set points cache failed for user %d: %v", userID, err)
+	}
+}
+
+// DeductPointsCache 扣减积分缓存（同步调用）
+func (s *BillingCacheService) DeductPointsCache(ctx context.Context, userID int64, amount float64) error {
+	if s.cache == nil {
+		return nil
+	}
+	return s.cache.DeductUserPoints(ctx, userID, amount)
+}
+
+// QueueDeductPoints 异步扣减积分缓存
+func (s *BillingCacheService) QueueDeductPoints(userID int64, amount float64) {
+	if s.cache == nil {
+		return
+	}
+	if s.enqueueCacheWrite(cacheWriteTask{
+		kind:   cacheWriteDeductPoints,
+		userID: userID,
+		amount: amount,
+	}) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), cacheWriteTimeout)
+	defer cancel()
+	if err := s.DeductPointsCache(ctx, userID, amount); err != nil {
+		log.Printf("Warning: deduct points cache fallback failed for user %d: %v", userID, err)
+	}
+}
+
+// InvalidateUserPoints 失效用户积分缓存
+func (s *BillingCacheService) InvalidateUserPoints(ctx context.Context, userID int64) error {
+	if s.cache == nil {
+		return nil
+	}
+	if err := s.cache.InvalidateUserPoints(ctx, userID); err != nil {
+		log.Printf("Warning: invalidate points cache failed for user %d: %v", userID, err)
+		return err
+	}
+	return nil
+}
+
+// ============================================
 // 订阅缓存方法
 // ============================================
 
@@ -445,88 +548,134 @@ func (s *BillingCacheService) InvalidateSubscription(ctx context.Context, userID
 // 统一检查方法
 // ============================================
 
-// CheckBillingEligibility 检查用户是否有资格发起请求
-// 余额模式：检查缓存余额 > 0
-// 订阅模式：检查缓存用量未超过限额（Group限额从参数传入）
-func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user *User, apiKey *APIKey, group *Group, subscription *UserSubscription) error {
-	// 简易模式：跳过所有计费检查
-	if s.cfg.RunMode == config.RunModeSimple {
-		return nil
-	}
-	if s.circuitBreaker != nil && !s.circuitBreaker.Allow() {
-		return ErrBillingServiceUnavailable
-	}
-
-	// 判断计费模式
-	isSubscriptionMode := group != nil && group.IsSubscriptionType() && subscription != nil
-
-	if isSubscriptionMode {
-		return s.checkSubscriptionEligibility(ctx, user.ID, group, subscription)
-	}
-
-	return s.checkBalanceEligibility(ctx, user.ID)
+// BillingDecision 计费决策，指示本次请求应使用哪种计费方式
+type BillingDecision struct {
+	BillingType int8
 }
 
-// checkBalanceEligibility 检查余额模式资格
+// CheckBillingEligibilityDecision 检查计费资格并返回计费决策
+// 余额模式：优先余额，余额不足时回退到积分
+// 订阅模式：优先订阅，超限时回退到积分
+func (s *BillingCacheService) CheckBillingEligibilityDecision(ctx context.Context, user *User, apiKey *APIKey, group *Group, subscription *UserSubscription) (BillingDecision, error) {
+	if s.cfg.RunMode == config.RunModeSimple {
+		return BillingDecision{BillingType: BillingTypeBalance}, nil
+	}
+	if s.circuitBreaker != nil && !s.circuitBreaker.Allow() {
+		return BillingDecision{}, ErrBillingServiceUnavailable
+	}
+
+	// 积分专用分组：强制积分计费，不进入订阅/余额路径
+	if group != nil && group.IsPointsOnly {
+		points, err := s.GetUserPoints(ctx, user.ID)
+		if err != nil {
+			if s.circuitBreaker != nil {
+				s.circuitBreaker.OnFailure(err)
+			}
+			return BillingDecision{}, ErrBillingServiceUnavailable.WithCause(err)
+		}
+		if s.circuitBreaker != nil {
+			s.circuitBreaker.OnSuccess()
+		}
+		if points > 0 {
+			return BillingDecision{BillingType: BillingTypePoints}, nil
+		}
+		return BillingDecision{}, ErrInsufficientPoints
+	}
+
+	isSubscriptionMode := group != nil && group.IsSubscriptionType() && subscription != nil
+	if isSubscriptionMode {
+		return s.checkSubscriptionEligibilityDecision(ctx, user.ID, group, subscription)
+	}
+	return s.checkBalanceEligibilityDecision(ctx, user.ID)
+}
+
+// CheckBillingEligibility 检查用户是否有资格发起请求（兼容旧接口）
+func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user *User, apiKey *APIKey, group *Group, subscription *UserSubscription) error {
+	_, err := s.CheckBillingEligibilityDecision(ctx, user, apiKey, group, subscription)
+	return err
+}
+
+// checkBalanceEligibility 检查余额模式资格（兼容旧接口）
 func (s *BillingCacheService) checkBalanceEligibility(ctx context.Context, userID int64) error {
+	_, err := s.checkBalanceEligibilityDecision(ctx, userID)
+	return err
+}
+
+func (s *BillingCacheService) checkBalanceEligibilityDecision(ctx context.Context, userID int64) (BillingDecision, error) {
 	balance, err := s.GetUserBalance(ctx, userID)
 	if err != nil {
 		if s.circuitBreaker != nil {
 			s.circuitBreaker.OnFailure(err)
 		}
 		log.Printf("ALERT: billing balance check failed for user %d: %v", userID, err)
-		return ErrBillingServiceUnavailable.WithCause(err)
+		return BillingDecision{}, ErrBillingServiceUnavailable.WithCause(err)
 	}
 	if s.circuitBreaker != nil {
 		s.circuitBreaker.OnSuccess()
 	}
 
-	if balance <= 0 {
-		return ErrInsufficientBalance
+	if balance > 0 {
+		return BillingDecision{BillingType: BillingTypeBalance}, nil
 	}
 
-	return nil
+	return s.fallbackToPointsDecision(ctx, userID, ErrInsufficientBalance)
 }
 
-// checkSubscriptionEligibility 检查订阅模式资格
+// checkSubscriptionEligibility 检查订阅模式资格（兼容旧接口）
 func (s *BillingCacheService) checkSubscriptionEligibility(ctx context.Context, userID int64, group *Group, subscription *UserSubscription) error {
-	// 获取订阅缓存数据
+	_, err := s.checkSubscriptionEligibilityDecision(ctx, userID, group, subscription)
+	return err
+}
+
+func (s *BillingCacheService) checkSubscriptionEligibilityDecision(ctx context.Context, userID int64, group *Group, subscription *UserSubscription) (BillingDecision, error) {
 	subData, err := s.GetSubscriptionStatus(ctx, userID, group.ID)
 	if err != nil {
 		if s.circuitBreaker != nil {
 			s.circuitBreaker.OnFailure(err)
 		}
 		log.Printf("ALERT: billing subscription check failed for user %d group %d: %v", userID, group.ID, err)
-		return ErrBillingServiceUnavailable.WithCause(err)
+		return BillingDecision{}, ErrBillingServiceUnavailable.WithCause(err)
 	}
 	if s.circuitBreaker != nil {
 		s.circuitBreaker.OnSuccess()
 	}
 
-	// 检查订阅状态
+	// 订阅无效/过期：不回退到积分（状态错误）
 	if subData.Status != SubscriptionStatusActive {
-		return ErrSubscriptionInvalid
+		return BillingDecision{}, ErrSubscriptionInvalid
 	}
-
-	// 检查是否过期
 	if time.Now().After(subData.ExpiresAt) {
-		return ErrSubscriptionInvalid
+		return BillingDecision{}, ErrSubscriptionInvalid
 	}
 
-	// 检查限额（使用传入的Group限额配置）
+	// 超限：回退到积分
 	if group.HasDailyLimit() && subData.DailyUsage >= *group.DailyLimitUSD {
-		return ErrDailyLimitExceeded
+		return s.fallbackToPointsDecision(ctx, userID, ErrDailyLimitExceeded)
 	}
-
 	if group.HasWeeklyLimit() && subData.WeeklyUsage >= *group.WeeklyLimitUSD {
-		return ErrWeeklyLimitExceeded
+		return s.fallbackToPointsDecision(ctx, userID, ErrWeeklyLimitExceeded)
 	}
-
 	if group.HasMonthlyLimit() && subData.MonthlyUsage >= *group.MonthlyLimitUSD {
-		return ErrMonthlyLimitExceeded
+		return s.fallbackToPointsDecision(ctx, userID, ErrMonthlyLimitExceeded)
 	}
 
-	return nil
+	return BillingDecision{BillingType: BillingTypeSubscription}, nil
+}
+
+// fallbackToPointsDecision 尝试回退到积分计费，积分不足时返回原始错误
+func (s *BillingCacheService) fallbackToPointsDecision(ctx context.Context, userID int64, fallbackErr error) (BillingDecision, error) {
+	points, err := s.GetUserPoints(ctx, userID)
+	if err != nil {
+		if s.circuitBreaker != nil {
+			s.circuitBreaker.OnFailure(err)
+		}
+		log.Printf("ALERT: billing points check failed for user %d: %v", userID, err)
+		return BillingDecision{}, ErrBillingServiceUnavailable.WithCause(err)
+	}
+	if points > 0 {
+		return BillingDecision{BillingType: BillingTypePoints}, nil
+	}
+	return BillingDecision{}, fallbackErr
 }
 
 type billingCircuitBreakerState int

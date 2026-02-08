@@ -167,6 +167,18 @@ func (r *userSubscriptionRepository) ListActiveByUserID(ctx context.Context, use
 	return userSubscriptionEntitiesToService(subs), nil
 }
 
+func (r *userSubscriptionRepository) HasPaidActiveByUserID(ctx context.Context, userID int64) (bool, error) {
+	client := clientFromContext(ctx, r.client)
+	return client.UserSubscription.Query().
+		Where(
+			usersubscription.UserIDEQ(userID),
+			usersubscription.StatusEQ(service.SubscriptionStatusActive),
+			usersubscription.ExpiresAtGT(time.Now()),
+			usersubscription.SourceEQ(service.SubscriptionSourcePaid),
+		).
+		Exist(ctx)
+}
+
 func (r *userSubscriptionRepository) ListByGroupID(ctx context.Context, groupID int64, params pagination.PaginationParams) ([]service.UserSubscription, *pagination.PaginationResult, error) {
 	client := clientFromContext(ctx, r.client)
 	q := client.UserSubscription.Query().Where(usersubscription.GroupIDEQ(groupID))

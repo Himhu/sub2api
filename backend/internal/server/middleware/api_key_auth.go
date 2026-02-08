@@ -132,6 +132,7 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 
 		// 判断计费方式：订阅模式 vs 余额模式
 		isSubscriptionType := apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
+		subscriptionValidated := false
 
 		if isSubscriptionType && subscriptionService != nil {
 			// 订阅模式：验证订阅
@@ -150,6 +151,7 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 				AbortWithError(c, 403, "SUBSCRIPTION_INVALID", err.Error())
 				return
 			}
+			subscriptionValidated = true
 
 			// 激活滑动窗口（首次使用时）
 			if err := subscriptionService.CheckAndActivateWindow(c.Request.Context(), subscription); err != nil {
@@ -163,17 +165,37 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 
 			// 预检查用量限制（使用0作为额外费用进行预检查）
 			if err := subscriptionService.CheckUsageLimits(c.Request.Context(), subscription, apiKey.Group, 0); err != nil {
-				AbortWithError(c, 429, "USAGE_LIMIT_EXCEEDED", err.Error())
-				return
+				// 超限时检查积分回退
+				if apiKey.User.Points <= 0 {
+					AbortWithError(c, 429, "USAGE_LIMIT_EXCEEDED", err.Error())
+					return
+				}
 			}
 
 			// 将订阅信息存入上下文
 			c.Set(string(ContextKeySubscription), subscription)
 		} else {
-			// 余额模式：检查用户余额
-			if apiKey.User.Balance <= 0 {
+			// 余额模式：检查用户余额和积分
+			if apiKey.User.Balance <= 0 && apiKey.User.Points <= 0 {
 				AbortWithError(c, 403, "INSUFFICIENT_BALANCE", "Insufficient account balance")
 				return
+			}
+		}
+
+		// 分组类型运行时检查（能力模型）
+		if apiKey.Group != nil {
+			canUsePointsOnly := apiKey.User.Points > 0
+			canUseNormal := apiKey.User.Balance > 0 || subscriptionValidated
+			if apiKey.Group.IsPointsOnly {
+				if !canUsePointsOnly {
+					AbortWithError(c, 403, "GROUP_TYPE_MISMATCH", "Points-only group requires points balance")
+					return
+				}
+			} else {
+				if !canUseNormal {
+					AbortWithError(c, 403, "GROUP_TYPE_MISMATCH", "Normal group requires balance or valid subscription")
+					return
+				}
 			}
 		}
 

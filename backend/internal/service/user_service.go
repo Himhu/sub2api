@@ -12,6 +12,7 @@ var (
 	ErrUserNotFound        = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
 	ErrPasswordIncorrect   = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
 	ErrInsufficientPerms   = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrUserNotAgent        = infraerrors.BadRequest("USER_NOT_AGENT", "user is not an agent")
 	ErrParentAgentSelf     = infraerrors.BadRequest("PARENT_AGENT_SELF", "cannot set self as parent agent")
 	ErrParentAgentInvalid  = infraerrors.BadRequest("PARENT_AGENT_INVALID", "parent agent must be an existing agent")
 	ErrParentAgentCycle    = infraerrors.BadRequest("PARENT_AGENT_CYCLE", "setting this parent would create a cycle in the agent hierarchy")
@@ -38,6 +39,8 @@ type UserRepository interface {
 
 	UpdateBalance(ctx context.Context, id int64, amount float64) error
 	DeductBalance(ctx context.Context, id int64, amount float64) error
+	TryDeductPoints(ctx context.Context, id int64, amount float64) (bool, error)
+	AddPoints(ctx context.Context, id int64, amount float64) error
 	UpdateConcurrency(ctx context.Context, id int64, amount int) error
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 	RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error)

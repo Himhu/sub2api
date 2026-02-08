@@ -93,6 +93,9 @@ func (m *mockAccountRepoForGemini) SetError(ctx context.Context, id int64, error
 func (m *mockAccountRepoForGemini) ClearError(ctx context.Context, id int64) error {
 	return nil
 }
+func (m *mockAccountRepoForGemini) BatchClearErrors(ctx context.Context) (int64, error) {
+	return 0, nil
+}
 func (m *mockAccountRepoForGemini) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
 	return nil
 }

@@ -30,6 +30,7 @@ export interface User {
   email: string
   role: 'admin' | 'user' // User role for authorization
   balance: number // User balance for API usage
+  points: number // Gift credits (separate from paid balance)
   concurrency: number // Allowed concurrent requests
   status: 'active' | 'disabled' // Account status
   allowed_groups: number[] | null // Allowed group IDs (null = all non-exclusive groups)
@@ -369,8 +370,8 @@ export interface Group {
   claude_code_only: boolean
   fallback_group_id: number | null
   fallback_group_id_on_invalid_request: number | null
-  // 新人专属分组（仅对未使用过兑换码的用户可见）
-  is_newbie_only: boolean
+  // 积分专用分组
+  is_points_only: boolean
   created_at: string
   updated_at: string
 }
@@ -458,7 +459,7 @@ export interface CreateGroupRequest {
   supported_model_scopes?: string[]
   // 从指定分组复制账号
   copy_accounts_from_group_ids?: number[]
-  is_newbie_only?: boolean
+  is_points_only?: boolean
 }
 
 export interface UpdateGroupRequest {
@@ -481,7 +482,7 @@ export interface UpdateGroupRequest {
   mcp_xml_inject?: boolean
   supported_model_scopes?: string[]
   copy_accounts_from_group_ids?: number[]
-  is_newbie_only?: boolean
+  is_points_only?: boolean
 }
 
 // ==================== Account & Proxy Types ====================
@@ -903,6 +904,7 @@ export interface RedeemCode {
   id: number
   code: string
   type: RedeemCodeType
+  source?: string // 来源: paid/gift
   value: number
   status: 'active' | 'used' | 'expired' | 'unused'
   used_by: number | null
@@ -918,6 +920,7 @@ export interface RedeemCode {
 export interface GenerateRedeemCodesRequest {
   count: number
   type: RedeemCodeType
+  source?: string // 来源: paid/gift（仅 balance 类型）
   value: number
   group_id?: number | null // 订阅类型专用
   validity_days?: number // 订阅类型专用

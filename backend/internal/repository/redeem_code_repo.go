@@ -22,6 +22,7 @@ func (r *redeemCodeRepository) Create(ctx context.Context, code *service.RedeemC
 	created, err := r.client.RedeemCode.Create().
 		SetCode(code.Code).
 		SetType(code.Type).
+		SetSource(redeemCodeSourceOrDefault(code.Source)).
 		SetValue(code.Value).
 		SetStatus(code.Status).
 		SetNotes(code.Notes).
@@ -48,6 +49,7 @@ func (r *redeemCodeRepository) CreateBatch(ctx context.Context, codes []service.
 		b := r.client.RedeemCode.Create().
 			SetCode(c.Code).
 			SetType(c.Type).
+			SetSource(redeemCodeSourceOrDefault(c.Source)).
 			SetValue(c.Value).
 			SetStatus(c.Status).
 			SetNotes(c.Notes).
@@ -134,6 +136,7 @@ func (r *redeemCodeRepository) Update(ctx context.Context, code *service.RedeemC
 	up := r.client.RedeemCode.UpdateOneID(code.ID).
 		SetCode(code.Code).
 		SetType(code.Type).
+		SetSource(redeemCodeSourceOrDefault(code.Source)).
 		SetValue(code.Value).
 		SetStatus(code.Status).
 		SetNotes(code.Notes).
@@ -261,6 +264,7 @@ func redeemCodeEntityToService(m *dbent.RedeemCode) *service.RedeemCode {
 		ID:           m.ID,
 		Code:         m.Code,
 		Type:         m.Type,
+		Source:       m.Source,
 		Value:        m.Value,
 		Status:       m.Status,
 		UsedBy:       m.UsedBy,
@@ -287,6 +291,15 @@ func redeemCodeEntitiesToService(models []*dbent.RedeemCode) []service.RedeemCod
 		}
 	}
 	return out
+}
+
+func redeemCodeSourceOrDefault(source string) string {
+	switch source {
+	case service.RedeemSourcePaid, service.RedeemSourceGift:
+		return source
+	default:
+		return service.RedeemSourcePaid
+	}
 }
 
 // HasUsedByUser 检查用户是否使用过兑换码（排除管理员操作类型）

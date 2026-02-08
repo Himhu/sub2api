@@ -93,6 +93,7 @@ func newTestAPIKeyService(repo service.APIKeyRepository) *service.APIKeyService 
 		nil, // userRepo (unused in GetByKey)
 		nil, // groupRepo
 		nil, // userSubRepo
+		nil, // redeemRepo
 		nil, // userGroupRateRepo
 		nil, // cache
 		&config.Config{},
@@ -187,8 +188,9 @@ func TestApiKeyAuthWithSubscriptionGoogleSetsGroupContext(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil,
-		nil,
+		nil, // redeemRepo
+		nil, // userGroupRateRepo
+		nil, // cache
 		&config.Config{RunMode: config.RunModeSimple},
 	)
 
