@@ -67,6 +67,9 @@ func RegisterAdminRoutes(
 
 		// 代理（Agent）管理
 		registerAgentRoutes(admin, h)
+
+		// 错误透传规则管理
+		registerErrorPassthroughRoutes(admin, h)
 	}
 }
 
@@ -75,6 +78,7 @@ func registerOpsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	{
 		// Realtime ops signals
 		ops.GET("/concurrency", h.Admin.Ops.GetConcurrencyStats)
+		ops.GET("/user-concurrency", h.Admin.Ops.GetUserConcurrencyStats)
 		ops.GET("/account-availability", h.Admin.Ops.GetAccountAvailability)
 		ops.GET("/realtime-traffic", h.Admin.Ops.GetRealtimeTrafficSummary)
 
@@ -175,6 +179,7 @@ func registerUserManagementRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		users.POST("/:id/balance", h.Admin.User.UpdateBalance)
 		users.GET("/:id/api-keys", h.Admin.User.GetUserAPIKeys)
 		users.GET("/:id/usage", h.Admin.User.GetUserUsage)
+		users.GET("/:id/balance-history", h.Admin.User.GetBalanceHistory)
 
 		// User attribute values
 		users.GET("/:id/attributes", h.Admin.UserAttribute.GetUserAttributes)
@@ -218,10 +223,15 @@ func registerAccountRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		accounts.POST("/:id/schedulable", h.Admin.Account.SetSchedulable)
 		accounts.GET("/:id/models", h.Admin.Account.GetAvailableModels)
 		accounts.POST("/batch", h.Admin.Account.BatchCreate)
+		accounts.GET("/data", h.Admin.Account.ExportData)
+		accounts.POST("/data", h.Admin.Account.ImportData)
 		accounts.POST("/batch-update-credentials", h.Admin.Account.BatchUpdateCredentials)
 		accounts.POST("/batch-refresh-tier", h.Admin.Account.BatchRefreshTier)
 		accounts.POST("/batch-clear-error", h.Admin.Account.BatchClearError)
 		accounts.POST("/bulk-update", h.Admin.Account.BulkUpdate)
+
+		// Antigravity 默认模型映射
+		accounts.GET("/antigravity/default-model-mapping", h.Admin.Account.GetAntigravityDefaultModelMapping)
 
 		// Claude OAuth routes
 		accounts.POST("/generate-auth-url", h.Admin.OAuth.GenerateAuthURL)
@@ -278,6 +288,8 @@ func registerProxyRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	{
 		proxies.GET("", h.Admin.Proxy.List)
 		proxies.GET("/all", h.Admin.Proxy.GetAll)
+		proxies.GET("/data", h.Admin.Proxy.ExportData)
+		proxies.POST("/data", h.Admin.Proxy.ImportData)
 		proxies.GET("/:id", h.Admin.Proxy.GetByID)
 		proxies.POST("", h.Admin.Proxy.Create)
 		proxies.PUT("/:id", h.Admin.Proxy.Update)
@@ -384,5 +396,16 @@ func registerAgentRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		agents.PATCH("/:id/status", h.Admin.Agent.SetAgentStatus)
 		agents.GET("/:id/downline", h.Admin.Agent.GetDownline)
 		agents.GET("/:id/invite-stats", h.Admin.Agent.GetInviteStats)
+	}
+}
+
+func registerErrorPassthroughRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	rules := admin.Group("/error-passthrough-rules")
+	{
+		rules.GET("", h.Admin.ErrorPassthrough.List)
+		rules.GET("/:id", h.Admin.ErrorPassthrough.GetByID)
+		rules.POST("", h.Admin.ErrorPassthrough.Create)
+		rules.PUT("/:id", h.Admin.ErrorPassthrough.Update)
+		rules.DELETE("/:id", h.Admin.ErrorPassthrough.Delete)
 	}
 }

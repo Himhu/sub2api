@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -19,21 +20,26 @@ import (
 )
 
 var (
-	ErrInvalidCredentials  = infraerrors.Unauthorized("INVALID_CREDENTIALS", "invalid email or password")
-	ErrUserNotActive       = infraerrors.Forbidden("USER_NOT_ACTIVE", "user is not active")
-	ErrEmailExists         = infraerrors.Conflict("EMAIL_EXISTS", "email already exists")
-	ErrEmailReserved       = infraerrors.BadRequest("EMAIL_RESERVED", "email is reserved")
-	ErrInvalidToken        = infraerrors.Unauthorized("INVALID_TOKEN", "invalid token")
-	ErrTokenExpired        = infraerrors.Unauthorized("TOKEN_EXPIRED", "token has expired")
-	ErrTokenTooLarge       = infraerrors.BadRequest("TOKEN_TOO_LARGE", "token too large")
-	ErrTokenRevoked        = infraerrors.Unauthorized("TOKEN_REVOKED", "token has been revoked")
-	ErrEmailVerifyRequired = infraerrors.BadRequest("EMAIL_VERIFY_REQUIRED", "email verification is required")
-	ErrInviteCodeRequired  = infraerrors.BadRequest("INVITE_CODE_REQUIRED", "invite code is required")
-	ErrInviteCodeInvalid   = infraerrors.BadRequest("INVITE_CODE_INVALID", "invite code is invalid")
-	ErrInviteCodeFormat    = infraerrors.BadRequest("INVITE_CODE_INVALID_FORMAT", "invite code must be 16 hex characters")
-	ErrRegDisabled         = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
-	ErrDisposableEmail     = infraerrors.BadRequest("DISPOSABLE_EMAIL", "disposable/temporary email addresses are not allowed")
-	ErrServiceUnavailable  = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
+	ErrInvalidCredentials     = infraerrors.Unauthorized("INVALID_CREDENTIALS", "invalid email or password")
+	ErrUserNotActive          = infraerrors.Forbidden("USER_NOT_ACTIVE", "user is not active")
+	ErrEmailExists            = infraerrors.Conflict("EMAIL_EXISTS", "email already exists")
+	ErrEmailReserved          = infraerrors.BadRequest("EMAIL_RESERVED", "email is reserved")
+	ErrInvalidToken           = infraerrors.Unauthorized("INVALID_TOKEN", "invalid token")
+	ErrTokenExpired           = infraerrors.Unauthorized("TOKEN_EXPIRED", "token has expired")
+	ErrAccessTokenExpired     = infraerrors.Unauthorized("ACCESS_TOKEN_EXPIRED", "access token has expired")
+	ErrTokenTooLarge          = infraerrors.BadRequest("TOKEN_TOO_LARGE", "token too large")
+	ErrTokenRevoked           = infraerrors.Unauthorized("TOKEN_REVOKED", "token has been revoked")
+	ErrRefreshTokenInvalid    = infraerrors.Unauthorized("REFRESH_TOKEN_INVALID", "invalid refresh token")
+	ErrRefreshTokenExpired    = infraerrors.Unauthorized("REFRESH_TOKEN_EXPIRED", "refresh token has expired")
+	ErrRefreshTokenReused     = infraerrors.Unauthorized("REFRESH_TOKEN_REUSED", "refresh token has been reused")
+	ErrEmailVerifyRequired    = infraerrors.BadRequest("EMAIL_VERIFY_REQUIRED", "email verification is required")
+	ErrInviteCodeRequired     = infraerrors.BadRequest("INVITE_CODE_REQUIRED", "invite code is required")
+	ErrInviteCodeInvalid      = infraerrors.BadRequest("INVITE_CODE_INVALID", "invite code is invalid")
+	ErrInviteCodeFormat       = infraerrors.BadRequest("INVITE_CODE_INVALID_FORMAT", "invite code must be 16 hex characters")
+	ErrRegDisabled            = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
+	ErrServiceUnavailable     = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
+	ErrInvitationCodeRequired = infraerrors.BadRequest("INVITATION_CODE_REQUIRED", "invitation code is required")
+	ErrInvitationCodeInvalid  = infraerrors.BadRequest("INVITATION_CODE_INVALID", "invalid or used invitation code")
 )
 
 // maxTokenLength 限制 token 大小，避免超长 header 触发解析时的异常内存分配。
@@ -55,6 +61,9 @@ func IsValidInviteCodeFormat(code string) bool {
 	return true
 }
 
+// refreshTokenPrefix is the prefix for refresh tokens to distinguish them from access tokens.
+const refreshTokenPrefix = "rt_"
+
 // JWTClaims JWT载荷数据
 type JWTClaims struct {
 	UserID       int64  `json:"user_id"`
@@ -67,39 +76,48 @@ type JWTClaims struct {
 // AuthService 认证服务
 type AuthService struct {
 	userRepo          UserRepository
+	redeemRepo        RedeemCodeRepository
+	refreshTokenCache RefreshTokenCache
 	cfg               *config.Config
 	settingService    *SettingService
 	emailService      *EmailService
 	turnstileService  *TurnstileService
 	emailQueueService *EmailQueueService
+	promoService      *PromoService
 }
 
 // NewAuthService 创建认证服务实例
 func NewAuthService(
 	userRepo UserRepository,
+	redeemRepo RedeemCodeRepository,
+	refreshTokenCache RefreshTokenCache,
 	cfg *config.Config,
 	settingService *SettingService,
 	emailService *EmailService,
 	turnstileService *TurnstileService,
 	emailQueueService *EmailQueueService,
+	promoService *PromoService,
 ) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
+		redeemRepo:        redeemRepo,
+		refreshTokenCache: refreshTokenCache,
 		cfg:               cfg,
 		settingService:    settingService,
 		emailService:      emailService,
 		turnstileService:  turnstileService,
 		emailQueueService: emailQueueService,
+		promoService:      promoService,
 	}
 }
 
 // Register 用户注册，返回token和用户
 func (s *AuthService) Register(ctx context.Context, email, password string) (string, *User, error) {
-	return s.RegisterWithVerification(ctx, email, password, "", "")
+	return s.RegisterWithVerification(ctx, email, password, "", "", "")
 }
 
-// RegisterWithVerification 用户注册（支持邮件验证和优惠码），返回token和用户
-func (s *AuthService) RegisterWithVerification(ctx context.Context, email, password, verifyCode, promoCode string) (string, *User, error) {
+// RegisterWithVerification 用户注册（支持邮件验证、优惠码和邀请码），返回token和用户
+func (s *AuthService) RegisterWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode string) (string, *User, error) {
 	// 检查是否开放注册（默认关闭：settingService 未配置时不允许注册）
 	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
 		return "", nil, ErrRegDisabled
@@ -110,9 +128,25 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		return "", nil, ErrEmailReserved
 	}
 
-	// 防止临时邮箱注册
-	if IsDisposableEmail(email) {
-		return "", nil, ErrDisposableEmail
+	// 检查是否需要邀请码
+	var invitationRedeemCode *RedeemCode
+	if s.settingService != nil && s.settingService.IsInvitationCodeEnabled(ctx) {
+		if invitationCode == "" {
+			return "", nil, ErrInvitationCodeRequired
+		}
+		// 验证邀请码
+		redeemCode, err := s.redeemRepo.GetByCode(ctx, invitationCode)
+		if err != nil {
+			log.Printf("[Auth] Invalid invitation code: %s, error: %v", invitationCode, err)
+			return "", nil, ErrInvitationCodeInvalid
+		}
+		// 检查类型和状态
+		if redeemCode.Type != RedeemTypeInvitation || redeemCode.Status != StatusUnused {
+			log.Printf("[Auth] Invitation code invalid: type=%s, status=%s", redeemCode.Type, redeemCode.Status)
+			return "", nil, ErrInvitationCodeInvalid
+		}
+		invitationRedeemCode = redeemCode
+	}
 	}
 
 	// 检查是否需要邮件验证
@@ -229,7 +263,6 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 			if inviterBonus > 0 {
 				if err := s.userRepo.UpdateBalance(ctx, inviter.ID, inviterBonus); err != nil {
 					log.Printf("[Auth] Failed to add inviter bonus for user %d: %v", inviter.ID, err)
-					// 奖励发放失败不影响注册流程，仅记录日志
 				}
 			}
 		}
@@ -239,8 +272,24 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 			if err := s.userRepo.UpdateBalance(ctx, user.ID, inviteeBonus); err != nil {
 				log.Printf("[Auth] Failed to add invitee bonus for user %d: %v", user.ID, err)
 			} else {
-				// 更新本地用户对象的余额，以便返回正确的值
 				user.Balance += inviteeBonus
+			}
+		}
+	}
+
+	// 标记邀请码为已使用（如果使用了邀请码）
+	if invitationRedeemCode != nil {
+		if err := s.redeemRepo.Use(ctx, invitationRedeemCode.ID, user.ID); err != nil {
+			log.Printf("[Auth] Failed to mark invitation code as used for user %d: %v", user.ID, err)
+		}
+	}
+	// 应用优惠码（如果提供且功能已启用）
+	if promoCode != "" && s.promoService != nil && s.settingService != nil && s.settingService.IsPromoCodeEnabled(ctx) {
+		if err := s.promoService.ApplyPromoCode(ctx, user.ID, promoCode); err != nil {
+			log.Printf("[Auth] Failed to apply promo code for user %d: %v", user.ID, err)
+		} else {
+			if updatedUser, err := s.userRepo.GetByID(ctx, user.ID); err == nil {
+				user = updatedUser
 			}
 		}
 	}
@@ -544,6 +593,100 @@ func (s *AuthService) LoginOrRegisterOAuth(ctx context.Context, email, username 
 	return token, user, nil
 }
 
+// LoginOrRegisterOAuthWithTokenPair 用于第三方 OAuth/SSO 登录，返回完整的 TokenPair
+// 与 LoginOrRegisterOAuth 功能相同，但返回 TokenPair 而非单个 token
+func (s *AuthService) LoginOrRegisterOAuthWithTokenPair(ctx context.Context, email, username string) (*TokenPair, *User, error) {
+	// 检查 refreshTokenCache 是否可用
+	if s.refreshTokenCache == nil {
+		return nil, nil, errors.New("refresh token cache not configured")
+	}
+
+	email = strings.TrimSpace(email)
+	if email == "" || len(email) > 255 {
+		return nil, nil, infraerrors.BadRequest("INVALID_EMAIL", "invalid email")
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, nil, infraerrors.BadRequest("INVALID_EMAIL", "invalid email")
+	}
+
+	username = strings.TrimSpace(username)
+	if len([]rune(username)) > 100 {
+		username = string([]rune(username)[:100])
+	}
+
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			// OAuth 首次登录视为注册
+			if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
+				return nil, nil, ErrRegDisabled
+			}
+
+			randomPassword, err := randomHexString(32)
+			if err != nil {
+				log.Printf("[Auth] Failed to generate random password for oauth signup: %v", err)
+				return nil, nil, ErrServiceUnavailable
+			}
+			hashedPassword, err := s.HashPassword(randomPassword)
+			if err != nil {
+				return nil, nil, fmt.Errorf("hash password: %w", err)
+			}
+
+			defaultBalance := s.cfg.Default.UserBalance
+			defaultConcurrency := s.cfg.Default.UserConcurrency
+			if s.settingService != nil {
+				defaultBalance = s.settingService.GetDefaultBalance(ctx)
+				defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
+			}
+
+			newUser := &User{
+				Email:        email,
+				Username:     username,
+				PasswordHash: hashedPassword,
+				Role:         RoleUser,
+				Balance:      defaultBalance,
+				Concurrency:  defaultConcurrency,
+				Status:       StatusActive,
+			}
+
+			if err := s.userRepo.Create(ctx, newUser); err != nil {
+				if errors.Is(err, ErrEmailExists) {
+					user, err = s.userRepo.GetByEmail(ctx, email)
+					if err != nil {
+						log.Printf("[Auth] Database error getting user after conflict: %v", err)
+						return nil, nil, ErrServiceUnavailable
+					}
+				} else {
+					log.Printf("[Auth] Database error creating oauth user: %v", err)
+					return nil, nil, ErrServiceUnavailable
+				}
+			} else {
+				user = newUser
+			}
+		} else {
+			log.Printf("[Auth] Database error during oauth login: %v", err)
+			return nil, nil, ErrServiceUnavailable
+		}
+	}
+
+	if !user.IsActive() {
+		return nil, nil, ErrUserNotActive
+	}
+
+	if user.Username == "" && username != "" {
+		user.Username = username
+		if err := s.userRepo.Update(ctx, user); err != nil {
+			log.Printf("[Auth] Failed to update username after oauth login: %v", err)
+		}
+	}
+
+	tokenPair, err := s.GenerateTokenPair(ctx, user, "")
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate token pair: %w", err)
+	}
+	return tokenPair, user, nil
+}
+
 // ValidateToken 验证JWT token并返回用户声明
 func (s *AuthService) ValidateToken(tokenString string) (*JWTClaims, error) {
 	// 先做长度校验，尽早拒绝异常超长 token，降低 DoS 风险。
@@ -602,83 +745,17 @@ func isReservedEmail(email string) bool {
 	return strings.HasSuffix(normalized, LinuxDoConnectSyntheticEmailDomain)
 }
 
-// disposableEmailDomains 临时邮箱域名黑名单
-var disposableEmailDomains = map[string]bool{
-	// 常见临时邮箱服务
-	"10minutemail.com": true, "10minutemail.net": true, "10minmail.com": true,
-	"guerrillamail.com": true, "guerrillamail.net": true, "guerrillamail.org": true,
-	"guerrillamailblock.com": true, "sharklasers.com": true, "grr.la": true,
-	"tempmail.com": true, "temp-mail.org": true, "temp-mail.io": true,
-	"mailinator.com": true, "mailinator.net": true, "mailinator2.com": true,
-	"throwaway.email": true, "throwawaymail.com": true,
-	"fakeinbox.com": true, "fakemailgenerator.com": true,
-	"getnada.com": true, "nada.email": true,
-	"mohmal.com": true, "dispostable.com": true,
-	"mailnesia.com": true, "maildrop.cc": true,
-	"yopmail.com": true, "yopmail.fr": true, "yopmail.net": true,
-	"tempail.com": true, "tempr.email": true,
-	"discard.email": true, "discardmail.com": true,
-	"spamgourmet.com": true, "trashmail.com": true, "trashmail.net": true,
-	"mailcatch.com": true, "mytrashmail.com": true,
-	"getairmail.com": true, "airmail.cc": true,
-	"emailondeck.com": true, "anonymbox.com": true,
-	"mintemail.com": true, "tempinbox.com": true,
-	"burnermail.io": true, "mailsac.com": true,
-	"inboxalias.com": true, "33mail.com": true,
-	"spamex.com": true, "spam4.me": true,
-	"jetable.org": true, "mailexpire.com": true,
-	"tempmailo.com": true, "emailfake.com": true,
-	"crazymailing.com": true, "tempsky.com": true,
-	"fakemailgenerator.net": true, "emailtemporar.ro": true,
-	"mohmal.im": true, "emailnax.com": true,
-	"tmpmail.org": true, "tmpmail.net": true,
-	"1secmail.com": true, "1secmail.org": true, "1secmail.net": true,
-	// 邮箱转发/别名服务（允许创建无限子邮箱）
-	"2925.com": true, "anonaddy.com": true, "simplelogin.io": true,
-	"firefox.com": true, "relay.firefox.com": true,
-	"duck.com": true, "duckduckgo.com": true,
-	"fastmail.com": true, "pobox.com": true,
-	"sneakemail.com": true, "spamcop.net": true,
-	"mailforspam.com": true, "rmqkr.net": true,
-	"emailproxsy.com": true, "guerrillamail.biz": true,
-	"guerrillamail.de": true, "guerrillamail.info": true,
-	"spam.la": true, "spamherelots.com": true,
-	"spamobox.com": true, "tempmailaddress.com": true,
-	"wegwerfmail.de": true, "wegwerfmail.net": true,
-	"wegwerfmail.org": true, "wh4f.org": true,
-	// 新发现的临时邮箱域名
-	"deepyinc.com": true, "virgilian.com": true,
-}
-
-// IsDisposableEmail 检查是否是临时邮箱（导出供 handler 层使用）
-func IsDisposableEmail(email string) bool {
-	normalized := strings.ToLower(strings.TrimSpace(email))
-	parts := strings.Split(normalized, "@")
-	if len(parts) != 2 {
-		return false
-	}
-	domain := parts[1]
-
-	// 1. 精确匹配
-	if disposableEmailDomains[domain] {
-		return true
-	}
-
-	// 2. 子域名匹配：检查是否为黑名单域名的子域名
-	// 例如：ynhololens.33mail.com 是 33mail.com 的子域名
-	for blockedDomain := range disposableEmailDomains {
-		if strings.HasSuffix(domain, "."+blockedDomain) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// GenerateToken 生成JWT token
+// GenerateToken 生成JWT access token
+// 使用新的access_token_expire_minutes配置项（如果配置了），否则回退到expire_hour
 func (s *AuthService) GenerateToken(user *User) (string, error) {
 	now := time.Now()
-	expiresAt := now.Add(time.Duration(s.cfg.JWT.ExpireHour) * time.Hour)
+	var expiresAt time.Time
+	if s.cfg.JWT.AccessTokenExpireMinutes > 0 {
+		expiresAt = now.Add(time.Duration(s.cfg.JWT.AccessTokenExpireMinutes) * time.Minute)
+	} else {
+		// 向后兼容：使用旧的expire_hour配置
+		expiresAt = now.Add(time.Duration(s.cfg.JWT.ExpireHour) * time.Hour)
+	}
 
 	claims := &JWTClaims{
 		UserID:       user.ID,
@@ -699,6 +776,15 @@ func (s *AuthService) GenerateToken(user *User) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+// GetAccessTokenExpiresIn 返回Access Token的有效期（秒）
+// 用于前端设置刷新定时器
+func (s *AuthService) GetAccessTokenExpiresIn() int {
+	if s.cfg.JWT.AccessTokenExpireMinutes > 0 {
+		return s.cfg.JWT.AccessTokenExpireMinutes * 60
+	}
+	return s.cfg.JWT.ExpireHour * 3600
 }
 
 // HashPassword 使用bcrypt加密密码
@@ -891,6 +977,12 @@ func (s *AuthService) ResetPassword(ctx context.Context, email, token, newPasswo
 		return ErrServiceUnavailable
 	}
 
+	// Also revoke all refresh tokens for this user
+	if err := s.RevokeAllUserSessions(ctx, user.ID); err != nil {
+		log.Printf("[Auth] Failed to revoke refresh tokens for user %d: %v", user.ID, err)
+		// Don't return error - password was already changed successfully
+	}
+
 	log.Printf("[Auth] Password reset successful for user: %s", email)
 	return nil
 }
@@ -903,17 +995,199 @@ func (s *AuthService) generateUniqueInviteCode(ctx context.Context) (string, err
 		if err != nil {
 			return "", err
 		}
-		// 检查邀请码是否已存在
 		_, err = s.userRepo.GetByInviteCode(ctx, code)
 		if errors.Is(err, ErrUserNotFound) {
-			// 邀请码不存在，可以使用
 			return code, nil
 		}
 		if err != nil {
-			// 数据库错误
 			return "", fmt.Errorf("check invite code existence: %w", err)
 		}
-		// 邀请码已存在，重试
 	}
 	return "", fmt.Errorf("failed to generate unique invite code after %d attempts", maxRetries)
+}
+
+// ==================== Refresh Token Methods ====================
+
+// TokenPair 包含Access Token和Refresh Token
+type TokenPair struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"` // Access Token有效期（秒）
+}
+
+// GenerateTokenPair 生成Access Token和Refresh Token对
+// familyID: 可选的Token家族ID，用于Token轮转时保持家族关系
+func (s *AuthService) GenerateTokenPair(ctx context.Context, user *User, familyID string) (*TokenPair, error) {
+	// 检查 refreshTokenCache 是否可用
+	if s.refreshTokenCache == nil {
+		return nil, errors.New("refresh token cache not configured")
+	}
+
+	// 生成Access Token
+	accessToken, err := s.GenerateToken(user)
+	if err != nil {
+		return nil, fmt.Errorf("generate access token: %w", err)
+	}
+
+	// 生成Refresh Token
+	refreshToken, err := s.generateRefreshToken(ctx, user, familyID)
+	if err != nil {
+		return nil, fmt.Errorf("generate refresh token: %w", err)
+	}
+
+	return &TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    s.GetAccessTokenExpiresIn(),
+	}, nil
+}
+
+// generateRefreshToken 生成并存储Refresh Token
+func (s *AuthService) generateRefreshToken(ctx context.Context, user *User, familyID string) (string, error) {
+	// 生成随机Token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("generate random bytes: %w", err)
+	}
+	rawToken := refreshTokenPrefix + hex.EncodeToString(tokenBytes)
+
+	// 计算Token哈希（存储哈希而非原始Token）
+	tokenHash := hashToken(rawToken)
+
+	// 如果没有提供familyID，生成新的
+	if familyID == "" {
+		familyBytes := make([]byte, 16)
+		if _, err := rand.Read(familyBytes); err != nil {
+			return "", fmt.Errorf("generate family id: %w", err)
+		}
+		familyID = hex.EncodeToString(familyBytes)
+	}
+
+	now := time.Now()
+	ttl := time.Duration(s.cfg.JWT.RefreshTokenExpireDays) * 24 * time.Hour
+
+	data := &RefreshTokenData{
+		UserID:       user.ID,
+		TokenVersion: user.TokenVersion,
+		FamilyID:     familyID,
+		CreatedAt:    now,
+		ExpiresAt:    now.Add(ttl),
+	}
+
+	// 存储Token数据
+	if err := s.refreshTokenCache.StoreRefreshToken(ctx, tokenHash, data, ttl); err != nil {
+		return "", fmt.Errorf("store refresh token: %w", err)
+	}
+
+	// 添加到用户Token集合
+	if err := s.refreshTokenCache.AddToUserTokenSet(ctx, user.ID, tokenHash, ttl); err != nil {
+		log.Printf("[Auth] Failed to add token to user set: %v", err)
+		// 不影响主流程
+	}
+
+	// 添加到家族Token集合
+	if err := s.refreshTokenCache.AddToFamilyTokenSet(ctx, familyID, tokenHash, ttl); err != nil {
+		log.Printf("[Auth] Failed to add token to family set: %v", err)
+		// 不影响主流程
+	}
+
+	return rawToken, nil
+}
+
+// RefreshTokenPair 使用Refresh Token刷新Token对
+// 实现Token轮转：每次刷新都会生成新的Refresh Token，旧Token立即失效
+func (s *AuthService) RefreshTokenPair(ctx context.Context, refreshToken string) (*TokenPair, error) {
+	// 检查 refreshTokenCache 是否可用
+	if s.refreshTokenCache == nil {
+		return nil, ErrRefreshTokenInvalid
+	}
+
+	// 验证Token格式
+	if !strings.HasPrefix(refreshToken, refreshTokenPrefix) {
+		return nil, ErrRefreshTokenInvalid
+	}
+
+	tokenHash := hashToken(refreshToken)
+
+	// 获取Token数据
+	data, err := s.refreshTokenCache.GetRefreshToken(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, ErrRefreshTokenNotFound) {
+			// Token不存在，可能是已被使用（Token轮转）或已过期
+			log.Printf("[Auth] Refresh token not found, possible reuse attack")
+			return nil, ErrRefreshTokenInvalid
+		}
+		log.Printf("[Auth] Error getting refresh token: %v", err)
+		return nil, ErrServiceUnavailable
+	}
+
+	// 检查Token是否过期
+	if time.Now().After(data.ExpiresAt) {
+		// 删除过期Token
+		_ = s.refreshTokenCache.DeleteRefreshToken(ctx, tokenHash)
+		return nil, ErrRefreshTokenExpired
+	}
+
+	// 获取用户信息
+	user, err := s.userRepo.GetByID(ctx, data.UserID)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			// 用户已删除，撤销整个Token家族
+			_ = s.refreshTokenCache.DeleteTokenFamily(ctx, data.FamilyID)
+			return nil, ErrRefreshTokenInvalid
+		}
+		log.Printf("[Auth] Database error getting user for token refresh: %v", err)
+		return nil, ErrServiceUnavailable
+	}
+
+	// 检查用户状态
+	if !user.IsActive() {
+		// 用户被禁用，撤销整个Token家族
+		_ = s.refreshTokenCache.DeleteTokenFamily(ctx, data.FamilyID)
+		return nil, ErrUserNotActive
+	}
+
+	// 检查TokenVersion（密码更改后所有Token失效）
+	if data.TokenVersion != user.TokenVersion {
+		// TokenVersion不匹配，撤销整个Token家族
+		_ = s.refreshTokenCache.DeleteTokenFamily(ctx, data.FamilyID)
+		return nil, ErrTokenRevoked
+	}
+
+	// Token轮转：立即使旧Token失效
+	if err := s.refreshTokenCache.DeleteRefreshToken(ctx, tokenHash); err != nil {
+		log.Printf("[Auth] Failed to delete old refresh token: %v", err)
+		// 继续处理，不影响主流程
+	}
+
+	// 生成新的Token对，保持同一个家族ID
+	return s.GenerateTokenPair(ctx, user, data.FamilyID)
+}
+
+// RevokeRefreshToken 撤销单个Refresh Token
+func (s *AuthService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
+	if s.refreshTokenCache == nil {
+		return nil // No-op if cache not configured
+	}
+	if !strings.HasPrefix(refreshToken, refreshTokenPrefix) {
+		return ErrRefreshTokenInvalid
+	}
+
+	tokenHash := hashToken(refreshToken)
+	return s.refreshTokenCache.DeleteRefreshToken(ctx, tokenHash)
+}
+
+// RevokeAllUserSessions 撤销用户的所有会话（所有Refresh Token）
+// 用于密码更改或用户主动登出所有设备
+func (s *AuthService) RevokeAllUserSessions(ctx context.Context, userID int64) error {
+	if s.refreshTokenCache == nil {
+		return nil // No-op if cache not configured
+	}
+	return s.refreshTokenCache.DeleteUserRefreshTokens(ctx, userID)
+}
+
+// hashToken 计算Token的SHA256哈希
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }

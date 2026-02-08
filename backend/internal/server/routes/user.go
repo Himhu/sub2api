@@ -60,6 +60,7 @@ func RegisterUserRoutes(
 		{
 			groups.GET("/available", h.APIKey.GetAvailableGroups)
 			groups.GET("/:id/models", h.APIKey.GetGroupAvailableModels)
+			groups.GET("/rates", h.APIKey.GetUserGroupRates)
 		}
 
 		// 使用记录

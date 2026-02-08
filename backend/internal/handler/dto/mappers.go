@@ -65,8 +65,9 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		return nil
 	}
 	return &AdminUser{
-		User:  *base,
-		Notes: u.Notes,
+		User:       *base,
+		Notes:      u.Notes,
+		GroupRates: u.GroupRates,
 	}
 }
 
@@ -83,6 +84,9 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		Status:      k.Status,
 		IPWhitelist: k.IPWhitelist,
 		IPBlacklist: k.IPBlacklist,
+		Quota:       k.Quota,
+		QuotaUsed:   k.QuotaUsed,
+		ExpiresAt:   k.ExpiresAt,
 		CreatedAt:   k.CreatedAt,
 		UpdatedAt:   k.UpdatedAt,
 		User:        UserFromServiceShallow(k.User),
@@ -112,10 +116,12 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		return nil
 	}
 	out := &AdminGroup{
-		Group:               groupFromServiceBase(g),
-		ModelRouting:        g.ModelRouting,
-		ModelRoutingEnabled: g.ModelRoutingEnabled,
-		AccountCount:        g.AccountCount,
+		Group:                groupFromServiceBase(g),
+		ModelRouting:         g.ModelRouting,
+		ModelRoutingEnabled:  g.ModelRoutingEnabled,
+		MCPXMLInject:         g.MCPXMLInject,
+		SupportedModelScopes: g.SupportedModelScopes,
+		AccountCount:         g.AccountCount,
 	}
 	if len(g.AccountGroups) > 0 {
 		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))
@@ -145,9 +151,11 @@ func groupFromServiceBase(g *service.Group) Group {
 		ImagePrice4K:     g.ImagePrice4K,
 		ClaudeCodeOnly:   g.ClaudeCodeOnly,
 		FallbackGroupID:  g.FallbackGroupID,
-		IsNewbieOnly:     g.IsNewbieOnly,
-		CreatedAt:        g.CreatedAt,
-		UpdatedAt:        g.UpdatedAt,
+		// 无效请求兜底分组
+		FallbackGroupIDOnInvalidRequest: g.FallbackGroupIDOnInvalidRequest,
+		IsNewbieOnly:                    g.IsNewbieOnly,
+		CreatedAt:                       g.CreatedAt,
+		UpdatedAt:                       g.UpdatedAt,
 	}
 }
 
@@ -374,6 +382,7 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		AccountID:             l.AccountID,
 		RequestID:             l.RequestID,
 		Model:                 l.Model,
+		ReasoningEffort:       l.ReasoningEffort,
 		GroupID:               l.GroupID,
 		SubscriptionID:        l.SubscriptionID,
 		InputTokens:           l.InputTokens,

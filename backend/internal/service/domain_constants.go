@@ -31,6 +31,7 @@ const (
 	AccountTypeOAuth      = domain.AccountTypeOAuth      // OAuth类型账号（full scope: profile + inference）
 	AccountTypeSetupToken = domain.AccountTypeSetupToken // Setup Token类型账号（inference only scope）
 	AccountTypeAPIKey     = domain.AccountTypeAPIKey     // API Key类型账号
+	AccountTypeUpstream   = domain.AccountTypeUpstream   // 上游透传类型账号（通过 Base URL + API Key 连接上游）
 )
 
 // Redeem type constants
@@ -38,6 +39,7 @@ const (
 	RedeemTypeBalance      = domain.RedeemTypeBalance
 	RedeemTypeConcurrency  = domain.RedeemTypeConcurrency
 	RedeemTypeSubscription = domain.RedeemTypeSubscription
+	RedeemTypeInvitation   = domain.RedeemTypeInvitation
 )
 
 // Admin adjustment type constants
@@ -70,7 +72,9 @@ const (
 	SettingKeyInviteRegistrationEnabled = "invite_registration_enabled" // 是否启用邀请注册
 	SettingKeyInviterBonus              = "inviter_bonus"               // 邀请人奖励金额
 	SettingKeyInviteeBonus              = "invitee_bonus"               // 被邀请人奖励金额
+	SettingKeyPromoCodeEnabled          = "promo_code_enabled"          // 是否启用优惠码功能
 	SettingKeyPasswordResetEnabled      = "password_reset_enabled"      // 是否启用忘记密码功能（需要先开启邮件验证）
+	SettingKeyInvitationCodeEnabled     = "invitation_code_enabled"     // 是否启用邀请码注册
 
 	// 邮件服务设置
 	SettingKeySMTPHost     = "smtp_host"      // SMTP服务器地址

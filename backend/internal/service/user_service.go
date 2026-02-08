@@ -45,7 +45,7 @@ type UserRepository interface {
 	// LoadSubscriptions 加载用户的活跃订阅（仅在需要时调用，避免 GetByID 性能问题）
 	LoadSubscriptions(ctx context.Context, userID int64) ([]UserSubscription, error)
 
-	// TOTP 相关方法
+	// TOTP 双因素认证
 	UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error
 	EnableTotp(ctx context.Context, userID int64) error
 	DisableTotp(ctx context.Context, userID int64) error
