@@ -17,8 +17,13 @@
 import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 
-defineProps(['loading'])
-defineEmits(['refresh', 'sync', 'create', 'batchClearError'])
+defineProps<{ loading?: boolean }>()
+defineEmits<{
+  (e: 'refresh'): void
+  (e: 'sync'): void
+  (e: 'create'): void
+  (e: 'batchClearError'): void
+}>()
 
 const { t } = useI18n()
 </script>
