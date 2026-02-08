@@ -33,7 +33,6 @@ type SystemSettings struct {
 	SiteLogo                    string
 	SiteSubtitle                string
 	APIBaseURL                  string
-	ContactInfo                 string
 	DocURL                      string
 	HomeContent                 string
 	HideCcsImportButton         bool

@@ -221,7 +221,6 @@ export default {
     copyFailed: 'Failed to copy',
     verifying: 'Verifying...',
     processing: 'Processing...',
-    contactSupport: 'Contact Support',
     contactAgent: 'Contact Agent',
     agentContact: 'Agent Contact',
     noAgentAssigned: 'No agent assigned',
@@ -3298,9 +3297,6 @@ export default {
         apiBaseUrlPlaceholder: 'https://api.example.com',
         apiBaseUrlHint:
           'Used for "Use Key" and "Import to CC Switch" features. Leave empty to use current site URL.',
-        contactInfo: 'Contact Info',
-        contactInfoPlaceholder: 'e.g., QQ: 123456789',
-        contactInfoHint: 'Customer support contact info, displayed on redeem page, profile, etc.',
         docUrl: 'Documentation URL',
         docUrlPlaceholder: 'https://docs.example.com',
         docUrlHint: 'Link to your documentation site. Leave empty to hide the documentation link.',

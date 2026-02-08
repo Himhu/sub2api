@@ -707,22 +707,6 @@
               </p>
             </div>
 
-            <!-- Contact Info -->
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('admin.settings.site.contactInfo') }}
-              </label>
-              <input
-                v-model="form.contact_info"
-                type="text"
-                class="input"
-                :placeholder="t('admin.settings.site.contactInfoPlaceholder')"
-              />
-              <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                {{ t('admin.settings.site.contactInfoHint') }}
-              </p>
-            </div>
-
             <!-- Doc URL -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1174,7 +1158,6 @@ const form = reactive<SettingsForm>({
   site_logo: '',
   site_subtitle: 'Subscription to API Conversion Platform',
   api_base_url: '',
-  contact_info: '',
   doc_url: '',
   home_content: '',
   hide_ccs_import_button: false,
@@ -1304,7 +1287,6 @@ async function saveSettings() {
       site_logo: form.site_logo,
       site_subtitle: form.site_subtitle,
       api_base_url: form.api_base_url,
-      contact_info: form.contact_info,
       doc_url: form.doc_url,
       home_content: form.home_content,
       hide_ccs_import_button: form.hide_ccs_import_button,
