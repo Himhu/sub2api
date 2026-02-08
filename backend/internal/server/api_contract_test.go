@@ -458,7 +458,6 @@ func TestAPIContracts(t *testing.T) {
 				"data": {
 					"registration_enabled": true,
 					"email_verify_enabled": false,
-					"promo_code_enabled": true,
 					"password_reset_enabled": false,
 					"totp_enabled": false,
 					"totp_encryption_key_configured": false,

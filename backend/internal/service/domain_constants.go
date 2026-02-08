@@ -48,12 +48,6 @@ const (
 	RedeemSourceGift = "gift"
 )
 
-// PromoCode status constants
-const (
-	PromoCodeStatusActive   = domain.PromoCodeStatusActive
-	PromoCodeStatusDisabled = domain.PromoCodeStatusDisabled
-)
-
 // Admin adjustment type constants
 const (
 	AdjustmentTypeAdminBalance     = domain.AdjustmentTypeAdminBalance     // 管理员调整余额
@@ -90,8 +84,7 @@ const (
 	SettingKeyInviteRegistrationEnabled = "invite_registration_enabled" // 是否启用邀请注册
 	SettingKeyInviterBonus              = "inviter_bonus"               // 邀请人奖励金额
 	SettingKeyInviteeBonus              = "invitee_bonus"               // 被邀请人奖励金额
-	SettingKeyPromoCodeEnabled          = "promo_code_enabled"          // 是否启用优惠码功能
-	SettingKeyPasswordResetEnabled      = "password_reset_enabled"      // 是否启用忘记密码功能（需要先开启邮件验证）
+	SettingKeyPasswordResetEnabled = "password_reset_enabled" // 是否启用忘记密码功能（需要先开启邮件验证）
 	SettingKeyInvitationCodeEnabled     = "invitation_code_enabled"     // 是否启用邀请码注册
 
 	// 邮件服务设置

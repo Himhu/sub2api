@@ -3406,8 +3406,6 @@ export default {
         emailVerificationHint: '新用户注册时需要验证邮箱',
         inviteRegistration: '邀请注册',
         inviteRegistrationHint: '启用邀请码注册功能',
-        promoCode: '优惠码',
-        promoCodeHint: '允许用户在注册时使用优惠码',
         invitationCode: '邀请码注册',
         invitationCodeHint: '开启后，用户注册时需要填写有效的邀请码',
         passwordReset: '忘记密码',

@@ -3233,8 +3233,6 @@ export default {
         emailVerificationHint: 'Require email verification for new registrations',
         inviteRegistration: 'Invite Registration',
         inviteRegistrationHint: 'Enable invite code registration',
-        promoCode: 'Promo Code',
-        promoCodeHint: 'Allow users to use promo codes during registration',
         invitationCode: 'Invitation Code Registration',
         invitationCodeHint: 'When enabled, users must enter a valid invitation code to register',
         passwordReset: 'Password Reset',

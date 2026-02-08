@@ -100,7 +100,6 @@ type UpdateSettingsRequest struct {
 	RegistrationEnabled       bool `json:"registration_enabled"`
 	EmailVerifyEnabled        bool `json:"email_verify_enabled"`
 	InviteRegistrationEnabled bool `json:"invite_registration_enabled"`
-	PromoCodeEnabled          bool `json:"promo_code_enabled"`
 	PasswordResetEnabled      bool `json:"password_reset_enabled"`
 	InvitationCodeEnabled     bool `json:"invitation_code_enabled"`
 	TotpEnabled               bool `json:"totp_enabled"` // TOTP 双因素认证

@@ -4,7 +4,6 @@ type SystemSettings struct {
 	RegistrationEnabled       bool
 	EmailVerifyEnabled        bool
 	InviteRegistrationEnabled bool
-	PromoCodeEnabled          bool
 	PasswordResetEnabled      bool
 	InvitationCodeEnabled     bool
 	TotpEnabled               bool // TOTP 双因素认证
@@ -68,7 +67,6 @@ type PublicSettings struct {
 	RegistrationEnabled       bool
 	EmailVerifyEnabled        bool
 	InviteRegistrationEnabled bool
-	PromoCodeEnabled          bool
 	PasswordResetEnabled      bool
 	InvitationCodeEnabled     bool
 	TotpEnabled               bool // TOTP 双因素认证

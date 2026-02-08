@@ -84,7 +84,6 @@ type AuthService struct {
 	emailService      *EmailService
 	turnstileService  *TurnstileService
 	emailQueueService *EmailQueueService
-	promoService      *PromoService
 }
 
 // NewAuthService 创建认证服务实例
@@ -97,7 +96,6 @@ func NewAuthService(
 	emailService *EmailService,
 	turnstileService *TurnstileService,
 	emailQueueService *EmailQueueService,
-	promoService *PromoService,
 ) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
@@ -108,7 +106,6 @@ func NewAuthService(
 		emailService:      emailService,
 		turnstileService:  turnstileService,
 		emailQueueService: emailQueueService,
-		promoService:      promoService,
 	}
 }
 
@@ -117,7 +114,7 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (str
 	return s.RegisterWithVerification(ctx, email, password, "", "", "")
 }
 
-// RegisterWithVerification 用户注册（支持邮件验证、优惠码和邀请码），返回token和用户
+// RegisterWithVerification 用户注册（支持邮件验证和邀请码），返回token和用户
 func (s *AuthService) RegisterWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode string) (string, *User, error) {
 	// 检查是否开放注册（默认关闭：settingService 未配置时不允许注册）
 	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
@@ -280,16 +277,6 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 	if invitationRedeemCode != nil {
 		if err := s.redeemRepo.Use(ctx, invitationRedeemCode.ID, user.ID); err != nil {
 			log.Printf("[Auth] Failed to mark invitation code as used for user %d: %v", user.ID, err)
-		}
-	}
-	// 应用优惠码（如果提供且功能已启用）
-	if promoCode != "" && s.promoService != nil && s.settingService != nil && s.settingService.IsPromoCodeEnabled(ctx) {
-		if err := s.promoService.ApplyPromoCode(ctx, user.ID, promoCode); err != nil {
-			log.Printf("[Auth] Failed to apply promo code for user %d: %v", user.ID, err)
-		} else {
-			if updatedUser, err := s.userRepo.GetByID(ctx, user.ID); err == nil {
-				user = updatedUser
-			}
 		}
 	}
 
