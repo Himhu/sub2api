@@ -222,7 +222,8 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 	}
 
 	// 2) billing eligibility check (after wait)
-	if err := h.billingCacheService.CheckBillingEligibility(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription); err != nil {
+	billingDecision, err := h.billingCacheService.CheckBillingEligibilityDecision(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription)
+	if err != nil {
 		status, _, message := billingErrorDetails(err)
 		googleError(c, status, message)
 		return
@@ -487,7 +488,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		}
 
 		// 6) record usage async (Gemini 使用长上下文双倍计费)
-		go func(result *service.ForwardResult, usedAccount *service.Account, ua, ip string, fcb bool) {
+		go func(result *service.ForwardResult, usedAccount *service.Account, ua, ip string, fcb bool, bt int8) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
@@ -497,6 +498,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 				User:                  apiKey.User,
 				Account:               usedAccount,
 				Subscription:          subscription,
+				BillingTypeOverride:   &bt,
 				UserAgent:             ua,
 				IPAddress:             ip,
 				LongContextThreshold:  200000, // Gemini 200K 阈值
@@ -506,7 +508,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 			}); err != nil {
 				log.Printf("Record usage failed: %v", err)
 			}
-		}(result, account, userAgent, clientIP, forceCacheBilling)
+		}(result, account, userAgent, clientIP, forceCacheBilling, billingDecision.BillingType)
 		return
 	}
 }

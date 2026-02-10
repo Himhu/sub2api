@@ -1771,7 +1771,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	if apiKey.GroupID != nil {
 		usageLog.GroupID = apiKey.GroupID
 	}
-	if subscription != nil {
+	if billingType == BillingTypeSubscription && subscription != nil {
 		usageLog.SubscriptionID = &subscription.ID
 	}
 
@@ -1799,7 +1799,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 			} else if ok {
 				s.billingCacheService.QueueDeductPoints(user.ID, cost.ActualCost)
 			} else {
-				log.Printf("Warning: points insufficient for user %d, cost %.6f", user.ID, cost.ActualCost)
+				log.Printf("Warning: points deduct no rows updated for user %d, cost %.6f", user.ID, cost.ActualCost)
 			}
 		}
 	default:

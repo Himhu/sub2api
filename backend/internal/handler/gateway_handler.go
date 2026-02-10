@@ -195,8 +195,9 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		defer userReleaseFunc()
 	}
 
-	// 2. 【新增】Wait后二次检查余额/订阅
-	if err := h.billingCacheService.CheckBillingEligibility(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription); err != nil {
+	// 2. 【新增】Wait后二次检查余额/订阅，并获取计费决策（余额/订阅/积分）
+	billingDecision, err := h.billingCacheService.CheckBillingEligibilityDecision(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription)
+	if err != nil {
 		log.Printf("Billing eligibility check failed after wait: %v", err)
 		status, code, message := billingErrorDetails(err)
 		h.handleStreamingAwareError(c, status, code, message, streamStarted)
@@ -387,29 +388,31 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			clientIP := ip.GetClientIP(c)
 
 			// 异步记录使用量（subscription已在函数开头获取）
-			go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, fcb bool) {
+			go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, fcb bool, bt int8) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
-					Result:            result,
-					APIKey:            apiKey,
-					User:              apiKey.User,
-					Account:           usedAccount,
-					Subscription:      subscription,
-					UserAgent:         ua,
-					IPAddress:         clientIP,
-					ForceCacheBilling: fcb,
-					APIKeyService:     h.apiKeyService,
+					Result:              result,
+					APIKey:              apiKey,
+					User:                apiKey.User,
+					Account:             usedAccount,
+					Subscription:        subscription,
+					BillingTypeOverride: &bt,
+					UserAgent:           ua,
+					IPAddress:           clientIP,
+					ForceCacheBilling:   fcb,
+					APIKeyService:       h.apiKeyService,
 				}); err != nil {
 					log.Printf("Record usage failed: %v", err)
 				}
-			}(result, account, userAgent, clientIP, forceCacheBilling)
+			}(result, account, userAgent, clientIP, forceCacheBilling, billingDecision.BillingType)
 			return
 		}
 	}
 
 	currentAPIKey := apiKey
 	currentSubscription := subscription
+	currentBillingDecision := billingDecision
 	var fallbackGroupID *int64
 	if apiKey.Group != nil {
 		fallbackGroupID = apiKey.Group.FallbackGroupIDOnInvalidRequest
@@ -560,16 +563,18 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 							return
 						}
 						fallbackAPIKey := cloneAPIKeyWithGroup(apiKey, fallbackGroup)
-						if err := h.billingCacheService.CheckBillingEligibility(c.Request.Context(), fallbackAPIKey.User, fallbackAPIKey, fallbackGroup, nil); err != nil {
+						fallbackDecision, err := h.billingCacheService.CheckBillingEligibilityDecision(c.Request.Context(), fallbackAPIKey.User, fallbackAPIKey, fallbackGroup, nil)
+						if err != nil {
 							status, code, message := billingErrorDetails(err)
 							h.handleStreamingAwareError(c, status, code, message, streamStarted)
 							return
 						}
-						// 兜底重试按“直接请求兜底分组”处理：清除强制平台，允许按分组平台调度
+						// 兜底重试按"直接请求兜底分组"处理：清除强制平台，允许按分组平台调度
 						ctx := context.WithValue(c.Request.Context(), ctxkey.ForcePlatform, "")
 						c.Request = c.Request.WithContext(ctx)
 						currentAPIKey = fallbackAPIKey
 						currentSubscription = nil
+						currentBillingDecision = fallbackDecision
 						fallbackUsed = true
 						retryWithFallback = true
 						break
@@ -606,24 +611,25 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			userAgent := c.GetHeader("User-Agent")
 			clientIP := ip.GetClientIP(c)
 
-			// 异步记录使用量（subscription已在函数开头获取）
-			go func(result *service.ForwardResult, usedAccount *service.Account, ua, clientIP string, fcb bool) {
+			// 异步记录使用量（所有外部变量通过参数传递，避免闭包捕获）
+			go func(result *service.ForwardResult, usedAccount *service.Account, ak *service.APIKey, sub *service.UserSubscription, ua, clientIP string, fcb bool, bt int8) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
-					Result:            result,
-					APIKey:            currentAPIKey,
-					User:              currentAPIKey.User,
-					Account:           usedAccount,
-					Subscription:      currentSubscription,
-					UserAgent:         ua,
-					IPAddress:         clientIP,
-					ForceCacheBilling: fcb,
-					APIKeyService:     h.apiKeyService,
+					Result:              result,
+					APIKey:              ak,
+					User:                ak.User,
+					Account:             usedAccount,
+					Subscription:        sub,
+					BillingTypeOverride: &bt,
+					UserAgent:           ua,
+					IPAddress:           clientIP,
+					ForceCacheBilling:   fcb,
+					APIKeyService:       h.apiKeyService,
 				}); err != nil {
 					log.Printf("Record usage failed: %v", err)
 				}
-			}(result, account, userAgent, clientIP, forceCacheBilling)
+			}(result, account, currentAPIKey, currentSubscription, userAgent, clientIP, forceCacheBilling, currentBillingDecision.BillingType)
 			return
 		}
 		if !retryWithFallback {

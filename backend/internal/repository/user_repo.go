@@ -363,9 +363,11 @@ func (r *userRepository) DeductBalance(ctx context.Context, id int64, amount flo
 	return nil
 }
 
-// TryDeductPoints 原子扣除用户积分（仅当积分足够时扣除）
+// TryDeductPoints 原子扣除用户积分（允许透支，与余额路径一致）
+// 透支策略：允许积分变为负数，确保已通过资格检查的在途请求能够完成计费。
+// 资格检查（points > 0）会阻止后续请求，因此透支仅限于并发在途请求。
 // 返回 (true, nil) 表示扣除成功
-// 返回 (false, nil) 表示积分不足
+// 返回 (false, nil) 表示用户不存在
 func (r *userRepository) TryDeductPoints(ctx context.Context, id int64, amount float64) (bool, error) {
 	if r.sql == nil {
 		return false, fmt.Errorf("sql executor is not configured")
@@ -375,7 +377,7 @@ func (r *userRepository) TryDeductPoints(ctx context.Context, id int64, amount f
 	err := scanSingleRow(ctx, r.sql, `
 		UPDATE users
 		SET points = points - $1
-		WHERE id = $2 AND points >= $1
+		WHERE id = $2
 		RETURNING id
 	`, []any{amount, id}, &updatedID)
 	if err != nil {

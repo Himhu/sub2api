@@ -4486,15 +4486,16 @@ func (s *GatewayService) replaceModelInResponseBody(body []byte, fromModel, toMo
 
 // RecordUsageInput 记录使用量的输入参数
 type RecordUsageInput struct {
-	Result            *ForwardResult
-	APIKey            *APIKey
-	User              *User
-	Account           *Account
-	Subscription      *UserSubscription  // 可选：订阅信息
-	UserAgent         string             // 请求的 User-Agent
-	IPAddress         string             // 请求的客户端 IP 地址
-	ForceCacheBilling bool               // 强制缓存计费：将 input_tokens 转为 cache_read 计费（用于粘性会话切换）
-	APIKeyService     APIKeyQuotaUpdater // 可选：用于更新API Key配额
+	Result              *ForwardResult
+	APIKey              *APIKey
+	User                *User
+	Account             *Account
+	Subscription        *UserSubscription  // 可选：订阅信息
+	BillingTypeOverride *int8              // 可选：覆盖计费类型（BillingTypeBalance/BillingTypeSubscription/BillingTypePoints）
+	UserAgent           string             // 请求的 User-Agent
+	IPAddress           string             // 请求的客户端 IP 地址
+	ForceCacheBilling   bool               // 强制缓存计费：将 input_tokens 转为 cache_read 计费（用于粘性会话切换）
+	APIKeyService       APIKeyQuotaUpdater // 可选：用于更新API Key配额
 }
 
 // APIKeyQuotaUpdater defines the interface for updating API Key quota
@@ -4562,11 +4563,13 @@ func (s *GatewayService) RecordUsage(ctx context.Context, input *RecordUsageInpu
 		}
 	}
 
-	// 判断计费方式：订阅模式 vs 余额模式
-	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
+	// 判断计费方式：订阅 > 余额（可被 BillingTypeOverride 覆盖为积分）
 	billingType := BillingTypeBalance
-	if isSubscriptionBilling {
+	if subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType() {
 		billingType = BillingTypeSubscription
+	}
+	if input.BillingTypeOverride != nil {
+		billingType = *input.BillingTypeOverride
 	}
 
 	// 创建使用日志
@@ -4617,7 +4620,7 @@ func (s *GatewayService) RecordUsage(ctx context.Context, input *RecordUsageInpu
 	if apiKey.GroupID != nil {
 		usageLog.GroupID = apiKey.GroupID
 	}
-	if subscription != nil {
+	if billingType == BillingTypeSubscription && subscription != nil {
 		usageLog.SubscriptionID = &subscription.ID
 	}
 
@@ -4635,22 +4638,30 @@ func (s *GatewayService) RecordUsage(ctx context.Context, input *RecordUsageInpu
 	shouldBill := inserted || err != nil
 
 	// 根据计费类型执行扣费
-	if isSubscriptionBilling {
-		// 订阅模式：更新订阅用量（使用 TotalCost 原始费用，不考虑倍率）
-		if shouldBill && cost.TotalCost > 0 {
+	switch billingType {
+	case BillingTypeSubscription:
+		if subscription != nil && shouldBill && cost.TotalCost > 0 {
 			if err := s.userSubRepo.IncrementUsage(ctx, subscription.ID, cost.TotalCost); err != nil {
 				log.Printf("Increment subscription usage failed: %v", err)
 			}
-			// 异步更新订阅缓存
 			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, *apiKey.GroupID, cost.TotalCost)
 		}
-	} else {
-		// 余额模式：扣除用户余额（使用 ActualCost 考虑倍率后的费用）
+	case BillingTypePoints:
+		if shouldBill && cost.ActualCost > 0 {
+			ok, err := s.userRepo.TryDeductPoints(ctx, user.ID, cost.ActualCost)
+			if err != nil {
+				log.Printf("Deduct points failed: %v", err)
+			} else if ok {
+				s.billingCacheService.QueueDeductPoints(user.ID, cost.ActualCost)
+			} else {
+				log.Printf("Warning: points deduct no rows updated for user %d, cost %.6f", user.ID, cost.ActualCost)
+			}
+		}
+	default:
 		if shouldBill && cost.ActualCost > 0 {
 			if err := s.userRepo.DeductBalance(ctx, user.ID, cost.ActualCost); err != nil {
 				log.Printf("Deduct balance failed: %v", err)
 			}
-			// 异步更新余额缓存
 			s.billingCacheService.QueueDeductBalance(user.ID, cost.ActualCost)
 		}
 	}
@@ -4675,6 +4686,7 @@ type RecordUsageLongContextInput struct {
 	User                  *User
 	Account               *Account
 	Subscription          *UserSubscription // 可选：订阅信息
+	BillingTypeOverride   *int8             // 可选：覆盖计费类型（BillingTypeBalance/BillingTypeSubscription/BillingTypePoints）
 	UserAgent             string            // 请求的 User-Agent
 	IPAddress             string            // 请求的客户端 IP 地址
 	LongContextThreshold  int               // 长上下文阈值（如 200000）
@@ -4743,11 +4755,13 @@ func (s *GatewayService) RecordUsageWithLongContext(ctx context.Context, input *
 		}
 	}
 
-	// 判断计费方式：订阅模式 vs 余额模式
-	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
+	// 判断计费方式：订阅 > 余额（可被 BillingTypeOverride 覆盖为积分）
 	billingType := BillingTypeBalance
-	if isSubscriptionBilling {
+	if subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType() {
 		billingType = BillingTypeSubscription
+	}
+	if input.BillingTypeOverride != nil {
+		billingType = *input.BillingTypeOverride
 	}
 
 	// 创建使用日志
@@ -4798,7 +4812,7 @@ func (s *GatewayService) RecordUsageWithLongContext(ctx context.Context, input *
 	if apiKey.GroupID != nil {
 		usageLog.GroupID = apiKey.GroupID
 	}
-	if subscription != nil {
+	if billingType == BillingTypeSubscription && subscription != nil {
 		usageLog.SubscriptionID = &subscription.ID
 	}
 
@@ -4816,29 +4830,38 @@ func (s *GatewayService) RecordUsageWithLongContext(ctx context.Context, input *
 	shouldBill := inserted || err != nil
 
 	// 根据计费类型执行扣费
-	if isSubscriptionBilling {
-		// 订阅模式：更新订阅用量（使用 TotalCost 原始费用，不考虑倍率）
-		if shouldBill && cost.TotalCost > 0 {
+	switch billingType {
+	case BillingTypeSubscription:
+		if subscription != nil && shouldBill && cost.TotalCost > 0 {
 			if err := s.userSubRepo.IncrementUsage(ctx, subscription.ID, cost.TotalCost); err != nil {
 				log.Printf("Increment subscription usage failed: %v", err)
 			}
-			// 异步更新订阅缓存
 			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, *apiKey.GroupID, cost.TotalCost)
 		}
-	} else {
-		// 余额模式：扣除用户余额（使用 ActualCost 考虑倍率后的费用）
+	case BillingTypePoints:
+		if shouldBill && cost.ActualCost > 0 {
+			ok, err := s.userRepo.TryDeductPoints(ctx, user.ID, cost.ActualCost)
+			if err != nil {
+				log.Printf("Deduct points failed: %v", err)
+			} else if ok {
+				s.billingCacheService.QueueDeductPoints(user.ID, cost.ActualCost)
+			} else {
+				log.Printf("Warning: points deduct no rows updated for user %d, cost %.6f", user.ID, cost.ActualCost)
+			}
+		}
+	default:
 		if shouldBill && cost.ActualCost > 0 {
 			if err := s.userRepo.DeductBalance(ctx, user.ID, cost.ActualCost); err != nil {
 				log.Printf("Deduct balance failed: %v", err)
 			}
-			// 异步更新余额缓存
 			s.billingCacheService.QueueDeductBalance(user.ID, cost.ActualCost)
-			// API Key 独立配额扣费
-			if input.APIKeyService != nil && apiKey.Quota > 0 {
-				if err := input.APIKeyService.UpdateQuotaUsed(ctx, apiKey.ID, cost.ActualCost); err != nil {
-					log.Printf("Add API key quota used failed: %v", err)
-				}
-			}
+		}
+	}
+
+	// 更新 API Key 配额（如果设置了配额限制）
+	if shouldBill && cost.ActualCost > 0 && apiKey.Quota > 0 && input.APIKeyService != nil {
+		if err := input.APIKeyService.UpdateQuotaUsed(ctx, apiKey.ID, cost.ActualCost); err != nil {
+			log.Printf("Update API key quota failed: %v", err)
 		}
 	}
 
