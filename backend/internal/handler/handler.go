@@ -42,6 +42,8 @@ type Handlers struct {
 	OpenAIGateway *OpenAIGatewayHandler
 	Setting       *SettingHandler
 	Totp          *TotpHandler
+	WeChat        *WeChatHandler
+	WeChatBinding *WeChatBindingHandler
 }
 
 // BuildInfo contains build-time information

@@ -53,15 +53,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/email-verify',
-    name: 'EmailVerify',
-    component: () => import('@/views/auth/EmailVerifyView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'Verify Email'
-    }
-  },
-  {
     path: '/auth/callback',
     name: 'OAuthCallback',
     component: () => import('@/views/auth/OAuthCallbackView.vue'),
@@ -77,24 +68,6 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'LinuxDo OAuth Callback'
-    }
-  },
-  {
-    path: '/forgot-password',
-    name: 'ForgotPassword',
-    component: () => import('@/views/auth/ForgotPasswordView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'Forgot Password'
-    }
-  },
-  {
-    path: '/reset-password',
-    name: 'ResetPassword',
-    component: () => import('@/views/auth/ResetPasswordView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'Reset Password'
     }
   },
 

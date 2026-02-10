@@ -309,10 +309,7 @@ export const useAppStore = defineStore('app', () => {
       }
       return {
         registration_enabled: false,
-        email_verify_enabled: false,
         invite_registration_enabled: true,
-        password_reset_enabled: false,
-        invitation_code_enabled: false,
         turnstile_enabled: false,
         turnstile_site_key: '',
         site_name: siteName.value,
@@ -327,7 +324,9 @@ export const useAppStore = defineStore('app', () => {
         linuxdo_oauth_enabled: false,
         version: siteVersion.value,
         inviter_bonus: 0,
-        invitee_bonus: 0
+        invitee_bonus: 0,
+        wechat_enabled: false,
+        wechat_account_name: ''
       }
     }
 

@@ -20,6 +20,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -497,6 +498,21 @@ func (_u *UserUpdate) AddAttributeValues(v ...*UserAttributeValue) *UserUpdate {
 	return _u.AddAttributeValueIDs(ids...)
 }
 
+// AddWechatBindingIDs adds the "wechat_bindings" edge to the WeChatBinding entity by IDs.
+func (_u *UserUpdate) AddWechatBindingIDs(ids ...int64) *UserUpdate {
+	_u.mutation.AddWechatBindingIDs(ids...)
+	return _u
+}
+
+// AddWechatBindings adds the "wechat_bindings" edges to the WeChatBinding entity.
+func (_u *UserUpdate) AddWechatBindings(v ...*WeChatBinding) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddWechatBindingIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
@@ -668,6 +684,27 @@ func (_u *UserUpdate) RemoveAttributeValues(v ...*UserAttributeValue) *UserUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAttributeValueIDs(ids...)
+}
+
+// ClearWechatBindings clears all "wechat_bindings" edges to the WeChatBinding entity.
+func (_u *UserUpdate) ClearWechatBindings() *UserUpdate {
+	_u.mutation.ClearWechatBindings()
+	return _u
+}
+
+// RemoveWechatBindingIDs removes the "wechat_bindings" edge to WeChatBinding entities by IDs.
+func (_u *UserUpdate) RemoveWechatBindingIDs(ids ...int64) *UserUpdate {
+	_u.mutation.RemoveWechatBindingIDs(ids...)
+	return _u
+}
+
+// RemoveWechatBindings removes "wechat_bindings" edges to WeChatBinding entities.
+func (_u *UserUpdate) RemoveWechatBindings(v ...*WeChatBinding) *UserUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveWechatBindingIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1227,6 +1264,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.WechatBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedWechatBindingsIDs(); len(nodes) > 0 && !_u.mutation.WechatBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.WechatBindingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -1709,6 +1791,21 @@ func (_u *UserUpdateOne) AddAttributeValues(v ...*UserAttributeValue) *UserUpdat
 	return _u.AddAttributeValueIDs(ids...)
 }
 
+// AddWechatBindingIDs adds the "wechat_bindings" edge to the WeChatBinding entity by IDs.
+func (_u *UserUpdateOne) AddWechatBindingIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.AddWechatBindingIDs(ids...)
+	return _u
+}
+
+// AddWechatBindings adds the "wechat_bindings" edges to the WeChatBinding entity.
+func (_u *UserUpdateOne) AddWechatBindings(v ...*WeChatBinding) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddWechatBindingIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
@@ -1880,6 +1977,27 @@ func (_u *UserUpdateOne) RemoveAttributeValues(v ...*UserAttributeValue) *UserUp
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAttributeValueIDs(ids...)
+}
+
+// ClearWechatBindings clears all "wechat_bindings" edges to the WeChatBinding entity.
+func (_u *UserUpdateOne) ClearWechatBindings() *UserUpdateOne {
+	_u.mutation.ClearWechatBindings()
+	return _u
+}
+
+// RemoveWechatBindingIDs removes the "wechat_bindings" edge to WeChatBinding entities by IDs.
+func (_u *UserUpdateOne) RemoveWechatBindingIDs(ids ...int64) *UserUpdateOne {
+	_u.mutation.RemoveWechatBindingIDs(ids...)
+	return _u
+}
+
+// RemoveWechatBindings removes "wechat_bindings" edges to WeChatBinding entities.
+func (_u *UserUpdateOne) RemoveWechatBindings(v ...*WeChatBinding) *UserUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveWechatBindingIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -2462,6 +2580,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userattributevalue.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.WechatBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedWechatBindingsIDs(); len(nodes) > 0 && !_u.mutation.WechatBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.WechatBindingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

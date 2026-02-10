@@ -92,10 +92,6 @@ func registerOpsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		ops.PUT("/alert-events/:id/status", h.Admin.Ops.UpdateAlertEventStatus)
 		ops.POST("/alert-silences", h.Admin.Ops.CreateAlertSilence)
 
-		// Email notification config (DB-backed)
-		ops.GET("/email-notification/config", h.Admin.Ops.GetEmailNotificationConfig)
-		ops.PUT("/email-notification/config", h.Admin.Ops.UpdateEmailNotificationConfig)
-
 		// Runtime settings (DB-backed)
 		runtime := ops.Group("/runtime")
 		{
@@ -321,8 +317,6 @@ func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	{
 		adminSettings.GET("", h.Admin.Setting.GetSettings)
 		adminSettings.PUT("", h.Admin.Setting.UpdateSettings)
-		adminSettings.POST("/test-smtp", h.Admin.Setting.TestSMTPConnection)
-		adminSettings.POST("/send-test-email", h.Admin.Setting.SendTestEmail)
 		// Admin API Key 管理
 		adminSettings.GET("/admin-api-key", h.Admin.Setting.GetAdminAPIKey)
 		adminSettings.POST("/admin-api-key/regenerate", h.Admin.Setting.RegenerateAdminAPIKey)

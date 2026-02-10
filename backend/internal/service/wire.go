@@ -31,11 +31,6 @@ func ProvideUpdateService(cache UpdateCache, githubClient GitHubReleaseClient, b
 	return NewUpdateService(cache, githubClient, buildInfo.Version, buildInfo.BuildType)
 }
 
-// ProvideEmailQueueService creates EmailQueueService with default worker count
-func ProvideEmailQueueService(emailService *EmailService) *EmailQueueService {
-	return NewEmailQueueService(emailService, 3)
-}
-
 // ProvideTokenRefreshService creates and starts TokenRefreshService
 func ProvideTokenRefreshService(
 	accountRepo AccountRepository,
@@ -169,11 +164,10 @@ func ProvideOpsAggregationService(
 func ProvideOpsAlertEvaluatorService(
 	opsService *OpsService,
 	opsRepo OpsRepository,
-	emailService *EmailService,
 	redisClient *redis.Client,
 	cfg *config.Config,
 ) *OpsAlertEvaluatorService {
-	svc := NewOpsAlertEvaluatorService(opsService, opsRepo, emailService, redisClient, cfg)
+	svc := NewOpsAlertEvaluatorService(opsService, opsRepo, redisClient, cfg)
 	svc.Start()
 	return svc
 }
@@ -186,19 +180,6 @@ func ProvideOpsCleanupService(
 	cfg *config.Config,
 ) *OpsCleanupService {
 	svc := NewOpsCleanupService(opsRepo, db, redisClient, cfg)
-	svc.Start()
-	return svc
-}
-
-// ProvideOpsScheduledReportService creates and starts OpsScheduledReportService.
-func ProvideOpsScheduledReportService(
-	opsService *OpsService,
-	userService *UserService,
-	emailService *EmailService,
-	redisClient *redis.Client,
-	cfg *config.Config,
-) *OpsScheduledReportService {
-	svc := NewOpsScheduledReportService(opsService, userService, emailService, redisClient, cfg)
 	svc.Start()
 	return svc
 }
@@ -253,9 +234,6 @@ var ProviderSet = wire.NewSet(
 	ProvideOpsAggregationService,
 	ProvideOpsAlertEvaluatorService,
 	ProvideOpsCleanupService,
-	ProvideOpsScheduledReportService,
-	NewEmailService,
-	ProvideEmailQueueService,
 	NewTurnstileService,
 	NewSubscriptionService,
 	ProvideConcurrencyService,
@@ -275,4 +253,6 @@ var ProviderSet = wire.NewSet(
 	NewUsageCache,
 	NewTotpService,
 	NewErrorPassthroughService,
+	NewWeChatService,
+	NewWeChatVerificationService,
 )

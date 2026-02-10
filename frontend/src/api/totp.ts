@@ -10,8 +10,7 @@ import type {
   TotpSetupResponse,
   TotpEnableRequest,
   TotpEnableResponse,
-  TotpDisableRequest,
-  TotpVerificationMethod
+  TotpDisableRequest
 } from '@/types'
 
 /**
@@ -20,24 +19,6 @@ import type {
  */
 export async function getStatus(): Promise<TotpStatus> {
   const { data } = await apiClient.get<TotpStatus>('/user/totp/status')
-  return data
-}
-
-/**
- * Get verification method for TOTP operations
- * @returns Method ('email' or 'password') required for setup/disable
- */
-export async function getVerificationMethod(): Promise<TotpVerificationMethod> {
-  const { data } = await apiClient.get<TotpVerificationMethod>('/user/totp/verification-method')
-  return data
-}
-
-/**
- * Send email verification code for TOTP operations
- * @returns Success response
- */
-export async function sendVerifyCode(): Promise<{ success: boolean }> {
-  const { data } = await apiClient.post<{ success: boolean }>('/user/totp/send-code')
   return data
 }
 
@@ -73,8 +54,6 @@ export async function disable(request: TotpDisableRequest): Promise<{ success: b
 
 export const totpAPI = {
   getStatus,
-  getVerificationMethod,
-  sendVerifyCode,
   initiateSetup,
   enable,
   disable

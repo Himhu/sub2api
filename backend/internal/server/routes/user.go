@@ -1,10 +1,14 @@
 package routes
 
 import (
+	"time"
+
 	"github.com/Wei-Shaw/sub2api/internal/handler"
+	ratelimit "github.com/Wei-Shaw/sub2api/internal/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 // RegisterUserRoutes 注册用户相关路由（需要认证）
@@ -12,7 +16,9 @@ func RegisterUserRoutes(
 	v1 *gin.RouterGroup,
 	h *handler.Handlers,
 	jwtAuth middleware.JWTAuthMiddleware,
+	redisClient *redis.Client,
 ) {
+	rateLimiter := ratelimit.NewRateLimiter(redisClient)
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))
 	{
@@ -37,11 +43,20 @@ func RegisterUserRoutes(
 			totp := user.Group("/totp")
 			{
 				totp.GET("/status", h.Totp.GetStatus)
-				totp.GET("/verification-method", h.Totp.GetVerificationMethod)
-				totp.POST("/send-code", h.Totp.SendVerifyCode)
 				totp.POST("/setup", h.Totp.InitiateSetup)
 				totp.POST("/enable", h.Totp.Enable)
 				totp.POST("/disable", h.Totp.Disable)
+			}
+
+			// 微信绑定/解绑
+			wechat := user.Group("/wechat")
+			{
+				wechat.GET("/status", h.WeChatBinding.GetStatus)
+				wechat.POST("/bind", h.WeChatBinding.InitiateBind)
+				wechat.POST("/confirm", h.WeChatBinding.ConfirmBind)
+				wechat.POST("/unbind", rateLimiter.LimitWithOptions("wechat-unbind", 5, time.Minute, ratelimit.RateLimitOptions{
+					FailureMode: ratelimit.RateLimitFailClose,
+				}), h.WeChatBinding.Unbind)
 			}
 		}
 

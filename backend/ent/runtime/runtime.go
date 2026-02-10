@@ -23,6 +23,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbindinghistory"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -1005,6 +1007,126 @@ func init() {
 	usersubscriptionDescAssignedAt := usersubscriptionFields[13].Descriptor()
 	// usersubscription.DefaultAssignedAt holds the default value on creation for the assigned_at field.
 	usersubscription.DefaultAssignedAt = usersubscriptionDescAssignedAt.Default.(func() time.Time)
+	wechatbindingMixin := schema.WeChatBinding{}.Mixin()
+	wechatbindingMixinFields0 := wechatbindingMixin[0].Fields()
+	_ = wechatbindingMixinFields0
+	wechatbindingFields := schema.WeChatBinding{}.Fields()
+	_ = wechatbindingFields
+	// wechatbindingDescCreatedAt is the schema descriptor for created_at field.
+	wechatbindingDescCreatedAt := wechatbindingMixinFields0[0].Descriptor()
+	// wechatbinding.DefaultCreatedAt holds the default value on creation for the created_at field.
+	wechatbinding.DefaultCreatedAt = wechatbindingDescCreatedAt.Default.(func() time.Time)
+	// wechatbindingDescUpdatedAt is the schema descriptor for updated_at field.
+	wechatbindingDescUpdatedAt := wechatbindingMixinFields0[1].Descriptor()
+	// wechatbinding.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	wechatbinding.DefaultUpdatedAt = wechatbindingDescUpdatedAt.Default.(func() time.Time)
+	// wechatbinding.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	wechatbinding.UpdateDefaultUpdatedAt = wechatbindingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// wechatbindingDescAppID is the schema descriptor for app_id field.
+	wechatbindingDescAppID := wechatbindingFields[1].Descriptor()
+	// wechatbinding.AppIDValidator is a validator for the "app_id" field. It is called by the builders before save.
+	wechatbinding.AppIDValidator = func() func(string) error {
+		validators := wechatbindingDescAppID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(app_id string) error {
+			for _, fn := range fns {
+				if err := fn(app_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// wechatbindingDescOpenid is the schema descriptor for openid field.
+	wechatbindingDescOpenid := wechatbindingFields[2].Descriptor()
+	// wechatbinding.OpenidValidator is a validator for the "openid" field. It is called by the builders before save.
+	wechatbinding.OpenidValidator = func() func(string) error {
+		validators := wechatbindingDescOpenid.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(openid string) error {
+			for _, fn := range fns {
+				if err := fn(openid); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// wechatbindingDescUnionid is the schema descriptor for unionid field.
+	wechatbindingDescUnionid := wechatbindingFields[3].Descriptor()
+	// wechatbinding.UnionidValidator is a validator for the "unionid" field. It is called by the builders before save.
+	wechatbinding.UnionidValidator = wechatbindingDescUnionid.Validators[0].(func(string) error)
+	// wechatbindingDescSubscribed is the schema descriptor for subscribed field.
+	wechatbindingDescSubscribed := wechatbindingFields[4].Descriptor()
+	// wechatbinding.DefaultSubscribed holds the default value on creation for the subscribed field.
+	wechatbinding.DefaultSubscribed = wechatbindingDescSubscribed.Default.(bool)
+	wechatbindinghistoryMixin := schema.WeChatBindingHistory{}.Mixin()
+	wechatbindinghistoryMixinFields0 := wechatbindinghistoryMixin[0].Fields()
+	_ = wechatbindinghistoryMixinFields0
+	wechatbindinghistoryFields := schema.WeChatBindingHistory{}.Fields()
+	_ = wechatbindinghistoryFields
+	// wechatbindinghistoryDescCreatedAt is the schema descriptor for created_at field.
+	wechatbindinghistoryDescCreatedAt := wechatbindinghistoryMixinFields0[0].Descriptor()
+	// wechatbindinghistory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	wechatbindinghistory.DefaultCreatedAt = wechatbindinghistoryDescCreatedAt.Default.(func() time.Time)
+	// wechatbindinghistoryDescUpdatedAt is the schema descriptor for updated_at field.
+	wechatbindinghistoryDescUpdatedAt := wechatbindinghistoryMixinFields0[1].Descriptor()
+	// wechatbindinghistory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	wechatbindinghistory.DefaultUpdatedAt = wechatbindinghistoryDescUpdatedAt.Default.(func() time.Time)
+	// wechatbindinghistory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	wechatbindinghistory.UpdateDefaultUpdatedAt = wechatbindinghistoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// wechatbindinghistoryDescAppID is the schema descriptor for app_id field.
+	wechatbindinghistoryDescAppID := wechatbindinghistoryFields[1].Descriptor()
+	// wechatbindinghistory.AppIDValidator is a validator for the "app_id" field. It is called by the builders before save.
+	wechatbindinghistory.AppIDValidator = func() func(string) error {
+		validators := wechatbindinghistoryDescAppID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(app_id string) error {
+			for _, fn := range fns {
+				if err := fn(app_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// wechatbindinghistoryDescOpenid is the schema descriptor for openid field.
+	wechatbindinghistoryDescOpenid := wechatbindinghistoryFields[2].Descriptor()
+	// wechatbindinghistory.OpenidValidator is a validator for the "openid" field. It is called by the builders before save.
+	wechatbindinghistory.OpenidValidator = func() func(string) error {
+		validators := wechatbindinghistoryDescOpenid.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(openid string) error {
+			for _, fn := range fns {
+				if err := fn(openid); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// wechatbindinghistoryDescUnboundAt is the schema descriptor for unbound_at field.
+	wechatbindinghistoryDescUnboundAt := wechatbindinghistoryFields[3].Descriptor()
+	// wechatbindinghistory.DefaultUnboundAt holds the default value on creation for the unbound_at field.
+	wechatbindinghistory.DefaultUnboundAt = wechatbindinghistoryDescUnboundAt.Default.(func() time.Time)
+	// wechatbindinghistoryDescReason is the schema descriptor for reason field.
+	wechatbindinghistoryDescReason := wechatbindinghistoryFields[4].Descriptor()
+	// wechatbindinghistory.DefaultReason holds the default value on creation for the reason field.
+	wechatbindinghistory.DefaultReason = wechatbindinghistoryDescReason.Default.(string)
+	// wechatbindinghistory.ReasonValidator is a validator for the "reason" field. It is called by the builders before save.
+	wechatbindinghistory.ReasonValidator = wechatbindinghistoryDescReason.Validators[0].(func(string) error)
 }
 
 const (

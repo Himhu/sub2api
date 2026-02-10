@@ -32,9 +32,8 @@ return 0
 `)
 
 type OpsAlertEvaluatorService struct {
-	opsService   *OpsService
-	opsRepo      OpsRepository
-	emailService *EmailService
+	opsService *OpsService
+	opsRepo    OpsRepository
 
 	redisClient *redis.Client
 	cfg         *config.Config
@@ -64,15 +63,13 @@ type opsAlertRuleState struct {
 func NewOpsAlertEvaluatorService(
 	opsService *OpsService,
 	opsRepo OpsRepository,
-	emailService *EmailService,
 	redisClient *redis.Client,
 	cfg *config.Config,
 ) *OpsAlertEvaluatorService {
 	return &OpsAlertEvaluatorService{
-		opsService:   opsService,
-		opsRepo:      opsRepo,
-		emailService: emailService,
-		redisClient:  redisClient,
+		opsService:  opsService,
+		opsRepo:     opsRepo,
+		redisClient: redisClient,
 		cfg:          cfg,
 		instanceID:   uuid.NewString(),
 		ruleStates:   map[int64]*opsAlertRuleState{},
@@ -600,61 +597,9 @@ func buildOpsAlertDescription(rule *OpsAlertRule, value float64, windowMinutes i
 	)
 }
 
-func (s *OpsAlertEvaluatorService) maybeSendAlertEmail(ctx context.Context, runtimeCfg *OpsAlertRuntimeSettings, rule *OpsAlertRule, event *OpsAlertEvent) bool {
-	if s == nil || s.emailService == nil || s.opsService == nil || event == nil || rule == nil {
-		return false
-	}
-	if event.EmailSent {
-		return false
-	}
-	if !rule.NotifyEmail {
-		return false
-	}
-
-	emailCfg, err := s.opsService.GetEmailNotificationConfig(ctx)
-	if err != nil || emailCfg == nil || !emailCfg.Alert.Enabled {
-		return false
-	}
-
-	if len(emailCfg.Alert.Recipients) == 0 {
-		return false
-	}
-	if !shouldSendOpsAlertEmailByMinSeverity(strings.TrimSpace(emailCfg.Alert.MinSeverity), strings.TrimSpace(rule.Severity)) {
-		return false
-	}
-
-	if runtimeCfg != nil && runtimeCfg.Silencing.Enabled {
-		if isOpsAlertSilenced(time.Now().UTC(), rule, event, runtimeCfg.Silencing) {
-			return false
-		}
-	}
-
-	// Apply/update rate limiter.
-	s.emailLimiter.SetLimit(emailCfg.Alert.RateLimitPerHour)
-
-	subject := fmt.Sprintf("[Ops Alert][%s] %s", strings.TrimSpace(rule.Severity), strings.TrimSpace(rule.Name))
-	body := buildOpsAlertEmailBody(rule, event)
-
-	anySent := false
-	for _, to := range emailCfg.Alert.Recipients {
-		addr := strings.TrimSpace(to)
-		if addr == "" {
-			continue
-		}
-		if !s.emailLimiter.Allow(time.Now().UTC()) {
-			continue
-		}
-		if err := s.emailService.SendEmail(ctx, addr, subject, body); err != nil {
-			// Ignore per-recipient failures; continue best-effort.
-			continue
-		}
-		anySent = true
-	}
-
-	if anySent {
-		_ = s.opsRepo.UpdateAlertEventEmailSent(context.Background(), event.ID, true)
-	}
-	return anySent
+func (s *OpsAlertEvaluatorService) maybeSendAlertEmail(_ context.Context, _ *OpsAlertRuntimeSettings, _ *OpsAlertRule, _ *OpsAlertEvent) bool {
+	// Email service removed; alert email sending is a no-op.
+	return false
 }
 
 func buildOpsAlertEmailBody(rule *OpsAlertRule, event *OpsAlertEvent) string {

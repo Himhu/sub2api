@@ -1349,6 +1349,29 @@ func HasAttributeValuesWith(preds ...predicate.UserAttributeValue) predicate.Use
 	})
 }
 
+// HasWechatBindings applies the HasEdge predicate on the "wechat_bindings" edge.
+func HasWechatBindings() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WechatBindingsTable, WechatBindingsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWechatBindingsWith applies the HasEdge predicate on the "wechat_bindings" edge with a given conditions (other predicates).
+func HasWechatBindingsWith(preds ...predicate.WeChatBinding) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newWechatBindingsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasUserAllowedGroups applies the HasEdge predicate on the "user_allowed_groups" edge.
 func HasUserAllowedGroups() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

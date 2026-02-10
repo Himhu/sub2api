@@ -73,7 +73,7 @@ func registerRoutes(
 
 	// 注册各模块路由
 	routes.RegisterAuthRoutes(v1, h, jwtAuth, redisClient)
-	routes.RegisterUserRoutes(v1, h, jwtAuth)
+	routes.RegisterUserRoutes(v1, h, jwtAuth, redisClient)
 	routes.RegisterAdminRoutes(v1, h, adminAuth)
 	routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, cfg)
 }

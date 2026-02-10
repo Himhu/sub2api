@@ -27,7 +27,6 @@ func RegisterAuthRoutes(
 		auth.POST("/register", h.Auth.Register)
 		auth.POST("/login", h.Auth.Login)
 		auth.POST("/login/2fa", h.Auth.Login2FA)
-		auth.POST("/send-verify-code", h.Auth.SendVerifyCode)
 		// 邀请码验证接口添加速率限制：每分钟最多 10 次（Redis 故障时 fail-close）
 		auth.POST("/validate-invite-code", rateLimiter.LimitWithOptions("validate-invite", 10, time.Minute, middleware.RateLimitOptions{
 			FailureMode: middleware.RateLimitFailClose,
@@ -38,20 +37,15 @@ func RegisterAuthRoutes(
 		}), h.Auth.RefreshToken)
 		// 登出接口（公开，允许未认证用户调用以撤销Refresh Token）
 		auth.POST("/logout", h.Auth.Logout)
-		// 邀请码验证接口添加速率限制：每分钟最多 10 次（Redis 故障时 fail-close）
-		auth.POST("/validate-invitation-code", rateLimiter.LimitWithOptions("validate-invitation", 10, time.Minute, middleware.RateLimitOptions{
-			FailureMode: middleware.RateLimitFailClose,
-		}), h.Auth.ValidateInvitationCode)
-		// 忘记密码接口添加速率限制：每分钟最多 5 次（Redis 故障时 fail-close）
-		auth.POST("/forgot-password", rateLimiter.LimitWithOptions("forgot-password", 5, time.Minute, middleware.RateLimitOptions{
-			FailureMode: middleware.RateLimitFailClose,
-		}), h.Auth.ForgotPassword)
-		// 重置密码接口添加速率限制：每分钟最多 10 次（Redis 故障时 fail-close）
-		auth.POST("/reset-password", rateLimiter.LimitWithOptions("reset-password", 10, time.Minute, middleware.RateLimitOptions{
-			FailureMode: middleware.RateLimitFailClose,
-		}), h.Auth.ResetPassword)
 		auth.GET("/oauth/linuxdo/start", h.Auth.LinuxDoOAuthStart)
 		auth.GET("/oauth/linuxdo/callback", h.Auth.LinuxDoOAuthCallback)
+
+		// 微信验证相关
+		auth.POST("/wechat/shortcode", h.WeChat.PostShortCode)
+		auth.POST("/wechat/qrcode", h.WeChat.PostQRCode)
+		auth.GET("/wechat/scan-status", h.WeChat.GetScanStatus)
+		auth.GET("/wechat/callback", h.WeChat.GetCallback)
+		auth.POST("/wechat/callback", h.WeChat.PostCallback)
 	}
 
 	// 公开设置（无需认证）

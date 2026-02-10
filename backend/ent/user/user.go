@@ -71,6 +71,8 @@ const (
 	EdgeUsageLogs = "usage_logs"
 	// EdgeAttributeValues holds the string denoting the attribute_values edge name in mutations.
 	EdgeAttributeValues = "attribute_values"
+	// EdgeWechatBindings holds the string denoting the wechat_bindings edge name in mutations.
+	EdgeWechatBindings = "wechat_bindings"
 	// EdgeUserAllowedGroups holds the string denoting the user_allowed_groups edge name in mutations.
 	EdgeUserAllowedGroups = "user_allowed_groups"
 	// Table holds the table name of the user in the database.
@@ -129,6 +131,13 @@ const (
 	AttributeValuesInverseTable = "user_attribute_values"
 	// AttributeValuesColumn is the table column denoting the attribute_values relation/edge.
 	AttributeValuesColumn = "user_id"
+	// WechatBindingsTable is the table that holds the wechat_bindings relation/edge.
+	WechatBindingsTable = "wechat_bindings"
+	// WechatBindingsInverseTable is the table name for the WeChatBinding entity.
+	// It exists in this package in order to avoid circular dependency with the "wechatbinding" package.
+	WechatBindingsInverseTable = "wechat_bindings"
+	// WechatBindingsColumn is the table column denoting the wechat_bindings relation/edge.
+	WechatBindingsColumn = "user_id"
 	// UserAllowedGroupsTable is the table that holds the user_allowed_groups relation/edge.
 	UserAllowedGroupsTable = "user_allowed_groups"
 	// UserAllowedGroupsInverseTable is the table name for the UserAllowedGroup entity.
@@ -445,6 +454,20 @@ func ByAttributeValues(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByWechatBindingsCount orders the results by wechat_bindings count.
+func ByWechatBindingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newWechatBindingsStep(), opts...)
+	}
+}
+
+// ByWechatBindings orders the results by wechat_bindings terms.
+func ByWechatBindings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newWechatBindingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByUserAllowedGroupsCount orders the results by user_allowed_groups count.
 func ByUserAllowedGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -512,6 +535,13 @@ func newAttributeValuesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AttributeValuesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AttributeValuesTable, AttributeValuesColumn),
+	)
+}
+func newWechatBindingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(WechatBindingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, WechatBindingsTable, WechatBindingsColumn),
 	)
 }
 func newUserAllowedGroupsStep() *sqlgraph.Step {

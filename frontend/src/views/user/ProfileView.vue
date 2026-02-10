@@ -28,6 +28,7 @@
       <ProfileEditForm :initial-username="user?.username || ''" />
       <ProfilePasswordForm />
       <ProfileTotpCard />
+      <ProfileWeChatBindCard />
     </div>
   </AppLayout>
 </template>
@@ -41,6 +42,7 @@ import ProfileInfoCard from '@/components/user/profile/ProfileInfoCard.vue'
 import ProfileEditForm from '@/components/user/profile/ProfileEditForm.vue'
 import ProfilePasswordForm from '@/components/user/profile/ProfilePasswordForm.vue'
 import ProfileTotpCard from '@/components/user/profile/ProfileTotpCard.vue'
+import ProfileWeChatBindCard from '@/components/user/profile/ProfileWeChatBindCard.vue'
 
 const { t } = useI18n(); const authStore = useAuthStore(); const user = computed(() => authStore.user)
 

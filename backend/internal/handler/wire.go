@@ -77,6 +77,8 @@ func ProvideHandlers(
 	openaiGatewayHandler *OpenAIGatewayHandler,
 	settingHandler *SettingHandler,
 	totpHandler *TotpHandler,
+	wechatHandler *WeChatHandler,
+	wechatBindingHandler *WeChatBindingHandler,
 ) *Handlers {
 	return &Handlers{
 		Auth:          authHandler,
@@ -92,6 +94,8 @@ func ProvideHandlers(
 		OpenAIGateway: openaiGatewayHandler,
 		Setting:       settingHandler,
 		Totp:          totpHandler,
+		WeChat:        wechatHandler,
+		WeChatBinding: wechatBindingHandler,
 	}
 }
 
@@ -109,6 +113,8 @@ var ProviderSet = wire.NewSet(
 	NewGatewayHandler,
 	NewOpenAIGatewayHandler,
 	NewTotpHandler,
+	NewWeChatHandler,
+	NewWeChatBindingHandler,
 	ProvideSettingHandler,
 
 	// Admin handlers

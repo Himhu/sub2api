@@ -11,6 +11,13 @@
         </p>
       </div>
 
+      <!-- Step Indicator (only when wechat enabled) -->
+      <div v-if="wechatEnabled && registrationEnabled && settingsLoaded" class="flex items-center justify-center gap-2">
+        <div class="h-2 w-2 rounded-full transition-colors" :class="currentStep === 1 ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'" />
+        <div class="h-px w-6 transition-colors" :class="currentStep === 2 ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'" />
+        <div class="h-2 w-2 rounded-full transition-colors" :class="currentStep === 2 ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'" />
+      </div>
+
       <!-- LinuxDo Connect OAuth 登录 -->
       <LinuxDoOAuthSection v-if="linuxdoOAuthEnabled" :disabled="isLoading" />
 
@@ -30,189 +37,231 @@
       </div>
 
       <!-- Registration Form -->
-      <form v-else @submit.prevent="handleRegister" class="space-y-5">
-        <!-- Email Input -->
-        <div>
-          <label for="email" class="input-label">
-            {{ t('auth.emailLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="mail" size="md" class="text-gray-400 dark:text-dark-500" />
-            </div>
-            <input
-              id="email"
-              v-model="formData.email"
-              type="email"
-              required
-              autofocus
-              autocomplete="email"
-              :disabled="isLoading"
-              class="input pl-11"
-              :class="{ 'input-error': errors.email }"
-              :placeholder="t('auth.emailPlaceholder')"
-            />
-          </div>
-          <p v-if="errors.email" class="input-error-text">
-            {{ errors.email }}
-          </p>
-        </div>
+      <form v-else @submit.prevent="currentStep === 1 ? handleNext() : handleRegister()" class="space-y-5">
 
-        <!-- Password Input -->
-        <div>
-          <label for="password" class="input-label">
-            {{ t('auth.passwordLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="lock" size="md" class="text-gray-400 dark:text-dark-500" />
+        <!-- ==================== Step 1: Account Info ==================== -->
+        <template v-if="currentStep === 1">
+          <!-- Email Input -->
+          <div>
+            <label for="email" class="input-label">
+              {{ t('auth.emailLabel') }}
+            </label>
+            <div class="relative">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <Icon name="mail" size="md" class="text-gray-400 dark:text-dark-500" />
+              </div>
+              <input
+                id="email"
+                v-model="formData.email"
+                type="email"
+                required
+                autofocus
+                autocomplete="email"
+                :disabled="isLoading"
+                class="input pl-11"
+                :class="{ 'input-error': errors.email }"
+                :placeholder="t('auth.emailPlaceholder')"
+              />
             </div>
-            <input
-              id="password"
-              v-model="formData.password"
-              :type="showPassword ? 'text' : 'password'"
-              required
-              autocomplete="new-password"
-              :disabled="isLoading"
-              class="input pl-11 pr-11"
-              :class="{ 'input-error': errors.password }"
-              :placeholder="t('auth.createPasswordPlaceholder')"
-            />
-            <button
-              type="button"
-              @click="showPassword = !showPassword"
-              class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-dark-300"
-            >
-              <Icon v-if="showPassword" name="eyeOff" size="md" />
-              <Icon v-else name="eye" size="md" />
-            </button>
+            <p v-if="errors.email" class="input-error-text">
+              {{ errors.email }}
+            </p>
           </div>
-          <p v-if="errors.password" class="input-error-text">
-            {{ errors.password }}
-          </p>
-          <p v-else class="input-hint">
-            {{ t('auth.passwordHint') }}
-          </p>
-        </div>
 
-        <!-- Invitation Code Input (Required when enabled) -->
-        <div v-if="invitationCodeEnabled">
-          <label for="invitation_code" class="input-label">
-            {{ t('auth.invitationCodeLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="key" size="md" :class="invitationValidation.valid ? 'text-green-500' : 'text-gray-400 dark:text-dark-500'" />
+          <!-- Password Input -->
+          <div>
+            <label for="password" class="input-label">
+              {{ t('auth.passwordLabel') }}
+            </label>
+            <div class="relative">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <Icon name="lock" size="md" class="text-gray-400 dark:text-dark-500" />
+              </div>
+              <input
+                id="password"
+                v-model="formData.password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                autocomplete="new-password"
+                :disabled="isLoading"
+                class="input pl-11 pr-11"
+                :class="{ 'input-error': errors.password }"
+                :placeholder="t('auth.createPasswordPlaceholder')"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-dark-300"
+              >
+                <Icon v-if="showPassword" name="eyeOff" size="md" />
+                <Icon v-else name="eye" size="md" />
+              </button>
             </div>
+            <p v-if="errors.password" class="input-error-text">
+              {{ errors.password }}
+            </p>
+            <p v-else class="input-hint">
+              {{ t('auth.passwordHint') }}
+            </p>
+          </div>
+
+          <!-- Invite Code Input -->
+          <div v-if="promoCodeEnabled">
+            <label for="promo_code" class="input-label">
+              {{ t('auth.promoCodeLabel') }}
+            </label>
+            <div class="relative">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <Icon name="gift" size="md" :class="promoValidation.valid ? 'text-green-500' : 'text-gray-400 dark:text-dark-500'" />
+              </div>
+              <input
+                id="promo_code"
+                v-model="formData.promo_code"
+                type="text"
+                :disabled="isLoading"
+                class="input pl-11 pr-10"
+                :class="{
+                  'border-green-500 focus:border-green-500 focus:ring-green-500': promoValidation.valid,
+                  'border-red-500 focus:border-red-500 focus:ring-red-500': promoValidation.invalid
+                }"
+                :placeholder="t('auth.promoCodePlaceholder')"
+                @input="handlePromoCodeInput"
+              />
+              <div v-if="promoValidating" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
+                <svg class="h-4 w-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <div v-else-if="promoValidation.valid" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
+                <Icon name="checkCircle" size="md" class="text-green-500" />
+              </div>
+              <div v-else-if="promoValidation.invalid" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
+                <Icon name="exclamationCircle" size="md" class="text-red-500" />
+              </div>
+            </div>
+            <transition name="fade">
+              <div v-if="promoValidation.valid" class="mt-2 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20">
+                <Icon name="gift" size="sm" class="text-green-600 dark:text-green-400" />
+                <span class="text-sm text-green-700 dark:text-green-400">
+                  {{ t('auth.promoCodeValid', { amount: promoValidation.bonusAmount?.toFixed(2) }) }}
+                </span>
+              </div>
+              <p v-else-if="promoValidation.invalid" class="input-error-text">
+                {{ promoValidation.message }}
+              </p>
+            </transition>
+          </div>
+
+          <!-- Turnstile Widget -->
+          <div v-if="turnstileEnabled && turnstileSiteKey">
+            <TurnstileWidget
+              ref="turnstileRef"
+              :site-key="turnstileSiteKey"
+              @verify="onTurnstileVerify"
+              @expire="onTurnstileExpire"
+              @error="onTurnstileError"
+            />
+            <p v-if="errors.turnstile" class="input-error-text mt-2 text-center">
+              {{ errors.turnstile }}
+            </p>
+          </div>
+        </template>
+
+        <!-- ==================== Step 2: WeChat Verification ==================== -->
+        <template v-if="currentStep === 2">
+          <!-- Instruction -->
+          <div class="rounded-lg border border-primary-200 bg-primary-50 p-4 dark:border-primary-800/50 dark:bg-primary-900/20">
+            <div class="space-y-2.5">
+              <template v-if="wechatAccountName">
+                <p class="text-center text-sm text-primary-700 dark:text-primary-300">
+                  {{ t('auth.wechat.followAccount') }}
+                  <span class="font-bold text-red-600 dark:text-red-400">{{ wechatAccountName }}</span>
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded bg-white/60 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800/40 dark:text-gray-400">
+                  <span>{{ t('auth.wechat.searchFollow', { account: wechatAccountName }) }}</span>
+                </div>
+              </template>
+              <p v-else class="text-center text-sm text-primary-700 dark:text-primary-300">
+                {{ t('auth.wechat.followAccountGeneric') }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Short Code Card -->
+          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+            <div class="flex flex-col items-center space-y-3">
+              <!-- Loading -->
+              <div v-if="wechatLoading && !wechatShortCode" class="flex items-center gap-2 py-4 text-gray-500">
+                <div class="h-5 w-5 animate-spin rounded-full border-b-2 border-primary-600"></div>
+                <span class="text-sm">{{ t('common.loading') }}</span>
+              </div>
+
+              <!-- Short Code Display -->
+              <template v-if="wechatShortCode">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="rounded-lg bg-white px-4 py-2 font-mono text-2xl font-bold tracking-[0.3em] text-gray-900 shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:text-white dark:ring-gray-700"
+                    :class="{ 'opacity-40': wechatScanStatus === 'expired' }"
+                  >
+                    {{ wechatShortCode }}
+                  </span>
+                  <button
+                    type="button"
+                    @click="copyShortCode"
+                    class="rounded-md p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                    title="Copy"
+                  >
+                    <Icon name="clipboard" size="md" />
+                  </button>
+                </div>
+
+                <!-- Status -->
+                <div v-if="wechatScanStatus === 'code_sent'" class="flex items-center gap-1.5 text-green-600">
+                  <Icon name="checkCircle" size="sm" />
+                  <span class="text-sm font-medium">{{ t('auth.wechat.codeSentSuccess') }}</span>
+                </div>
+                <div v-else-if="wechatScanStatus === 'expired'" class="flex flex-col items-center gap-1.5">
+                  <span class="text-sm text-yellow-600">{{ t('auth.wechat.shortCodeExpired') }}</span>
+                  <button type="button" @click="refreshShortCode" class="flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline">
+                    <Icon name="refresh" size="sm" />
+                    {{ t('auth.wechat.refreshShortCode') }}
+                  </button>
+                </div>
+                <div v-else class="flex items-center gap-1.5 text-gray-500">
+                  <div class="h-3 w-3 animate-pulse rounded-full bg-yellow-400"></div>
+                  <span class="text-xs">{{ t('auth.wechat.waitingForCode') }}</span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Verification Code Input -->
+          <div>
+            <label for="wechat_code" class="input-label">
+              {{ t('auth.wechat.verifyCodeLabel') }}
+            </label>
             <input
-              id="invitation_code"
-              v-model="formData.invitation_code"
+              id="wechat_code"
+              v-model="formData.wechat_verify_code"
               type="text"
-              :disabled="isLoading"
-              class="input pl-11 pr-10"
-              :class="{
-                'border-green-500 focus:border-green-500 focus:ring-green-500': invitationValidation.valid,
-                'border-red-500 focus:border-red-500 focus:ring-red-500': invitationValidation.invalid || errors.invitation_code
-              }"
-              :placeholder="t('auth.invitationCodePlaceholder')"
-              @input="handleInvitationCodeInput"
+              maxlength="6"
+              inputmode="numeric"
+              placeholder="000000"
+              class="input text-center font-mono tracking-[0.2em]"
+              :class="{ 'input-error': errors.wechat }"
+              :disabled="wechatLoading"
             />
-            <!-- Validation indicator -->
-            <div v-if="invitationValidating" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
-              <svg class="h-4 w-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-            <div v-else-if="invitationValidation.valid" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
-              <Icon name="checkCircle" size="md" class="text-green-500" />
-            </div>
-            <div v-else-if="invitationValidation.invalid || errors.invitation_code" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
-              <Icon name="exclamationCircle" size="md" class="text-red-500" />
-            </div>
+            <p v-if="errors.wechat" class="input-error-text">
+              {{ errors.wechat }}
+            </p>
+            <p v-else class="input-hint">
+              {{ t('auth.wechat.verifyCodeHint') }}
+            </p>
           </div>
-          <!-- Invitation code validation result -->
-          <transition name="fade">
-            <div v-if="invitationValidation.valid" class="mt-2 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20">
-              <Icon name="checkCircle" size="sm" class="text-green-600 dark:text-green-400" />
-              <span class="text-sm text-green-700 dark:text-green-400">
-                {{ t('auth.invitationCodeValid') }}
-              </span>
-            </div>
-            <p v-else-if="invitationValidation.invalid" class="input-error-text">
-              {{ invitationValidation.message }}
-            </p>
-            <p v-else-if="errors.invitation_code" class="input-error-text">
-              {{ errors.invitation_code }}
-            </p>
-          </transition>
-        </div>
+        </template>
 
-        <!-- Invite Code Input (Required when invite registration is enabled) -->
-        <div v-if="promoCodeEnabled">
-          <label for="promo_code" class="input-label">
-            {{ t('auth.promoCodeLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="gift" size="md" :class="promoValidation.valid ? 'text-green-500' : 'text-gray-400 dark:text-dark-500'" />
-            </div>
-            <input
-              id="promo_code"
-              v-model="formData.promo_code"
-              type="text"
-              :disabled="isLoading"
-              class="input pl-11 pr-10"
-              :class="{
-                'border-green-500 focus:border-green-500 focus:ring-green-500': promoValidation.valid,
-                'border-red-500 focus:border-red-500 focus:ring-red-500': promoValidation.invalid
-              }"
-              :placeholder="t('auth.promoCodePlaceholder')"
-              @input="handlePromoCodeInput"
-            />
-            <!-- Validation indicator -->
-            <div v-if="promoValidating" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
-              <svg class="h-4 w-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-            <div v-else-if="promoValidation.valid" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
-              <Icon name="checkCircle" size="md" class="text-green-500" />
-            </div>
-            <div v-else-if="promoValidation.invalid" class="absolute inset-y-0 right-0 flex items-center pr-3.5">
-              <Icon name="exclamationCircle" size="md" class="text-red-500" />
-            </div>
-          </div>
-          <!-- Promo code validation result -->
-          <transition name="fade">
-            <div v-if="promoValidation.valid" class="mt-2 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20">
-              <Icon name="gift" size="sm" class="text-green-600 dark:text-green-400" />
-              <span class="text-sm text-green-700 dark:text-green-400">
-                {{ t('auth.promoCodeValid', { amount: promoValidation.bonusAmount?.toFixed(2) }) }}
-              </span>
-            </div>
-            <p v-else-if="promoValidation.invalid" class="input-error-text">
-              {{ promoValidation.message }}
-            </p>
-          </transition>
-        </div>
-
-        <!-- Turnstile Widget -->
-        <div v-if="turnstileEnabled && turnstileSiteKey">
-          <TurnstileWidget
-            ref="turnstileRef"
-            :site-key="turnstileSiteKey"
-            @verify="onTurnstileVerify"
-            @expire="onTurnstileExpire"
-            @error="onTurnstileError"
-          />
-          <p v-if="errors.turnstile" class="input-error-text mt-2 text-center">
-            {{ errors.turnstile }}
-          </p>
-        </div>
-
-        <!-- Error Message -->
+        <!-- ==================== Error Message (both steps) ==================== -->
         <transition name="fade">
           <div
             v-if="errorMessage"
@@ -229,41 +278,64 @@
           </div>
         </transition>
 
-        <!-- Submit Button -->
-        <button
-          type="submit"
-          :disabled="isLoading || (turnstileEnabled && !turnstileToken)"
-          class="btn btn-primary w-full"
-        >
-          <svg
-            v-if="isLoading"
-            class="-ml-1 mr-2 h-4 w-4 animate-spin text-white"
-            fill="none"
-            viewBox="0 0 24 24"
+        <!-- ==================== Action Buttons ==================== -->
+        <!-- Step 1: Next / Submit -->
+        <template v-if="currentStep === 1">
+          <button
+            type="submit"
+            :disabled="isLoading || (turnstileEnabled && !turnstileToken)"
+            class="btn btn-primary w-full"
           >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          <Icon v-else name="userPlus" size="md" class="mr-2" />
-          {{
-            isLoading
-              ? t('auth.processing')
-              : emailVerifyEnabled
-                ? t('auth.continue')
-                : t('auth.createAccount')
-          }}
-        </button>
+            <template v-if="wechatEnabled">
+              <Icon name="arrowRight" size="md" class="mr-2" />
+              {{ t('auth.wechat.stepNext') }}
+            </template>
+            <template v-else>
+              <svg
+                v-if="isLoading"
+                class="-ml-1 mr-2 h-4 w-4 animate-spin text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <Icon v-else name="userPlus" size="md" class="mr-2" />
+              {{ isLoading ? t('auth.processing') : t('auth.createAccount') }}
+            </template>
+          </button>
+        </template>
+
+        <!-- Step 2: Back + Create Account -->
+        <template v-if="currentStep === 2">
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="handleBack"
+              class="btn flex-1 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <Icon name="arrowLeft" size="md" class="mr-2" />
+              {{ t('auth.wechat.stepBack') }}
+            </button>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="btn btn-primary flex-1"
+            >
+              <svg
+                v-if="isLoading"
+                class="-ml-1 mr-2 h-4 w-4 animate-spin text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <Icon v-else name="userPlus" size="md" class="mr-2" />
+              {{ isLoading ? t('auth.processing') : t('auth.createAccount') }}
+            </button>
+          </div>
+        </template>
       </form>
     </div>
 
@@ -291,7 +363,8 @@ import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore } from '@/stores'
-import { getPublicSettings, validateInviteCode, validateInvitationCode } from '@/api/auth'
+import { getPublicSettings, validateInviteCode } from '@/api/auth'
+import { createShortCode, checkScanStatus } from '@/api/wechat'
 
 const { t } = useI18n()
 
@@ -308,16 +381,24 @@ const isLoading = ref<boolean>(false)
 const settingsLoaded = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
+const currentStep = ref<number>(1)
 
 // Public settings
 const registrationEnabled = ref<boolean>(true)
-const emailVerifyEnabled = ref<boolean>(false)
 const promoCodeEnabled = ref<boolean>(true)
-const invitationCodeEnabled = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const siteName = ref<string>('Sub2API')
 const linuxdoOAuthEnabled = ref<boolean>(false)
+
+// WeChat verification
+const wechatEnabled = ref<boolean>(false)
+const wechatAccountName = ref<string>('')
+const wechatLoading = ref<boolean>(false)
+const wechatShortCode = ref<string>('')
+const wechatSceneID = ref<string>('')
+const wechatScanStatus = ref<'idle' | 'pending' | 'code_sent' | 'expired'>('idle')
+let wechatPollTimer: ReturnType<typeof setInterval> | null = null
 
 // Turnstile
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -333,27 +414,18 @@ const promoValidation = reactive({
 })
 let promoValidateTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Invitation code validation
-const invitationValidating = ref<boolean>(false)
-const invitationValidation = reactive({
-  valid: false,
-  invalid: false,
-  message: ''
-})
-let invitationValidateTimeout: ReturnType<typeof setTimeout> | null = null
-
 const formData = reactive({
   email: '',
   password: '',
   promo_code: '',
-  invitation_code: ''
+  wechat_verify_code: ''
 })
 
 const errors = reactive({
   email: '',
   password: '',
   turnstile: '',
-  invitation_code: ''
+  wechat: ''
 })
 
 // ==================== Lifecycle ====================
@@ -362,13 +434,13 @@ onMounted(async () => {
   try {
     const settings = await getPublicSettings()
     registrationEnabled.value = settings.registration_enabled
-    emailVerifyEnabled.value = settings.email_verify_enabled
     promoCodeEnabled.value = settings.invite_registration_enabled
-    invitationCodeEnabled.value = settings.invitation_code_enabled
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     siteName.value = settings.site_name || 'Sub2API'
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
+    wechatEnabled.value = settings.wechat_enabled
+    wechatAccountName.value = settings.wechat_account_name || ''
 
     // Read promo code from URL parameter only if promo code is enabled
     // Support both ?promo_code=xxx and ?promo=xxx
@@ -391,8 +463,8 @@ onUnmounted(() => {
   if (promoValidateTimeout) {
     clearTimeout(promoValidateTimeout)
   }
-  if (invitationValidateTimeout) {
-    clearTimeout(invitationValidateTimeout)
+  if (wechatPollTimer) {
+    clearInterval(wechatPollTimer)
   }
 })
 
@@ -489,67 +561,58 @@ function isValidInviteCodeFormat(code: string): boolean {
   return /^[0-9A-F]{16}$/.test(code)
 }
 
-// ==================== Invitation Code Validation ====================
+// ==================== WeChat Verification ====================
 
-function handleInvitationCodeInput(): void {
-  const code = formData.invitation_code.trim()
-
-  // Clear previous validation
-  invitationValidation.valid = false
-  invitationValidation.invalid = false
-  invitationValidation.message = ''
-  errors.invitation_code = ''
-
-  if (!code) {
-    return
-  }
-
-  // Debounce validation
-  if (invitationValidateTimeout) {
-    clearTimeout(invitationValidateTimeout)
-  }
-
-  invitationValidateTimeout = setTimeout(() => {
-    validateInvitationCodeDebounced(code)
-  }, 500)
-}
-
-async function validateInvitationCodeDebounced(code: string): Promise<void> {
-  invitationValidating.value = true
-
+async function startWeChatShortCode(): Promise<void> {
+  wechatLoading.value = true
+  wechatScanStatus.value = 'idle'
   try {
-    const result = await validateInvitationCode(code)
-
-    if (result.valid) {
-      invitationValidation.valid = true
-      invitationValidation.invalid = false
-      invitationValidation.message = ''
-    } else {
-      invitationValidation.valid = false
-      invitationValidation.invalid = true
-      invitationValidation.message = getInvitationErrorMessage(result.error_code)
-    }
-  } catch {
-    invitationValidation.valid = false
-    invitationValidation.invalid = true
-    invitationValidation.message = t('auth.invitationCodeInvalid')
+    const res = await createShortCode()
+    // Guard: user may have navigated back during the request
+    if (currentStep.value !== 2) return
+    wechatSceneID.value = res.scene_id
+    wechatShortCode.value = res.short_code
+    wechatScanStatus.value = 'pending'
+    startPolling(res.scene_id)
+  } catch (err) {
+    if (currentStep.value !== 2) return
+    console.error('Failed to create WeChat short code:', err)
+    errors.wechat = t('auth.wechat.shortCodeFailed')
   } finally {
-    invitationValidating.value = false
+    wechatLoading.value = false
   }
 }
 
-function getInvitationErrorMessage(errorCode?: string): string {
-  switch (errorCode) {
-    case 'INVITATION_CODE_NOT_FOUND':
-      return t('auth.invitationCodeInvalid')
-    case 'INVITATION_CODE_INVALID':
-      return t('auth.invitationCodeInvalid')
-    case 'INVITATION_CODE_USED':
-      return t('auth.invitationCodeInvalid')
-    case 'INVITATION_CODE_DISABLED':
-      return t('auth.invitationCodeInvalid')
-    default:
-      return t('auth.invitationCodeInvalid')
+function startPolling(sceneID: string): void {
+  if (wechatPollTimer) clearInterval(wechatPollTimer)
+  wechatPollTimer = setInterval(async () => {
+    try {
+      const res = await checkScanStatus(sceneID)
+      wechatScanStatus.value = res.status
+      if (res.status === 'code_sent' || res.status === 'expired') {
+        if (wechatPollTimer) {
+          clearInterval(wechatPollTimer)
+          wechatPollTimer = null
+        }
+      }
+    } catch {
+      // Silently ignore polling errors
+    }
+  }, 2000)
+}
+
+function refreshShortCode(): void {
+  wechatShortCode.value = ''
+  wechatSceneID.value = ''
+  wechatScanStatus.value = 'idle'
+  formData.wechat_verify_code = ''
+  errors.wechat = ''
+  startWeChatShortCode()
+}
+
+function copyShortCode(): void {
+  if (wechatShortCode.value) {
+    navigator.clipboard.writeText(wechatShortCode.value).catch(() => {})
   }
 }
 
@@ -577,16 +640,14 @@ function validateEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
-function validateForm(): boolean {
-  // Reset errors
+function validateStep1(): boolean {
   errors.email = ''
   errors.password = ''
   errors.turnstile = ''
-  errors.invitation_code = ''
+  errorMessage.value = ''
 
   let isValid = true
 
-  // Email validation
   if (!formData.email.trim()) {
     errors.email = t('auth.emailRequired')
     isValid = false
@@ -595,7 +656,6 @@ function validateForm(): boolean {
     isValid = false
   }
 
-  // Password validation
   if (!formData.password) {
     errors.password = t('auth.passwordRequired')
     isValid = false
@@ -604,15 +664,6 @@ function validateForm(): boolean {
     isValid = false
   }
 
-  // Invitation code validation (required when enabled)
-  if (invitationCodeEnabled.value) {
-    if (!formData.invitation_code.trim()) {
-      errors.invitation_code = t('auth.invitationCodeRequired')
-      isValid = false
-    }
-  }
-
-  // Turnstile validation
   if (turnstileEnabled.value && !turnstileToken.value) {
     errors.turnstile = t('auth.completeVerification')
     isValid = false
@@ -621,94 +672,106 @@ function validateForm(): boolean {
   return isValid
 }
 
+function validateStep2(): boolean {
+  errors.wechat = ''
+
+  if (!wechatEnabled.value) return true
+
+  if (!formData.wechat_verify_code.trim()) {
+    errors.wechat = t('auth.wechat.codeRequired')
+    return false
+  }
+  if (!/^\d{6}$/.test(formData.wechat_verify_code.trim())) {
+    errors.wechat = t('auth.wechat.codeInvalid')
+    return false
+  }
+  return true
+}
+
+
 // ==================== Form Handlers ====================
 
-async function handleRegister(): Promise<void> {
-  // Clear previous error
+// ==================== Step Navigation ====================
+
+function handleNext(): void {
   errorMessage.value = ''
 
-  // Validate form
-  if (!validateForm()) {
-    return
-  }
+  if (!validateStep1()) return
 
-  // Check invite code when invite registration is enabled
+  // Validate invite code before proceeding
   if (promoCodeEnabled.value) {
-    // Invite code is required when invite registration is enabled
     if (!formData.promo_code.trim()) {
       errorMessage.value = t('auth.inviteCodeRequired')
       return
     }
-    // If invite code is being validated, wait
     if (promoValidating.value) {
       errorMessage.value = t('auth.promoCodeValidating')
       return
     }
-    // If invite code is invalid, block submission
     if (promoValidation.invalid) {
       errorMessage.value = t('auth.promoCodeInvalidCannotRegister')
       return
     }
-    // If invite code hasn't been validated yet (valid is false but not invalid), validate it
     if (!promoValidation.valid) {
       errorMessage.value = t('auth.inviteCodeRequired')
       return
     }
   }
 
-  // Check invitation code validation status (if enabled and code provided)
-  if (invitationCodeEnabled.value) {
-    // If still validating, wait
-    if (invitationValidating.value) {
-      errorMessage.value = t('auth.invitationCodeValidating')
+  // If wechat not enabled, submit directly
+  if (!wechatEnabled.value) {
+    handleRegister()
+    return
+  }
+
+  // Move to step 2 and start WeChat short code
+  currentStep.value = 2
+  startWeChatShortCode()
+}
+
+function handleBack(): void {
+  if (wechatPollTimer) {
+    clearInterval(wechatPollTimer)
+    wechatPollTimer = null
+  }
+  wechatShortCode.value = ''
+  wechatSceneID.value = ''
+  wechatScanStatus.value = 'idle'
+  formData.wechat_verify_code = ''
+  errors.wechat = ''
+  errorMessage.value = ''
+  // Reset turnstile to force fresh solve on step 1
+  if (turnstileRef.value) {
+    turnstileRef.value.reset()
+    turnstileToken.value = ''
+  }
+  currentStep.value = 1
+}
+
+// ==================== Form Handlers ====================
+
+async function handleRegister(): Promise<void> {
+  errorMessage.value = ''
+
+  // Validate wechat step if enabled
+  if (wechatEnabled.value) {
+    if (!validateStep2()) return
+    if (!wechatSceneID.value) {
+      errors.wechat = t('auth.wechat.shortCodeFailed')
       return
-    }
-    // If invitation code is invalid, block submission
-    if (invitationValidation.invalid) {
-      errorMessage.value = t('auth.invitationCodeInvalidCannotRegister')
-      return
-    }
-    // If invitation code is required but not validated yet
-    if (formData.invitation_code.trim() && !invitationValidation.valid) {
-      errorMessage.value = t('auth.invitationCodeValidating')
-      // Trigger validation
-      await validateInvitationCodeDebounced(formData.invitation_code.trim())
-      if (!invitationValidation.valid) {
-        errorMessage.value = t('auth.invitationCodeInvalidCannotRegister')
-        return
-      }
     }
   }
 
   isLoading.value = true
 
   try {
-    // If email verification is enabled, redirect to verification page
-    if (emailVerifyEnabled.value) {
-      // Store registration data in sessionStorage
-      sessionStorage.setItem(
-        'register_data',
-        JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          turnstile_token: turnstileToken.value,
-          promo_code: formData.promo_code || undefined,
-          invitation_code: formData.invitation_code || undefined
-        })
-      )
-
-      // Navigate to email verification page
-      await router.push('/email-verify')
-      return
-    }
-
-    // Otherwise, directly register
     await authStore.register({
       email: formData.email,
       password: formData.password,
       turnstile_token: turnstileEnabled.value ? turnstileToken.value : undefined,
       promo_code: formData.promo_code || undefined,
-      invitation_code: formData.invitation_code || undefined
+      wechat_verify_code: wechatEnabled.value ? formData.wechat_verify_code.trim() : undefined,
+      scene_id: wechatEnabled.value && wechatSceneID.value ? wechatSceneID.value : undefined
     })
 
     // Show success toast

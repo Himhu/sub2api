@@ -237,7 +237,7 @@
               </div>
             </div>
             <!-- 余额/并发类型：显示数值输入 -->
-            <div v-if="generateForm.type !== 'subscription' && generateForm.type !== 'invitation'">
+            <div v-if="generateForm.type !== 'subscription'">
               <label class="input-label">
                 {{
                   generateForm.type === 'balance'
@@ -253,12 +253,6 @@
                 required
                 class="input"
               />
-            </div>
-            <!-- 邀请码类型：显示提示信息 -->
-            <div v-if="generateForm.type === 'invitation'" class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-              <p class="text-sm text-blue-700 dark:text-blue-300">
-                {{ t('admin.redeem.invitationHint') }}
-              </p>
             </div>
             <!-- 订阅类型：显示分组选择和有效天数 -->
             <template v-if="generateForm.type === 'subscription'">
@@ -529,16 +523,14 @@ const columns = computed<Column[]>(() => [
 const typeOptions = computed(() => [
   { value: 'balance', label: t('admin.redeem.balance') },
   { value: 'concurrency', label: t('admin.redeem.concurrency') },
-  { value: 'subscription', label: t('admin.redeem.subscription') },
-  { value: 'invitation', label: t('admin.redeem.invitation') }
+  { value: 'subscription', label: t('admin.redeem.subscription') }
 ])
 
 const filterTypeOptions = computed(() => [
   { value: '', label: t('admin.redeem.allTypes') },
   { value: 'balance', label: t('admin.redeem.balance') },
   { value: 'concurrency', label: t('admin.redeem.concurrency') },
-  { value: 'subscription', label: t('admin.redeem.subscription') },
-  { value: 'invitation', label: t('admin.redeem.invitation') }
+  { value: 'subscription', label: t('admin.redeem.subscription') }
 ])
 
 const filterStatusOptions = computed(() => [
@@ -579,11 +571,11 @@ const generateForm = reactive({
   validity_days: 30
 })
 
-// 监听类型变化，邀请码类型时自动设置 value 为 0
+// 监听类型变化，订阅类型时重置 value
 watch(
   () => generateForm.type,
   (newType) => {
-    if (newType === 'invitation') {
+    if (newType === 'subscription') {
       generateForm.value = 0
     } else if (generateForm.value === 0) {
       generateForm.value = 10

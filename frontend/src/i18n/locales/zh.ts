@@ -330,27 +330,20 @@ export default {
     sendingCode: '发送中...',
     clickToResend: '点击重新发送验证码',
     resendCode: '重新发送验证码',
-    promoCodeLabel: '邀请码',
-    promoCodePlaceholder: '输入邀请码',
+    promoCodeLabel: '推荐码',
+    promoCodePlaceholder: '请输入好友推荐码',
     promoCodeValid: '有效！注册后将获得 ${amount} 赠送余额',
-    promoCodeInvalid: '无效的邀请码',
-    promoCodeNotFound: '邀请码不存在',
-    promoCodeExpired: '此邀请码已过期',
-    promoCodeDisabled: '此邀请码已被禁用',
-    inviterNotActive: '邀请人账号未激活',
-    promoCodeMaxUsed: '此邀请码已达到使用上限',
-    promoCodeAlreadyUsed: '您已使用过此邀请码',
-    promoCodeInvalidFormat: '邀请码格式无效（必须是16位十六进制字符）',
-    promoCodeValidating: '邀请码正在验证中，请稍候',
-    promoCodeInvalidCannotRegister: '邀请码无效，请检查后重试',
-    inviteCodeRequired: '请输入有效的邀请码',
-    invitationCodeLabel: '邀请码',
-    invitationCodePlaceholder: '请输入邀请码',
-    invitationCodeRequired: '请输入邀请码',
-    invitationCodeValid: '邀请码有效',
-    invitationCodeInvalid: '邀请码无效或已被使用',
-    invitationCodeValidating: '正在验证邀请码...',
-    invitationCodeInvalidCannotRegister: '邀请码无效，请检查后重试',
+    promoCodeInvalid: '无效的推荐码',
+    promoCodeNotFound: '推荐码不存在',
+    promoCodeExpired: '此推荐码已过期',
+    promoCodeDisabled: '此推荐码已被禁用',
+    inviterNotActive: '推荐人账号未激活',
+    promoCodeMaxUsed: '此推荐码已达到使用上限',
+    promoCodeAlreadyUsed: '您已使用过此推荐码',
+    promoCodeInvalidFormat: '推荐码格式无效（必须是16位十六进制字符）',
+    promoCodeValidating: '推荐码正在验证中，请稍候',
+    promoCodeInvalidCannotRegister: '推荐码无效，请检查后重试',
+    inviteCodeRequired: '请输入有效的推荐码',
     linuxdo: {
       signIn: '使用 Linux.do 登录',
       orContinue: '或使用邮箱密码继续',
@@ -365,36 +358,28 @@ export default {
       state: '状态',
       fullUrl: '完整URL'
     },
-    // 忘记密码
-    forgotPassword: '忘记密码？',
-    forgotPasswordTitle: '重置密码',
-    forgotPasswordHint: '输入您的邮箱地址，我们将向您发送密码重置链接。',
-    sendResetLink: '发送重置链接',
-    sendingResetLink: '发送中...',
-    sendResetLinkFailed: '发送重置链接失败，请重试。',
-    resetEmailSent: '重置链接已发送',
-    resetEmailSentHint:
-      '如果该邮箱已注册，您将很快收到密码重置链接。请检查您的收件箱和垃圾邮件文件夹。',
-    backToLogin: '返回登录',
-    rememberedPassword: '想起密码了？',
-    // 重置密码
-    resetPasswordTitle: '设置新密码',
-    resetPasswordHint: '请在下方输入您的新密码。',
-    newPassword: '新密码',
-    newPasswordPlaceholder: '输入新密码',
-    confirmPassword: '确认密码',
-    confirmPasswordPlaceholder: '再次输入新密码',
-    confirmPasswordRequired: '请确认您的密码',
-    passwordsDoNotMatch: '两次输入的密码不一致',
-    resetPassword: '重置密码',
-    resettingPassword: '重置中...',
-    resetPasswordFailed: '重置密码失败，请重试。',
-    passwordResetSuccess: '密码重置成功',
-    passwordResetSuccessHint: '您的密码已重置。现在可以使用新密码登录。',
-    invalidResetLink: '无效的重置链接',
-    invalidResetLinkHint: '此密码重置链接无效或已过期。请重新请求一个新链接。',
-    requestNewResetLink: '请求新的重置链接',
-    invalidOrExpiredToken: '密码重置链接无效或已过期。请重新请求一个新链接。'
+    // WeChat verification
+    wechat: {
+      sectionTitle: '微信验证',
+      stepNext: '下一步',
+      stepBack: '上一步',
+      followAccount: '请在微信中搜索并关注服务号',
+      followAccountGeneric: '请关注我们的微信服务号并发送以下短码',
+      searchFollow: '打开微信 → 搜索 "{account}" → 关注 → 发送下方短码',
+      searchFollowGeneric: '打开微信 → 搜索服务号 → 关注 → 发送下方短码',
+      shortCodeInstruction: '请在微信中向服务号发送以下验证短码',
+      codeSentSuccess: '验证码已发送，请查看微信',
+      shortCodeExpired: '短码已过期',
+      refreshShortCode: '获取新短码',
+      waitingForCode: '等待验证中...',
+      shortCodeFailed: '获取短码失败，请重试',
+      verifyCodeLabel: '微信验证码',
+      verifyCodeHint: '请输入微信收到的6位数字验证码',
+      codeRequired: '请输入微信验证码',
+      codeInvalid: '验证码格式无效，请输入6位数字'
+    },
+    // Password reset
+    resetPasswordGuide: '发送"重置密码"到微信公众号',
   },
 
   // Dashboard
@@ -768,14 +753,28 @@ export default {
       loginTitle: '双因素认证',
       loginHint: '请输入您认证器应用显示的 6 位验证码',
       loginFailed: '验证失败，请重试',
-      // New translations for email verification
-      verifyEmailFirst: '请先验证您的邮箱',
-      verifyPasswordFirst: '请先验证您的身份',
-      emailCode: '邮箱验证码',
-      enterEmailCode: '请输入 6 位验证码',
-      sendCode: '发送验证码',
-      codeSent: '验证码已发送到您的邮箱',
-      sendCodeFailed: '发送验证码失败'
+      verifyPasswordFirst: '请先验证您的身份'
+    },
+    wechat: {
+      title: '微信绑定',
+      description: '绑定微信账号以接收通知和快捷登录',
+      bound: '已绑定',
+      boundOpenId: 'OpenID',
+      notBound: '未绑定',
+      notBoundHint: '绑定微信可享受便捷登录和消息通知服务',
+      bind: '绑定',
+      unbind: '解绑',
+      bindTitle: '绑定微信',
+      bindPasswordHint: '请输入当前密码以验证身份',
+      bindStep1: '请发送以下验证码到我们的微信公众号：',
+      bindStep2: '发送后，您将收到一个 6 位数的验证码。',
+      bindEnterCode: '输入您收到的验证码',
+      bindConfirm: '确认绑定',
+      unbindTitle: '解绑微信',
+      unbindConfirm: '您确定要解绑微信账号吗？',
+      unbindPasswordLabel: '输入密码以确认',
+      bindSuccess: '微信账号绑定成功',
+      unbindSuccess: '微信账号已解绑'
     }
   },
 
@@ -783,8 +782,8 @@ export default {
   promotion: {
     title: '推广中心',
     description: '邀请好友，赚取奖励',
-    inviteCode: '您的邀请码',
-    copyCode: '复制邀请码',
+    inviteCode: '您的推荐码',
+    copyCode: '复制推荐码',
     copyLink: '复制链接',
     inviteLink: '邀请链接',
     inviteStats: '邀请统计',
@@ -800,7 +799,7 @@ export default {
     agentBenefits: '代理权益',
     agentBenefit1: '更高的佣金比例',
     agentBenefit2: '专属客服支持',
-    agentBenefit3: '自定义邀请码',
+    agentBenefit3: '自定义推荐码',
     applyAgent: '申请成为代理',
     alreadyAgent: '您已经是代理',
     notAgent: '尚未成为代理',
@@ -811,8 +810,8 @@ export default {
     approved: '已通过',
     rejected: '已拒绝',
     contactAdmin: '请联系管理员申请成为代理',
-    noInviteCode: '暂无邀请码',
-    generateCode: '生成邀请码',
+    noInviteCode: '暂无推荐码',
+    generateCode: '生成推荐码',
     credits: '余额'
   },
 
@@ -2370,7 +2369,6 @@ export default {
         balance: '余额',
         concurrency: '并发数',
         subscription: '订阅',
-        invitation: '邀请码',
         // 管理员在用户管理页面调整余额/并发时产生的记录
         admin_balance: '余额（管理员）',
         admin_concurrency: '并发数（管理员）'
@@ -2379,8 +2377,6 @@ export default {
       balance: '余额',
       concurrency: '并发数',
       subscription: '订阅',
-      invitation: '邀请码',
-      invitationHint: '邀请码用于限制用户注册，使用后自动标记为已使用。',
       allTypes: '全部类型',
       allStatus: '全部状态',
       unused: '未使用',
@@ -2468,7 +2464,7 @@ export default {
     // 代理管理 (新)
     agents: {
       title: '代理管理',
-      description: '管理代理及其邀请码',
+      description: '管理代理及其推荐码',
       searchAgents: '搜索代理...',
       addAgent: '添加代理',
       noAgentsYet: '暂无代理',
@@ -2476,7 +2472,7 @@ export default {
       columns: {
         email: '邮箱',
         username: '用户名',
-        inviteCode: '邀请码',
+        inviteCode: '推荐码',
         parentAgent: '上级代理',
         totalInvited: '邀请总数',
         status: '状态',
@@ -3396,20 +3392,14 @@ export default {
     // Settings
     settings: {
       title: '系统设置',
-      description: '管理注册、邮箱验证、默认值和 SMTP 设置',
+      description: '管理注册、默认值和站点设置',
       registration: {
         title: '注册设置',
         description: '控制用户注册和验证',
         enableRegistration: '开放注册',
         enableRegistrationHint: '允许新用户注册',
-        emailVerification: '邮箱验证',
-        emailVerificationHint: '新用户注册时需要验证邮箱',
-        inviteRegistration: '邀请注册',
-        inviteRegistrationHint: '启用邀请码注册功能',
-        invitationCode: '邀请码注册',
-        invitationCodeHint: '开启后，用户注册时需要填写有效的邀请码',
-        passwordReset: '忘记密码',
-        passwordResetHint: '允许用户通过邮箱重置密码',
+        inviteRegistration: '推荐注册',
+        inviteRegistrationHint: '启用推荐码注册功能',
         totp: '双因素认证 (2FA)',
         totpHint: '允许用户使用 Google Authenticator 等应用进行二次验证',
         totpKeyNotConfigured:
@@ -3446,6 +3436,25 @@ export default {
         quickSetCopy: '使用当前站点生成并复制',
         redirectUrlSetAndCopied: '已使用当前站点生成回调地址并复制到剪贴板'
       },
+      wechat: {
+        title: '微信服务号',
+        description: '配置微信服务号用于注册验证和密码重置',
+        enable: '启用微信验证',
+        enableHint: '注册时要求通过微信服务号验证身份',
+        appId: 'AppID',
+        appIdPlaceholder: '微信服务号 AppID',
+        appSecret: 'AppSecret',
+        appSecretPlaceholder: '微信服务号 AppSecret',
+        appSecretHint: '用于调用微信 API（请保密）',
+        token: 'Token',
+        tokenPlaceholder: '服务器配置中的 Token',
+        tokenHint: '微信公众平台 → 基本配置 → 服务器配置中的 Token',
+        secretConfiguredPlaceholder: '已配置，留空保留当前值',
+        secretConfiguredHint: '已配置，留空以保留当前值。',
+        accountName: '服务号名称',
+        accountNamePlaceholder: '例如：我的服务号',
+        accountNameHint: '注册验证时向用户展示的服务号名称'
+      },
       defaults: {
         title: '用户默认设置',
         description: '新用户的默认值',
@@ -3454,9 +3463,9 @@ export default {
         defaultConcurrency: '默认并发数',
         defaultConcurrencyHint: '新用户的最大并发请求数',
         inviterBonus: '邀请人奖励余额',
-        inviterBonusHint: '新用户注册时奖励给邀请人的余额',
-        inviteeBonus: '被邀请人奖励余额',
-        inviteeBonusHint: '使用邀请码注册时奖励给新用户的余额'
+        inviterBonusHint: '新用户注册时奖励给推荐人的余额',
+        inviteeBonus: '被推荐人奖励余额',
+        inviteeBonusHint: '使用推荐码注册时奖励给新用户的余额'
       },
       site: {
         title: '站点设置',
@@ -3500,38 +3509,6 @@ export default {
         urlHint: '必须是完整的 http(s) 链接',
         iframeWarning:
           '⚠️ iframe 提示：部分网站会通过 X-Frame-Options 或 CSP（frame-ancestors）禁止被 iframe 嵌入，出现空白时可引导用户使用“新窗口打开”。'
-      },
-      smtp: {
-        title: 'SMTP 设置',
-        description: '配置用于发送验证码的邮件服务',
-        testConnection: '测试连接',
-        testing: '测试中...',
-        host: 'SMTP 主机',
-        hostPlaceholder: 'smtp.gmail.com',
-        port: 'SMTP 端口',
-        portPlaceholder: '587',
-        username: 'SMTP 用户名',
-        usernamePlaceholder: "your-email{'@'}gmail.com",
-        password: 'SMTP 密码',
-        passwordPlaceholder: '********',
-        passwordHint: '留空以保留现有密码',
-        passwordConfiguredPlaceholder: '********',
-        passwordConfiguredHint: '密码已配置，留空以保留当前值。',
-        fromEmail: '发件人邮箱',
-        fromEmailPlaceholder: "noreply{'@'}example.com",
-        fromName: '发件人名称',
-        fromNamePlaceholder: 'Sub2API',
-        useTls: '使用 TLS',
-        useTlsHint: '为 SMTP 连接启用 TLS 加密'
-      },
-      testEmail: {
-        title: '发送测试邮件',
-        description: '发送测试邮件以验证 SMTP 配置',
-        recipientEmail: '收件人邮箱',
-        recipientEmailPlaceholder: "test{'@'}example.com",
-        sendTestEmail: '发送测试邮件',
-        sending: '发送中...',
-        enterRecipientHint: '请输入收件人邮箱地址'
       },
       opsMonitoring: {
         title: '运维监控',
@@ -3595,12 +3572,8 @@ export default {
       saveSettings: '保存设置',
       saving: '保存中...',
       settingsSaved: '设置保存成功',
-      smtpConnectionSuccess: 'SMTP 连接成功',
-      testEmailSent: '测试邮件发送成功',
       failedToLoad: '加载设置失败',
-      failedToSave: '保存设置失败',
-      failedToTestSmtp: 'SMTP 连接测试失败',
-      failedToSendTestEmail: '发送测试邮件失败'
+      failedToSave: '保存设置失败'
     },
 
     // Error Passthrough Rules

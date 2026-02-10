@@ -59,10 +59,7 @@ func (s *SettingService) GetAllSettings(ctx context.Context) (*SystemSettings, e
 func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings, error) {
 	keys := []string{
 		SettingKeyRegistrationEnabled,
-		SettingKeyEmailVerifyEnabled,
 		SettingKeyInviteRegistrationEnabled,
-		SettingKeyPasswordResetEnabled,
-		SettingKeyInvitationCodeEnabled,
 		SettingKeyTotpEnabled,
 		SettingKeyTurnstileEnabled,
 		SettingKeyTurnstileSiteKey,
@@ -78,6 +75,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyLinuxDoConnectEnabled,
 		SettingKeyInviterBonus,
 		SettingKeyInviteeBonus,
+		SettingKeyWeChatEnabled,
+		SettingKeyWeChatAccountName,
 	}
 
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
@@ -92,10 +91,6 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		linuxDoEnabled = s.cfg != nil && s.cfg.LinuxDo.Enabled
 	}
 
-	// Password reset requires email verification to be enabled
-	emailVerifyEnabled := settings[SettingKeyEmailVerifyEnabled] == "true"
-	passwordResetEnabled := emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true"
-
 	// Parse invite bonus values
 	var inviterBonus, inviteeBonus float64
 	if v, err := strconv.ParseFloat(settings[SettingKeyInviterBonus], 64); err == nil && v >= 0 {
@@ -107,10 +102,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 
 	return &PublicSettings{
 		RegistrationEnabled:         settings[SettingKeyRegistrationEnabled] == "true",
-		EmailVerifyEnabled:          emailVerifyEnabled,
-		InviteRegistrationEnabled:   settings[SettingKeyInviteRegistrationEnabled] == "true", // 默认关闭
-		PasswordResetEnabled:        passwordResetEnabled,
-		InvitationCodeEnabled:       settings[SettingKeyInvitationCodeEnabled] == "true",
+		InviteRegistrationEnabled:   settings[SettingKeyInviteRegistrationEnabled] == "true",
 		TotpEnabled:                 settings[SettingKeyTotpEnabled] == "true",
 		TurnstileEnabled:            settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:            settings[SettingKeyTurnstileSiteKey],
@@ -126,6 +118,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		LinuxDoOAuthEnabled:         linuxDoEnabled,
 		InviterBonus:                inviterBonus,
 		InviteeBonus:                inviteeBonus,
+		WeChatEnabled:               settings[SettingKeyWeChatEnabled] == "true",
+		WeChatAccountName:           settings[SettingKeyWeChatAccountName],
 	}, nil
 }
 
@@ -151,10 +145,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 	// Return a struct that matches the frontend's expected format
 	return &struct {
 		RegistrationEnabled         bool   `json:"registration_enabled"`
-		EmailVerifyEnabled          bool   `json:"email_verify_enabled"`
 		InviteRegistrationEnabled   bool   `json:"invite_registration_enabled"`
-		PasswordResetEnabled        bool   `json:"password_reset_enabled"`
-		InvitationCodeEnabled       bool   `json:"invitation_code_enabled"`
 		TotpEnabled                 bool   `json:"totp_enabled"`
 		TurnstileEnabled            bool   `json:"turnstile_enabled"`
 		TurnstileSiteKey            string `json:"turnstile_site_key,omitempty"`
@@ -173,10 +164,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		InviteeBonus                float64 `json:"invitee_bonus"`
 	}{
 		RegistrationEnabled:         settings.RegistrationEnabled,
-		EmailVerifyEnabled:          settings.EmailVerifyEnabled,
 		InviteRegistrationEnabled:   settings.InviteRegistrationEnabled,
-		PasswordResetEnabled:        settings.PasswordResetEnabled,
-		InvitationCodeEnabled:       settings.InvitationCodeEnabled,
 		TotpEnabled:                 settings.TotpEnabled,
 		TurnstileEnabled:            settings.TurnstileEnabled,
 		TurnstileSiteKey:            settings.TurnstileSiteKey,
@@ -202,22 +190,8 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 
 	// 注册设置
 	updates[SettingKeyRegistrationEnabled] = strconv.FormatBool(settings.RegistrationEnabled)
-	updates[SettingKeyEmailVerifyEnabled] = strconv.FormatBool(settings.EmailVerifyEnabled)
 	updates[SettingKeyInviteRegistrationEnabled] = strconv.FormatBool(settings.InviteRegistrationEnabled)
-	updates[SettingKeyPasswordResetEnabled] = strconv.FormatBool(settings.PasswordResetEnabled)
-	updates[SettingKeyInvitationCodeEnabled] = strconv.FormatBool(settings.InvitationCodeEnabled)
 	updates[SettingKeyTotpEnabled] = strconv.FormatBool(settings.TotpEnabled)
-
-	// 邮件服务设置（只有非空才更新密码）
-	updates[SettingKeySMTPHost] = settings.SMTPHost
-	updates[SettingKeySMTPPort] = strconv.Itoa(settings.SMTPPort)
-	updates[SettingKeySMTPUsername] = settings.SMTPUsername
-	if settings.SMTPPassword != "" {
-		updates[SettingKeySMTPPassword] = settings.SMTPPassword
-	}
-	updates[SettingKeySMTPFrom] = settings.SMTPFrom
-	updates[SettingKeySMTPFromName] = settings.SMTPFromName
-	updates[SettingKeySMTPUseTLS] = strconv.FormatBool(settings.SMTPUseTLS)
 
 	// Cloudflare Turnstile 设置（只有非空才更新密钥）
 	updates[SettingKeyTurnstileEnabled] = strconv.FormatBool(settings.TurnstileEnabled)
@@ -270,6 +244,16 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 		updates[SettingKeyOpsMetricsIntervalSeconds] = strconv.Itoa(settings.OpsMetricsIntervalSeconds)
 	}
 
+	// WeChat Service Account
+	updates[SettingKeyWeChatEnabled] = strconv.FormatBool(settings.WeChatEnabled)
+	updates[SettingKeyWeChatAppID] = settings.WeChatAppID
+	if settings.WeChatAppSecret != "" {
+		updates[SettingKeyWeChatAppSecret] = settings.WeChatAppSecret
+	}
+	if settings.WeChatToken != "" {
+		updates[SettingKeyWeChatToken] = settings.WeChatToken
+	}
+	updates[SettingKeyWeChatAccountName] = settings.WeChatAccountName
 	err := s.settingRepo.SetMultiple(ctx, updates)
 	if err == nil && s.onUpdate != nil {
 		s.onUpdate() // Invalidate cache after settings update
@@ -287,41 +271,9 @@ func (s *SettingService) IsRegistrationEnabled(ctx context.Context) bool {
 	return value == "true"
 }
 
-// IsEmailVerifyEnabled 检查是否开启邮件验证
-func (s *SettingService) IsEmailVerifyEnabled(ctx context.Context) bool {
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyEmailVerifyEnabled)
-	if err != nil {
-		return false
-	}
-	return value == "true"
-}
-
 // IsInviteRegistrationEnabled 检查是否启用邀请注册功能
 func (s *SettingService) IsInviteRegistrationEnabled(ctx context.Context) bool {
 	value, err := s.settingRepo.GetValue(ctx, SettingKeyInviteRegistrationEnabled)
-	if err != nil {
-		return false // 默认关闭
-	}
-	return value == "true"
-}
-
-// IsInvitationCodeEnabled 检查是否启用邀请码注册功能
-func (s *SettingService) IsInvitationCodeEnabled(ctx context.Context) bool {
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyInvitationCodeEnabled)
-	if err != nil {
-		return false // 默认关闭
-	}
-	return value == "true"
-}
-
-// IsPasswordResetEnabled 检查是否启用密码重置功能
-// 要求：必须同时开启邮件验证
-func (s *SettingService) IsPasswordResetEnabled(ctx context.Context) bool {
-	// Password reset requires email verification to be enabled
-	if !s.IsEmailVerifyEnabled(ctx) {
-		return false
-	}
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyPasswordResetEnabled)
 	if err != nil {
 		return false // 默认关闭
 	}
@@ -335,6 +287,41 @@ func (s *SettingService) IsTotpEnabled(ctx context.Context) bool {
 		return false // 默认关闭
 	}
 	return value == "true"
+}
+
+// IsWeChatEnabled checks whether WeChat verification is enabled.
+func (s *SettingService) IsWeChatEnabled(ctx context.Context) bool {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyWeChatEnabled)
+	if err != nil {
+		return false
+	}
+	return value == "true"
+}
+
+// WeChatConfig holds the effective WeChat Service Account configuration.
+type WeChatConfig struct {
+	AppID     string
+	AppSecret string
+	Token     string
+}
+
+// GetWeChatConfig returns the WeChat Service Account config from DB settings.
+func (s *SettingService) GetWeChatConfig(ctx context.Context) (WeChatConfig, error) {
+	keys := []string{
+		SettingKeyWeChatAppID,
+		SettingKeyWeChatAppSecret,
+		SettingKeyWeChatToken,
+	}
+	settings, err := s.settingRepo.GetMultiple(ctx, keys)
+	if err != nil {
+		return WeChatConfig{}, fmt.Errorf("get wechat settings: %w", err)
+	}
+
+	return WeChatConfig{
+		AppID:     strings.TrimSpace(settings[SettingKeyWeChatAppID]),
+		AppSecret: strings.TrimSpace(settings[SettingKeyWeChatAppSecret]),
+		Token:     strings.TrimSpace(settings[SettingKeyWeChatToken]),
+	}, nil
 }
 
 // IsTotpEncryptionKeyConfigured 检查 TOTP 加密密钥是否已手动配置
@@ -415,7 +402,6 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	// 初始化默认设置
 	defaults := map[string]string{
 		SettingKeyRegistrationEnabled:         "true",
-		SettingKeyEmailVerifyEnabled:          "false",
 		SettingKeyInviteRegistrationEnabled:   "false", // 默认关闭邀请注册功能
 		SettingKeySiteName:                    "Sub2API",
 		SettingKeySiteLogo:                    "",
@@ -425,8 +411,6 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyDefaultBalance:              strconv.FormatFloat(s.cfg.Default.UserBalance, 'f', 8, 64),
 		SettingKeyInviterBonus:                "0", // 邀请人奖励余额默认为0
 		SettingKeyInviteeBonus:                "0", // 被邀请人奖励余额默认为0
-		SettingKeySMTPPort:                    "587",
-		SettingKeySMTPUseTLS:                  "false",
 		// Model fallback defaults
 		SettingKeyEnableModelFallback:      "false",
 		SettingKeyFallbackModelAnthropic:   "claude-3-5-sonnet-20241022",
@@ -449,20 +433,10 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 // parseSettings 解析设置到结构体
 func (s *SettingService) parseSettings(settings map[string]string) *SystemSettings {
-	emailVerifyEnabled := settings[SettingKeyEmailVerifyEnabled] == "true"
 	result := &SystemSettings{
 		RegistrationEnabled:          settings[SettingKeyRegistrationEnabled] == "true",
-		EmailVerifyEnabled:           emailVerifyEnabled,
-		InviteRegistrationEnabled:    settings[SettingKeyInviteRegistrationEnabled] == "true", // 默认关闭
-		PasswordResetEnabled:         emailVerifyEnabled && settings[SettingKeyPasswordResetEnabled] == "true",
-		InvitationCodeEnabled:        settings[SettingKeyInvitationCodeEnabled] == "true",
+		InviteRegistrationEnabled:    settings[SettingKeyInviteRegistrationEnabled] == "true",
 		TotpEnabled:                  settings[SettingKeyTotpEnabled] == "true",
-		SMTPHost:                     settings[SettingKeySMTPHost],
-		SMTPUsername:                 settings[SettingKeySMTPUsername],
-		SMTPFrom:                     settings[SettingKeySMTPFrom],
-		SMTPFromName:                 settings[SettingKeySMTPFromName],
-		SMTPUseTLS:                   settings[SettingKeySMTPUseTLS] == "true",
-		SMTPPasswordConfigured:       settings[SettingKeySMTPPassword] != "",
 		TurnstileEnabled:             settings[SettingKeyTurnstileEnabled] == "true",
 		TurnstileSiteKey:             settings[SettingKeyTurnstileSiteKey],
 		TurnstileSecretKeyConfigured: settings[SettingKeyTurnstileSecretKey] != "",
@@ -478,12 +452,6 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 
 	// 解析整数类型
-	if port, err := strconv.Atoi(settings[SettingKeySMTPPort]); err == nil {
-		result.SMTPPort = port
-	} else {
-		result.SMTPPort = 587
-	}
-
 	if concurrency, err := strconv.Atoi(settings[SettingKeyDefaultConcurrency]); err == nil {
 		result.DefaultConcurrency = concurrency
 	} else {
@@ -506,7 +474,6 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 
 	// 敏感信息直接返回，方便测试连接时使用
-	result.SMTPPassword = settings[SettingKeySMTPPassword]
 	result.TurnstileSecretKey = settings[SettingKeyTurnstileSecretKey]
 
 	// LinuxDo Connect 设置：
@@ -572,6 +539,15 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 			result.OpsMetricsIntervalSeconds = v
 		}
 	}
+
+	// WeChat Service Account settings
+	result.WeChatEnabled = settings[SettingKeyWeChatEnabled] == "true"
+	result.WeChatAppID = settings[SettingKeyWeChatAppID]
+	result.WeChatAppSecret = settings[SettingKeyWeChatAppSecret]
+	result.WeChatAppSecretConfigured = result.WeChatAppSecret != ""
+	result.WeChatToken = settings[SettingKeyWeChatToken]
+	result.WeChatTokenConfigured = result.WeChatToken != ""
+	result.WeChatAccountName = settings[SettingKeyWeChatAccountName]
 
 	return result
 }

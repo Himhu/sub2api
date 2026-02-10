@@ -30,6 +30,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbindinghistory"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
@@ -59,6 +61,8 @@ const (
 	TypeUserAttributeDefinition = "UserAttributeDefinition"
 	TypeUserAttributeValue      = "UserAttributeValue"
 	TypeUserSubscription        = "UserSubscription"
+	TypeWeChatBinding           = "WeChatBinding"
+	TypeWeChatBindingHistory    = "WeChatBindingHistory"
 )
 
 // APIKeyMutation represents an operation that mutates the APIKey nodes in the graph.
@@ -16300,6 +16304,9 @@ type UserMutation struct {
 	attribute_values              map[int64]struct{}
 	removedattribute_values       map[int64]struct{}
 	clearedattribute_values       bool
+	wechat_bindings               map[int64]struct{}
+	removedwechat_bindings        map[int64]struct{}
+	clearedwechat_bindings        bool
 	done                          bool
 	oldValue                      func(context.Context) (*User, error)
 	predicates                    []predicate.User
@@ -17769,6 +17776,60 @@ func (m *UserMutation) ResetAttributeValues() {
 	m.removedattribute_values = nil
 }
 
+// AddWechatBindingIDs adds the "wechat_bindings" edge to the WeChatBinding entity by ids.
+func (m *UserMutation) AddWechatBindingIDs(ids ...int64) {
+	if m.wechat_bindings == nil {
+		m.wechat_bindings = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.wechat_bindings[ids[i]] = struct{}{}
+	}
+}
+
+// ClearWechatBindings clears the "wechat_bindings" edge to the WeChatBinding entity.
+func (m *UserMutation) ClearWechatBindings() {
+	m.clearedwechat_bindings = true
+}
+
+// WechatBindingsCleared reports if the "wechat_bindings" edge to the WeChatBinding entity was cleared.
+func (m *UserMutation) WechatBindingsCleared() bool {
+	return m.clearedwechat_bindings
+}
+
+// RemoveWechatBindingIDs removes the "wechat_bindings" edge to the WeChatBinding entity by IDs.
+func (m *UserMutation) RemoveWechatBindingIDs(ids ...int64) {
+	if m.removedwechat_bindings == nil {
+		m.removedwechat_bindings = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.wechat_bindings, ids[i])
+		m.removedwechat_bindings[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedWechatBindings returns the removed IDs of the "wechat_bindings" edge to the WeChatBinding entity.
+func (m *UserMutation) RemovedWechatBindingsIDs() (ids []int64) {
+	for id := range m.removedwechat_bindings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// WechatBindingsIDs returns the "wechat_bindings" edge IDs in the mutation.
+func (m *UserMutation) WechatBindingsIDs() (ids []int64) {
+	for id := range m.wechat_bindings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetWechatBindings resets all changes to the "wechat_bindings" edge.
+func (m *UserMutation) ResetWechatBindings() {
+	m.wechat_bindings = nil
+	m.clearedwechat_bindings = false
+	m.removedwechat_bindings = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -18345,7 +18406,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.api_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -18369,6 +18430,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.attribute_values != nil {
 		edges = append(edges, user.EdgeAttributeValues)
+	}
+	if m.wechat_bindings != nil {
+		edges = append(edges, user.EdgeWechatBindings)
 	}
 	return edges
 }
@@ -18425,13 +18489,19 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeWechatBindings:
+		ids := make([]ent.Value, 0, len(m.wechat_bindings))
+		for id := range m.wechat_bindings {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.removedapi_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -18455,6 +18525,9 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedattribute_values != nil {
 		edges = append(edges, user.EdgeAttributeValues)
+	}
+	if m.removedwechat_bindings != nil {
+		edges = append(edges, user.EdgeWechatBindings)
 	}
 	return edges
 }
@@ -18511,13 +18584,19 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeWechatBindings:
+		ids := make([]ent.Value, 0, len(m.removedwechat_bindings))
+		for id := range m.removedwechat_bindings {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.clearedapi_keys {
 		edges = append(edges, user.EdgeAPIKeys)
 	}
@@ -18542,6 +18621,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedattribute_values {
 		edges = append(edges, user.EdgeAttributeValues)
 	}
+	if m.clearedwechat_bindings {
+		edges = append(edges, user.EdgeWechatBindings)
+	}
 	return edges
 }
 
@@ -18565,6 +18647,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedusage_logs
 	case user.EdgeAttributeValues:
 		return m.clearedattribute_values
+	case user.EdgeWechatBindings:
+		return m.clearedwechat_bindings
 	}
 	return false
 }
@@ -18604,6 +18688,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeAttributeValues:
 		m.ResetAttributeValues()
+		return nil
+	case user.EdgeWechatBindings:
+		m.ResetWechatBindings()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)
@@ -22530,4 +22617,1419 @@ func (m *UserSubscriptionMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown UserSubscription edge %s", name)
+}
+
+// WeChatBindingMutation represents an operation that mutates the WeChatBinding nodes in the graph.
+type WeChatBindingMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int64
+	created_at    *time.Time
+	updated_at    *time.Time
+	app_id        *string
+	openid        *string
+	unionid       *string
+	subscribed    *bool
+	clearedFields map[string]struct{}
+	user          *int64
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*WeChatBinding, error)
+	predicates    []predicate.WeChatBinding
+}
+
+var _ ent.Mutation = (*WeChatBindingMutation)(nil)
+
+// wechatbindingOption allows management of the mutation configuration using functional options.
+type wechatbindingOption func(*WeChatBindingMutation)
+
+// newWeChatBindingMutation creates new mutation for the WeChatBinding entity.
+func newWeChatBindingMutation(c config, op Op, opts ...wechatbindingOption) *WeChatBindingMutation {
+	m := &WeChatBindingMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeWeChatBinding,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withWeChatBindingID sets the ID field of the mutation.
+func withWeChatBindingID(id int64) wechatbindingOption {
+	return func(m *WeChatBindingMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *WeChatBinding
+		)
+		m.oldValue = func(ctx context.Context) (*WeChatBinding, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().WeChatBinding.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withWeChatBinding sets the old WeChatBinding of the mutation.
+func withWeChatBinding(node *WeChatBinding) wechatbindingOption {
+	return func(m *WeChatBindingMutation) {
+		m.oldValue = func(context.Context) (*WeChatBinding, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m WeChatBindingMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m WeChatBindingMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *WeChatBindingMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *WeChatBindingMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().WeChatBinding.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *WeChatBindingMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *WeChatBindingMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *WeChatBindingMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *WeChatBindingMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *WeChatBindingMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *WeChatBindingMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user_id" field.
+func (m *WeChatBindingMutation) SetUserID(i int64) {
+	m.user = &i
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *WeChatBindingMutation) UserID() (r int64, exists bool) {
+	v := m.user
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldUserID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *WeChatBindingMutation) ResetUserID() {
+	m.user = nil
+}
+
+// SetAppID sets the "app_id" field.
+func (m *WeChatBindingMutation) SetAppID(s string) {
+	m.app_id = &s
+}
+
+// AppID returns the value of the "app_id" field in the mutation.
+func (m *WeChatBindingMutation) AppID() (r string, exists bool) {
+	v := m.app_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAppID returns the old "app_id" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldAppID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAppID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAppID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAppID: %w", err)
+	}
+	return oldValue.AppID, nil
+}
+
+// ResetAppID resets all changes to the "app_id" field.
+func (m *WeChatBindingMutation) ResetAppID() {
+	m.app_id = nil
+}
+
+// SetOpenid sets the "openid" field.
+func (m *WeChatBindingMutation) SetOpenid(s string) {
+	m.openid = &s
+}
+
+// Openid returns the value of the "openid" field in the mutation.
+func (m *WeChatBindingMutation) Openid() (r string, exists bool) {
+	v := m.openid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOpenid returns the old "openid" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldOpenid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOpenid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOpenid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOpenid: %w", err)
+	}
+	return oldValue.Openid, nil
+}
+
+// ResetOpenid resets all changes to the "openid" field.
+func (m *WeChatBindingMutation) ResetOpenid() {
+	m.openid = nil
+}
+
+// SetUnionid sets the "unionid" field.
+func (m *WeChatBindingMutation) SetUnionid(s string) {
+	m.unionid = &s
+}
+
+// Unionid returns the value of the "unionid" field in the mutation.
+func (m *WeChatBindingMutation) Unionid() (r string, exists bool) {
+	v := m.unionid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnionid returns the old "unionid" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldUnionid(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnionid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnionid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnionid: %w", err)
+	}
+	return oldValue.Unionid, nil
+}
+
+// ClearUnionid clears the value of the "unionid" field.
+func (m *WeChatBindingMutation) ClearUnionid() {
+	m.unionid = nil
+	m.clearedFields[wechatbinding.FieldUnionid] = struct{}{}
+}
+
+// UnionidCleared returns if the "unionid" field was cleared in this mutation.
+func (m *WeChatBindingMutation) UnionidCleared() bool {
+	_, ok := m.clearedFields[wechatbinding.FieldUnionid]
+	return ok
+}
+
+// ResetUnionid resets all changes to the "unionid" field.
+func (m *WeChatBindingMutation) ResetUnionid() {
+	m.unionid = nil
+	delete(m.clearedFields, wechatbinding.FieldUnionid)
+}
+
+// SetSubscribed sets the "subscribed" field.
+func (m *WeChatBindingMutation) SetSubscribed(b bool) {
+	m.subscribed = &b
+}
+
+// Subscribed returns the value of the "subscribed" field in the mutation.
+func (m *WeChatBindingMutation) Subscribed() (r bool, exists bool) {
+	v := m.subscribed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscribed returns the old "subscribed" field's value of the WeChatBinding entity.
+// If the WeChatBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingMutation) OldSubscribed(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscribed is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscribed requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscribed: %w", err)
+	}
+	return oldValue.Subscribed, nil
+}
+
+// ResetSubscribed resets all changes to the "subscribed" field.
+func (m *WeChatBindingMutation) ResetSubscribed() {
+	m.subscribed = nil
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *WeChatBindingMutation) ClearUser() {
+	m.cleareduser = true
+	m.clearedFields[wechatbinding.FieldUserID] = struct{}{}
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *WeChatBindingMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *WeChatBindingMutation) UserIDs() (ids []int64) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *WeChatBindingMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Where appends a list predicates to the WeChatBindingMutation builder.
+func (m *WeChatBindingMutation) Where(ps ...predicate.WeChatBinding) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the WeChatBindingMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *WeChatBindingMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.WeChatBinding, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *WeChatBindingMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *WeChatBindingMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (WeChatBinding).
+func (m *WeChatBindingMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *WeChatBindingMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, wechatbinding.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, wechatbinding.FieldUpdatedAt)
+	}
+	if m.user != nil {
+		fields = append(fields, wechatbinding.FieldUserID)
+	}
+	if m.app_id != nil {
+		fields = append(fields, wechatbinding.FieldAppID)
+	}
+	if m.openid != nil {
+		fields = append(fields, wechatbinding.FieldOpenid)
+	}
+	if m.unionid != nil {
+		fields = append(fields, wechatbinding.FieldUnionid)
+	}
+	if m.subscribed != nil {
+		fields = append(fields, wechatbinding.FieldSubscribed)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *WeChatBindingMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case wechatbinding.FieldCreatedAt:
+		return m.CreatedAt()
+	case wechatbinding.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case wechatbinding.FieldUserID:
+		return m.UserID()
+	case wechatbinding.FieldAppID:
+		return m.AppID()
+	case wechatbinding.FieldOpenid:
+		return m.Openid()
+	case wechatbinding.FieldUnionid:
+		return m.Unionid()
+	case wechatbinding.FieldSubscribed:
+		return m.Subscribed()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *WeChatBindingMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case wechatbinding.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case wechatbinding.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case wechatbinding.FieldUserID:
+		return m.OldUserID(ctx)
+	case wechatbinding.FieldAppID:
+		return m.OldAppID(ctx)
+	case wechatbinding.FieldOpenid:
+		return m.OldOpenid(ctx)
+	case wechatbinding.FieldUnionid:
+		return m.OldUnionid(ctx)
+	case wechatbinding.FieldSubscribed:
+		return m.OldSubscribed(ctx)
+	}
+	return nil, fmt.Errorf("unknown WeChatBinding field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *WeChatBindingMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case wechatbinding.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case wechatbinding.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case wechatbinding.FieldUserID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	case wechatbinding.FieldAppID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAppID(v)
+		return nil
+	case wechatbinding.FieldOpenid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOpenid(v)
+		return nil
+	case wechatbinding.FieldUnionid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnionid(v)
+		return nil
+	case wechatbinding.FieldSubscribed:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscribed(v)
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBinding field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *WeChatBindingMutation) AddedFields() []string {
+	var fields []string
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *WeChatBindingMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *WeChatBindingMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown WeChatBinding numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *WeChatBindingMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(wechatbinding.FieldUnionid) {
+		fields = append(fields, wechatbinding.FieldUnionid)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *WeChatBindingMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *WeChatBindingMutation) ClearField(name string) error {
+	switch name {
+	case wechatbinding.FieldUnionid:
+		m.ClearUnionid()
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBinding nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *WeChatBindingMutation) ResetField(name string) error {
+	switch name {
+	case wechatbinding.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case wechatbinding.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case wechatbinding.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case wechatbinding.FieldAppID:
+		m.ResetAppID()
+		return nil
+	case wechatbinding.FieldOpenid:
+		m.ResetOpenid()
+		return nil
+	case wechatbinding.FieldUnionid:
+		m.ResetUnionid()
+		return nil
+	case wechatbinding.FieldSubscribed:
+		m.ResetSubscribed()
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBinding field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *WeChatBindingMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, wechatbinding.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *WeChatBindingMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case wechatbinding.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *WeChatBindingMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *WeChatBindingMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *WeChatBindingMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, wechatbinding.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *WeChatBindingMutation) EdgeCleared(name string) bool {
+	switch name {
+	case wechatbinding.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *WeChatBindingMutation) ClearEdge(name string) error {
+	switch name {
+	case wechatbinding.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBinding unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *WeChatBindingMutation) ResetEdge(name string) error {
+	switch name {
+	case wechatbinding.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBinding edge %s", name)
+}
+
+// WeChatBindingHistoryMutation represents an operation that mutates the WeChatBindingHistory nodes in the graph.
+type WeChatBindingHistoryMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int64
+	created_at    *time.Time
+	updated_at    *time.Time
+	user_id       *int64
+	adduser_id    *int64
+	app_id        *string
+	openid        *string
+	unbound_at    *time.Time
+	reason        *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*WeChatBindingHistory, error)
+	predicates    []predicate.WeChatBindingHistory
+}
+
+var _ ent.Mutation = (*WeChatBindingHistoryMutation)(nil)
+
+// wechatbindinghistoryOption allows management of the mutation configuration using functional options.
+type wechatbindinghistoryOption func(*WeChatBindingHistoryMutation)
+
+// newWeChatBindingHistoryMutation creates new mutation for the WeChatBindingHistory entity.
+func newWeChatBindingHistoryMutation(c config, op Op, opts ...wechatbindinghistoryOption) *WeChatBindingHistoryMutation {
+	m := &WeChatBindingHistoryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeWeChatBindingHistory,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withWeChatBindingHistoryID sets the ID field of the mutation.
+func withWeChatBindingHistoryID(id int64) wechatbindinghistoryOption {
+	return func(m *WeChatBindingHistoryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *WeChatBindingHistory
+		)
+		m.oldValue = func(ctx context.Context) (*WeChatBindingHistory, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().WeChatBindingHistory.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withWeChatBindingHistory sets the old WeChatBindingHistory of the mutation.
+func withWeChatBindingHistory(node *WeChatBindingHistory) wechatbindinghistoryOption {
+	return func(m *WeChatBindingHistoryMutation) {
+		m.oldValue = func(context.Context) (*WeChatBindingHistory, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m WeChatBindingHistoryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m WeChatBindingHistoryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *WeChatBindingHistoryMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *WeChatBindingHistoryMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().WeChatBindingHistory.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *WeChatBindingHistoryMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *WeChatBindingHistoryMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *WeChatBindingHistoryMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *WeChatBindingHistoryMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *WeChatBindingHistoryMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *WeChatBindingHistoryMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user_id" field.
+func (m *WeChatBindingHistoryMutation) SetUserID(i int64) {
+	m.user_id = &i
+	m.adduser_id = nil
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *WeChatBindingHistoryMutation) UserID() (r int64, exists bool) {
+	v := m.user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldUserID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// AddUserID adds i to the "user_id" field.
+func (m *WeChatBindingHistoryMutation) AddUserID(i int64) {
+	if m.adduser_id != nil {
+		*m.adduser_id += i
+	} else {
+		m.adduser_id = &i
+	}
+}
+
+// AddedUserID returns the value that was added to the "user_id" field in this mutation.
+func (m *WeChatBindingHistoryMutation) AddedUserID() (r int64, exists bool) {
+	v := m.adduser_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *WeChatBindingHistoryMutation) ResetUserID() {
+	m.user_id = nil
+	m.adduser_id = nil
+}
+
+// SetAppID sets the "app_id" field.
+func (m *WeChatBindingHistoryMutation) SetAppID(s string) {
+	m.app_id = &s
+}
+
+// AppID returns the value of the "app_id" field in the mutation.
+func (m *WeChatBindingHistoryMutation) AppID() (r string, exists bool) {
+	v := m.app_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAppID returns the old "app_id" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldAppID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAppID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAppID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAppID: %w", err)
+	}
+	return oldValue.AppID, nil
+}
+
+// ResetAppID resets all changes to the "app_id" field.
+func (m *WeChatBindingHistoryMutation) ResetAppID() {
+	m.app_id = nil
+}
+
+// SetOpenid sets the "openid" field.
+func (m *WeChatBindingHistoryMutation) SetOpenid(s string) {
+	m.openid = &s
+}
+
+// Openid returns the value of the "openid" field in the mutation.
+func (m *WeChatBindingHistoryMutation) Openid() (r string, exists bool) {
+	v := m.openid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOpenid returns the old "openid" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldOpenid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOpenid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOpenid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOpenid: %w", err)
+	}
+	return oldValue.Openid, nil
+}
+
+// ResetOpenid resets all changes to the "openid" field.
+func (m *WeChatBindingHistoryMutation) ResetOpenid() {
+	m.openid = nil
+}
+
+// SetUnboundAt sets the "unbound_at" field.
+func (m *WeChatBindingHistoryMutation) SetUnboundAt(t time.Time) {
+	m.unbound_at = &t
+}
+
+// UnboundAt returns the value of the "unbound_at" field in the mutation.
+func (m *WeChatBindingHistoryMutation) UnboundAt() (r time.Time, exists bool) {
+	v := m.unbound_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnboundAt returns the old "unbound_at" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldUnboundAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnboundAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnboundAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnboundAt: %w", err)
+	}
+	return oldValue.UnboundAt, nil
+}
+
+// ResetUnboundAt resets all changes to the "unbound_at" field.
+func (m *WeChatBindingHistoryMutation) ResetUnboundAt() {
+	m.unbound_at = nil
+}
+
+// SetReason sets the "reason" field.
+func (m *WeChatBindingHistoryMutation) SetReason(s string) {
+	m.reason = &s
+}
+
+// Reason returns the value of the "reason" field in the mutation.
+func (m *WeChatBindingHistoryMutation) Reason() (r string, exists bool) {
+	v := m.reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReason returns the old "reason" field's value of the WeChatBindingHistory entity.
+// If the WeChatBindingHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WeChatBindingHistoryMutation) OldReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReason: %w", err)
+	}
+	return oldValue.Reason, nil
+}
+
+// ResetReason resets all changes to the "reason" field.
+func (m *WeChatBindingHistoryMutation) ResetReason() {
+	m.reason = nil
+}
+
+// Where appends a list predicates to the WeChatBindingHistoryMutation builder.
+func (m *WeChatBindingHistoryMutation) Where(ps ...predicate.WeChatBindingHistory) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the WeChatBindingHistoryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *WeChatBindingHistoryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.WeChatBindingHistory, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *WeChatBindingHistoryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *WeChatBindingHistoryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (WeChatBindingHistory).
+func (m *WeChatBindingHistoryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *WeChatBindingHistoryMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, wechatbindinghistory.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, wechatbindinghistory.FieldUpdatedAt)
+	}
+	if m.user_id != nil {
+		fields = append(fields, wechatbindinghistory.FieldUserID)
+	}
+	if m.app_id != nil {
+		fields = append(fields, wechatbindinghistory.FieldAppID)
+	}
+	if m.openid != nil {
+		fields = append(fields, wechatbindinghistory.FieldOpenid)
+	}
+	if m.unbound_at != nil {
+		fields = append(fields, wechatbindinghistory.FieldUnboundAt)
+	}
+	if m.reason != nil {
+		fields = append(fields, wechatbindinghistory.FieldReason)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *WeChatBindingHistoryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case wechatbindinghistory.FieldCreatedAt:
+		return m.CreatedAt()
+	case wechatbindinghistory.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case wechatbindinghistory.FieldUserID:
+		return m.UserID()
+	case wechatbindinghistory.FieldAppID:
+		return m.AppID()
+	case wechatbindinghistory.FieldOpenid:
+		return m.Openid()
+	case wechatbindinghistory.FieldUnboundAt:
+		return m.UnboundAt()
+	case wechatbindinghistory.FieldReason:
+		return m.Reason()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *WeChatBindingHistoryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case wechatbindinghistory.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case wechatbindinghistory.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case wechatbindinghistory.FieldUserID:
+		return m.OldUserID(ctx)
+	case wechatbindinghistory.FieldAppID:
+		return m.OldAppID(ctx)
+	case wechatbindinghistory.FieldOpenid:
+		return m.OldOpenid(ctx)
+	case wechatbindinghistory.FieldUnboundAt:
+		return m.OldUnboundAt(ctx)
+	case wechatbindinghistory.FieldReason:
+		return m.OldReason(ctx)
+	}
+	return nil, fmt.Errorf("unknown WeChatBindingHistory field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *WeChatBindingHistoryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case wechatbindinghistory.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case wechatbindinghistory.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case wechatbindinghistory.FieldUserID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	case wechatbindinghistory.FieldAppID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAppID(v)
+		return nil
+	case wechatbindinghistory.FieldOpenid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOpenid(v)
+		return nil
+	case wechatbindinghistory.FieldUnboundAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnboundAt(v)
+		return nil
+	case wechatbindinghistory.FieldReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReason(v)
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBindingHistory field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *WeChatBindingHistoryMutation) AddedFields() []string {
+	var fields []string
+	if m.adduser_id != nil {
+		fields = append(fields, wechatbindinghistory.FieldUserID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *WeChatBindingHistoryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case wechatbindinghistory.FieldUserID:
+		return m.AddedUserID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *WeChatBindingHistoryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case wechatbindinghistory.FieldUserID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUserID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBindingHistory numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *WeChatBindingHistoryMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *WeChatBindingHistoryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *WeChatBindingHistoryMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown WeChatBindingHistory nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *WeChatBindingHistoryMutation) ResetField(name string) error {
+	switch name {
+	case wechatbindinghistory.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case wechatbindinghistory.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case wechatbindinghistory.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case wechatbindinghistory.FieldAppID:
+		m.ResetAppID()
+		return nil
+	case wechatbindinghistory.FieldOpenid:
+		m.ResetOpenid()
+		return nil
+	case wechatbindinghistory.FieldUnboundAt:
+		m.ResetUnboundAt()
+		return nil
+	case wechatbindinghistory.FieldReason:
+		m.ResetReason()
+		return nil
+	}
+	return fmt.Errorf("unknown WeChatBindingHistory field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *WeChatBindingHistoryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *WeChatBindingHistoryMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *WeChatBindingHistoryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *WeChatBindingHistoryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *WeChatBindingHistoryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *WeChatBindingHistoryMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *WeChatBindingHistoryMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown WeChatBindingHistory unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *WeChatBindingHistoryMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown WeChatBindingHistory edge %s", name)
 }

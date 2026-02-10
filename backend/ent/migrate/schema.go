@@ -912,6 +912,72 @@ var (
 			},
 		},
 	}
+	// WechatBindingsColumns holds the columns for the "wechat_bindings" table.
+	WechatBindingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "app_id", Type: field.TypeString, Size: 64},
+		{Name: "openid", Type: field.TypeString, Size: 64},
+		{Name: "unionid", Type: field.TypeString, Nullable: true, Size: 64},
+		{Name: "subscribed", Type: field.TypeBool, Default: true},
+		{Name: "user_id", Type: field.TypeInt64},
+	}
+	// WechatBindingsTable holds the schema information for the "wechat_bindings" table.
+	WechatBindingsTable = &schema.Table{
+		Name:       "wechat_bindings",
+		Columns:    WechatBindingsColumns,
+		PrimaryKey: []*schema.Column{WechatBindingsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "wechat_bindings_users_wechat_bindings",
+				Columns:    []*schema.Column{WechatBindingsColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "wechatbinding_app_id_openid",
+				Unique:  true,
+				Columns: []*schema.Column{WechatBindingsColumns[3], WechatBindingsColumns[4]},
+			},
+			{
+				Name:    "wechatbinding_user_id",
+				Unique:  true,
+				Columns: []*schema.Column{WechatBindingsColumns[7]},
+			},
+		},
+	}
+	// WechatBindingHistoryColumns holds the columns for the "wechat_binding_history" table.
+	WechatBindingHistoryColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "app_id", Type: field.TypeString, Size: 64},
+		{Name: "openid", Type: field.TypeString, Size: 64},
+		{Name: "unbound_at", Type: field.TypeTime},
+		{Name: "reason", Type: field.TypeString, Size: 64, Default: "user_unbind"},
+	}
+	// WechatBindingHistoryTable holds the schema information for the "wechat_binding_history" table.
+	WechatBindingHistoryTable = &schema.Table{
+		Name:       "wechat_binding_history",
+		Columns:    WechatBindingHistoryColumns,
+		PrimaryKey: []*schema.Column{WechatBindingHistoryColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "wechatbindinghistory_app_id_openid",
+				Unique:  true,
+				Columns: []*schema.Column{WechatBindingHistoryColumns[4], WechatBindingHistoryColumns[5]},
+			},
+			{
+				Name:    "wechatbindinghistory_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{WechatBindingHistoryColumns[3]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
@@ -931,6 +997,8 @@ var (
 		UserAttributeDefinitionsTable,
 		UserAttributeValuesTable,
 		UserSubscriptionsTable,
+		WechatBindingsTable,
+		WechatBindingHistoryTable,
 	}
 )
 
@@ -1006,5 +1074,12 @@ func init() {
 	UserSubscriptionsTable.ForeignKeys[2].RefTable = UsersTable
 	UserSubscriptionsTable.Annotation = &entsql.Annotation{
 		Table: "user_subscriptions",
+	}
+	WechatBindingsTable.ForeignKeys[0].RefTable = UsersTable
+	WechatBindingsTable.Annotation = &entsql.Annotation{
+		Table: "wechat_bindings",
+	}
+	WechatBindingHistoryTable.Annotation = &entsql.Annotation{
+		Table: "wechat_binding_history",
 	}
 }

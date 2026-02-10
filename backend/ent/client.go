@@ -32,6 +32,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbindinghistory"
 
 	stdsql "database/sql"
 )
@@ -75,6 +77,10 @@ type Client struct {
 	UserAttributeValue *UserAttributeValueClient
 	// UserSubscription is the client for interacting with the UserSubscription builders.
 	UserSubscription *UserSubscriptionClient
+	// WeChatBinding is the client for interacting with the WeChatBinding builders.
+	WeChatBinding *WeChatBindingClient
+	// WeChatBindingHistory is the client for interacting with the WeChatBindingHistory builders.
+	WeChatBindingHistory *WeChatBindingHistoryClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -103,6 +109,8 @@ func (c *Client) init() {
 	c.UserAttributeDefinition = NewUserAttributeDefinitionClient(c.config)
 	c.UserAttributeValue = NewUserAttributeValueClient(c.config)
 	c.UserSubscription = NewUserSubscriptionClient(c.config)
+	c.WeChatBinding = NewWeChatBindingClient(c.config)
+	c.WeChatBindingHistory = NewWeChatBindingHistoryClient(c.config)
 }
 
 type (
@@ -212,6 +220,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		UserAttributeDefinition: NewUserAttributeDefinitionClient(cfg),
 		UserAttributeValue:      NewUserAttributeValueClient(cfg),
 		UserSubscription:        NewUserSubscriptionClient(cfg),
+		WeChatBinding:           NewWeChatBindingClient(cfg),
+		WeChatBindingHistory:    NewWeChatBindingHistoryClient(cfg),
 	}, nil
 }
 
@@ -248,6 +258,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		UserAttributeDefinition: NewUserAttributeDefinitionClient(cfg),
 		UserAttributeValue:      NewUserAttributeValueClient(cfg),
 		UserSubscription:        NewUserSubscriptionClient(cfg),
+		WeChatBinding:           NewWeChatBindingClient(cfg),
+		WeChatBindingHistory:    NewWeChatBindingHistoryClient(cfg),
 	}, nil
 }
 
@@ -281,6 +293,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ErrorPassthroughRule, c.Group, c.Proxy, c.RedeemCode, c.Setting,
 		c.UsageCleanupTask, c.UsageLog, c.User, c.UserAllowedGroup,
 		c.UserAttributeDefinition, c.UserAttributeValue, c.UserSubscription,
+		c.WeChatBinding, c.WeChatBindingHistory,
 	} {
 		n.Use(hooks...)
 	}
@@ -294,6 +307,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ErrorPassthroughRule, c.Group, c.Proxy, c.RedeemCode, c.Setting,
 		c.UsageCleanupTask, c.UsageLog, c.User, c.UserAllowedGroup,
 		c.UserAttributeDefinition, c.UserAttributeValue, c.UserSubscription,
+		c.WeChatBinding, c.WeChatBindingHistory,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -336,6 +350,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.UserAttributeValue.mutate(ctx, m)
 	case *UserSubscriptionMutation:
 		return c.UserSubscription.mutate(ctx, m)
+	case *WeChatBindingMutation:
+		return c.WeChatBinding.mutate(ctx, m)
+	case *WeChatBindingHistoryMutation:
+		return c.WeChatBindingHistory.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -2580,6 +2598,22 @@ func (c *UserClient) QueryAttributeValues(_m *User) *UserAttributeValueQuery {
 	return query
 }
 
+// QueryWechatBindings queries the wechat_bindings edge of a User.
+func (c *UserClient) QueryWechatBindings(_m *User) *WeChatBindingQuery {
+	query := (&WeChatBindingClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(wechatbinding.Table, wechatbinding.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.WechatBindingsTable, user.WechatBindingsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryUserAllowedGroups queries the user_allowed_groups edge of a User.
 func (c *UserClient) QueryUserAllowedGroups(_m *User) *UserAllowedGroupQuery {
 	query := (&UserAllowedGroupClient{config: c.config}).Query()
@@ -3254,19 +3288,301 @@ func (c *UserSubscriptionClient) mutate(ctx context.Context, m *UserSubscription
 	}
 }
 
+// WeChatBindingClient is a client for the WeChatBinding schema.
+type WeChatBindingClient struct {
+	config
+}
+
+// NewWeChatBindingClient returns a client for the WeChatBinding from the given config.
+func NewWeChatBindingClient(c config) *WeChatBindingClient {
+	return &WeChatBindingClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `wechatbinding.Hooks(f(g(h())))`.
+func (c *WeChatBindingClient) Use(hooks ...Hook) {
+	c.hooks.WeChatBinding = append(c.hooks.WeChatBinding, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `wechatbinding.Intercept(f(g(h())))`.
+func (c *WeChatBindingClient) Intercept(interceptors ...Interceptor) {
+	c.inters.WeChatBinding = append(c.inters.WeChatBinding, interceptors...)
+}
+
+// Create returns a builder for creating a WeChatBinding entity.
+func (c *WeChatBindingClient) Create() *WeChatBindingCreate {
+	mutation := newWeChatBindingMutation(c.config, OpCreate)
+	return &WeChatBindingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WeChatBinding entities.
+func (c *WeChatBindingClient) CreateBulk(builders ...*WeChatBindingCreate) *WeChatBindingCreateBulk {
+	return &WeChatBindingCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *WeChatBindingClient) MapCreateBulk(slice any, setFunc func(*WeChatBindingCreate, int)) *WeChatBindingCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &WeChatBindingCreateBulk{err: fmt.Errorf("calling to WeChatBindingClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*WeChatBindingCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &WeChatBindingCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WeChatBinding.
+func (c *WeChatBindingClient) Update() *WeChatBindingUpdate {
+	mutation := newWeChatBindingMutation(c.config, OpUpdate)
+	return &WeChatBindingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WeChatBindingClient) UpdateOne(_m *WeChatBinding) *WeChatBindingUpdateOne {
+	mutation := newWeChatBindingMutation(c.config, OpUpdateOne, withWeChatBinding(_m))
+	return &WeChatBindingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WeChatBindingClient) UpdateOneID(id int64) *WeChatBindingUpdateOne {
+	mutation := newWeChatBindingMutation(c.config, OpUpdateOne, withWeChatBindingID(id))
+	return &WeChatBindingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WeChatBinding.
+func (c *WeChatBindingClient) Delete() *WeChatBindingDelete {
+	mutation := newWeChatBindingMutation(c.config, OpDelete)
+	return &WeChatBindingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WeChatBindingClient) DeleteOne(_m *WeChatBinding) *WeChatBindingDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *WeChatBindingClient) DeleteOneID(id int64) *WeChatBindingDeleteOne {
+	builder := c.Delete().Where(wechatbinding.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WeChatBindingDeleteOne{builder}
+}
+
+// Query returns a query builder for WeChatBinding.
+func (c *WeChatBindingClient) Query() *WeChatBindingQuery {
+	return &WeChatBindingQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeWeChatBinding},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a WeChatBinding entity by its id.
+func (c *WeChatBindingClient) Get(ctx context.Context, id int64) (*WeChatBinding, error) {
+	return c.Query().Where(wechatbinding.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WeChatBindingClient) GetX(ctx context.Context, id int64) *WeChatBinding {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a WeChatBinding.
+func (c *WeChatBindingClient) QueryUser(_m *WeChatBinding) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(wechatbinding.Table, wechatbinding.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, wechatbinding.UserTable, wechatbinding.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *WeChatBindingClient) Hooks() []Hook {
+	return c.hooks.WeChatBinding
+}
+
+// Interceptors returns the client interceptors.
+func (c *WeChatBindingClient) Interceptors() []Interceptor {
+	return c.inters.WeChatBinding
+}
+
+func (c *WeChatBindingClient) mutate(ctx context.Context, m *WeChatBindingMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&WeChatBindingCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&WeChatBindingUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&WeChatBindingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&WeChatBindingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown WeChatBinding mutation op: %q", m.Op())
+	}
+}
+
+// WeChatBindingHistoryClient is a client for the WeChatBindingHistory schema.
+type WeChatBindingHistoryClient struct {
+	config
+}
+
+// NewWeChatBindingHistoryClient returns a client for the WeChatBindingHistory from the given config.
+func NewWeChatBindingHistoryClient(c config) *WeChatBindingHistoryClient {
+	return &WeChatBindingHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `wechatbindinghistory.Hooks(f(g(h())))`.
+func (c *WeChatBindingHistoryClient) Use(hooks ...Hook) {
+	c.hooks.WeChatBindingHistory = append(c.hooks.WeChatBindingHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `wechatbindinghistory.Intercept(f(g(h())))`.
+func (c *WeChatBindingHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.WeChatBindingHistory = append(c.inters.WeChatBindingHistory, interceptors...)
+}
+
+// Create returns a builder for creating a WeChatBindingHistory entity.
+func (c *WeChatBindingHistoryClient) Create() *WeChatBindingHistoryCreate {
+	mutation := newWeChatBindingHistoryMutation(c.config, OpCreate)
+	return &WeChatBindingHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WeChatBindingHistory entities.
+func (c *WeChatBindingHistoryClient) CreateBulk(builders ...*WeChatBindingHistoryCreate) *WeChatBindingHistoryCreateBulk {
+	return &WeChatBindingHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *WeChatBindingHistoryClient) MapCreateBulk(slice any, setFunc func(*WeChatBindingHistoryCreate, int)) *WeChatBindingHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &WeChatBindingHistoryCreateBulk{err: fmt.Errorf("calling to WeChatBindingHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*WeChatBindingHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &WeChatBindingHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WeChatBindingHistory.
+func (c *WeChatBindingHistoryClient) Update() *WeChatBindingHistoryUpdate {
+	mutation := newWeChatBindingHistoryMutation(c.config, OpUpdate)
+	return &WeChatBindingHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WeChatBindingHistoryClient) UpdateOne(_m *WeChatBindingHistory) *WeChatBindingHistoryUpdateOne {
+	mutation := newWeChatBindingHistoryMutation(c.config, OpUpdateOne, withWeChatBindingHistory(_m))
+	return &WeChatBindingHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WeChatBindingHistoryClient) UpdateOneID(id int64) *WeChatBindingHistoryUpdateOne {
+	mutation := newWeChatBindingHistoryMutation(c.config, OpUpdateOne, withWeChatBindingHistoryID(id))
+	return &WeChatBindingHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WeChatBindingHistory.
+func (c *WeChatBindingHistoryClient) Delete() *WeChatBindingHistoryDelete {
+	mutation := newWeChatBindingHistoryMutation(c.config, OpDelete)
+	return &WeChatBindingHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WeChatBindingHistoryClient) DeleteOne(_m *WeChatBindingHistory) *WeChatBindingHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *WeChatBindingHistoryClient) DeleteOneID(id int64) *WeChatBindingHistoryDeleteOne {
+	builder := c.Delete().Where(wechatbindinghistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WeChatBindingHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for WeChatBindingHistory.
+func (c *WeChatBindingHistoryClient) Query() *WeChatBindingHistoryQuery {
+	return &WeChatBindingHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeWeChatBindingHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a WeChatBindingHistory entity by its id.
+func (c *WeChatBindingHistoryClient) Get(ctx context.Context, id int64) (*WeChatBindingHistory, error) {
+	return c.Query().Where(wechatbindinghistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WeChatBindingHistoryClient) GetX(ctx context.Context, id int64) *WeChatBindingHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *WeChatBindingHistoryClient) Hooks() []Hook {
+	return c.hooks.WeChatBindingHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *WeChatBindingHistoryClient) Interceptors() []Interceptor {
+	return c.inters.WeChatBindingHistory
+}
+
+func (c *WeChatBindingHistoryClient) mutate(ctx context.Context, m *WeChatBindingHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&WeChatBindingHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&WeChatBindingHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&WeChatBindingHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&WeChatBindingHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown WeChatBindingHistory mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead,
 		ErrorPassthroughRule, Group, Proxy, RedeemCode, Setting, UsageCleanupTask,
 		UsageLog, User, UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
-		UserSubscription []ent.Hook
+		UserSubscription, WeChatBinding, WeChatBindingHistory []ent.Hook
 	}
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead,
 		ErrorPassthroughRule, Group, Proxy, RedeemCode, Setting, UsageCleanupTask,
 		UsageLog, User, UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
-		UserSubscription []ent.Interceptor
+		UserSubscription, WeChatBinding, WeChatBindingHistory []ent.Interceptor
 	}
 )
 

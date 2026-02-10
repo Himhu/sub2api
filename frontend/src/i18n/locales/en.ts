@@ -330,27 +330,20 @@ export default {
     sendingCode: 'Sending...',
     clickToResend: 'Click to resend code',
     resendCode: 'Resend verification code',
-    promoCodeLabel: 'Invite Code',
-    promoCodePlaceholder: 'Enter invite code',
+    promoCodeLabel: 'Referral Code',
+    promoCodePlaceholder: 'Enter referral code',
     promoCodeValid: 'Valid! You will receive ${amount} bonus balance',
-    promoCodeInvalid: 'Invalid invite code',
-    promoCodeNotFound: 'Invite code not found',
-    promoCodeExpired: 'This invite code has expired',
-    promoCodeDisabled: 'This invite code is disabled',
-    inviterNotActive: 'Inviter account is not active',
-    promoCodeMaxUsed: 'This invite code has reached its usage limit',
-    promoCodeAlreadyUsed: 'You have already used this invite code',
-    promoCodeInvalidFormat: 'Invalid invite code format (must be 16 hex characters)',
-    promoCodeValidating: 'Invite code is being validated, please wait',
-    promoCodeInvalidCannotRegister: 'Invalid invite code. Please check and try again',
-    inviteCodeRequired: 'Please enter a valid invite code',
-    invitationCodeLabel: 'Invitation Code',
-    invitationCodePlaceholder: 'Enter invitation code',
-    invitationCodeRequired: 'Invitation code is required',
-    invitationCodeValid: 'Invitation code is valid',
-    invitationCodeInvalid: 'Invalid or used invitation code',
-    invitationCodeValidating: 'Validating invitation code...',
-    invitationCodeInvalidCannotRegister: 'Invalid invitation code. Please check and try again',
+    promoCodeInvalid: 'Invalid referral code',
+    promoCodeNotFound: 'Referral code not found',
+    promoCodeExpired: 'This referral code has expired',
+    promoCodeDisabled: 'This referral code is disabled',
+    inviterNotActive: 'Referrer account is not active',
+    promoCodeMaxUsed: 'This referral code has reached its usage limit',
+    promoCodeAlreadyUsed: 'You have already used this referral code',
+    promoCodeInvalidFormat: 'Invalid referral code format (must be 16 hex characters)',
+    promoCodeValidating: 'Referral code is being validated, please wait',
+    promoCodeInvalidCannotRegister: 'Invalid referral code. Please check and try again',
+    inviteCodeRequired: 'Please enter a valid referral code',
     linuxdo: {
       signIn: 'Continue with Linux.do',
       orContinue: 'or continue with email',
@@ -365,35 +358,28 @@ export default {
       state: 'State',
       fullUrl: 'Full URL'
     },
-    // Forgot password
-    forgotPassword: 'Forgot password?',
-    forgotPasswordTitle: 'Reset Your Password',
-    forgotPasswordHint: 'Enter your email address and we will send you a link to reset your password.',
-    sendResetLink: 'Send Reset Link',
-    sendingResetLink: 'Sending...',
-    sendResetLinkFailed: 'Failed to send reset link. Please try again.',
-    resetEmailSent: 'Reset Link Sent',
-    resetEmailSentHint: 'If an account exists with this email, you will receive a password reset link shortly. Please check your inbox and spam folder.',
-    backToLogin: 'Back to Login',
-    rememberedPassword: 'Remembered your password?',
-    // Reset password
-    resetPasswordTitle: 'Set New Password',
-    resetPasswordHint: 'Enter your new password below.',
-    newPassword: 'New Password',
-    newPasswordPlaceholder: 'Enter your new password',
-    confirmPassword: 'Confirm Password',
-    confirmPasswordPlaceholder: 'Confirm your new password',
-    confirmPasswordRequired: 'Please confirm your password',
-    passwordsDoNotMatch: 'Passwords do not match',
-    resetPassword: 'Reset Password',
-    resettingPassword: 'Resetting...',
-    resetPasswordFailed: 'Failed to reset password. Please try again.',
-    passwordResetSuccess: 'Password Reset Successful',
-    passwordResetSuccessHint: 'Your password has been reset. You can now sign in with your new password.',
-    invalidResetLink: 'Invalid Reset Link',
-    invalidResetLinkHint: 'This password reset link is invalid or has expired. Please request a new one.',
-    requestNewResetLink: 'Request New Reset Link',
-    invalidOrExpiredToken: 'The password reset link is invalid or has expired. Please request a new one.'
+    // WeChat verification
+    wechat: {
+      sectionTitle: 'WeChat Verification',
+      stepNext: 'Next',
+      stepBack: 'Back',
+      followAccount: 'Search and follow the WeChat service account below',
+      followAccountGeneric: 'Follow our WeChat service account and send the short code below',
+      searchFollow: 'Open WeChat → Search "{account}" → Follow → Send the code below',
+      searchFollowGeneric: 'Open WeChat → Search the account → Follow → Send the code below',
+      shortCodeInstruction: 'Send the code below to our WeChat service account',
+      codeSentSuccess: 'Verification code sent, check your WeChat',
+      shortCodeExpired: 'Code expired',
+      refreshShortCode: 'Get new code',
+      waitingForCode: 'Waiting for verification...',
+      shortCodeFailed: 'Failed to generate code, please try again',
+      verifyCodeLabel: 'WeChat Verification Code',
+      verifyCodeHint: 'Enter the 6-digit code received on WeChat',
+      codeRequired: 'Please enter the WeChat verification code',
+      codeInvalid: 'Invalid code format, please enter 6 digits'
+    },
+    // Password reset
+    resetPasswordGuide: 'Send "reset password" to WeChat Official Account',
   },
 
   // Dashboard
@@ -762,14 +748,28 @@ export default {
       loginTitle: 'Two-Factor Authentication',
       loginHint: 'Enter the 6-digit code from your authenticator app',
       loginFailed: 'Verification failed, please try again',
-      // New translations for email verification
-      verifyEmailFirst: 'Please verify your email first',
-      verifyPasswordFirst: 'Please verify your identity first',
-      emailCode: 'Email Verification Code',
-      enterEmailCode: 'Enter 6-digit code',
-      sendCode: 'Send Code',
-      codeSent: 'Verification code sent to your email',
-      sendCodeFailed: 'Failed to send verification code'
+      verifyPasswordFirst: 'Please verify your identity first'
+    },
+    wechat: {
+      title: 'WeChat Binding',
+      description: 'Bind your WeChat account for notifications and quick login',
+      bound: 'Bound',
+      boundOpenId: 'OpenID',
+      notBound: 'Not Bound',
+      notBoundHint: 'Bind WeChat for convenient login and notifications',
+      bind: 'Bind',
+      unbind: 'Unbind',
+      bindTitle: 'Bind WeChat',
+      bindPasswordHint: 'Enter your current password to verify identity',
+      bindStep1: 'Please send the following code to our WeChat Official Account:',
+      bindStep2: 'After sending, you will receive a 6-digit verification code.',
+      bindEnterCode: 'Enter the verification code you received',
+      bindConfirm: 'Confirm Bind',
+      unbindTitle: 'Unbind WeChat',
+      unbindConfirm: 'Are you sure you want to unbind your WeChat account?',
+      unbindPasswordLabel: 'Enter your password to confirm',
+      bindSuccess: 'WeChat account bound successfully',
+      unbindSuccess: 'WeChat account unbound successfully'
     }
   },
 
@@ -777,7 +777,7 @@ export default {
   promotion: {
     title: 'Promotion Center',
     description: 'Invite friends and earn rewards',
-    inviteCode: 'Your Invite Code',
+    inviteCode: 'Your Referral Code',
     copyCode: 'Copy Code',
     copyLink: 'Copy Link',
     inviteLink: 'Invite Link',
@@ -794,7 +794,7 @@ export default {
     agentBenefits: 'Agent Benefits',
     agentBenefit1: 'Higher commission rates',
     agentBenefit2: 'Dedicated support',
-    agentBenefit3: 'Custom invite codes',
+    agentBenefit3: 'Custom referral codes',
     applyAgent: 'Apply to Become Agent',
     alreadyAgent: 'You are already an agent',
     notAgent: 'Not an agent yet',
@@ -805,7 +805,7 @@ export default {
     approved: 'Approved',
     rejected: 'Rejected',
     contactAdmin: 'Please contact admin for agent application',
-    noInviteCode: 'No invite code available',
+    noInviteCode: 'No referral code available',
     generateCode: 'Generate Code',
     credits: 'credits'
   },
@@ -2228,8 +2228,6 @@ export default {
       balance: 'Balance',
       concurrency: 'Concurrency',
       subscription: 'Subscription',
-      invitation: 'Invitation',
-      invitationHint: 'Invitation codes are used to restrict user registration. They are automatically marked as used after use.',
       unused: 'Unused',
       used: 'Used',
       columns: {
@@ -2281,7 +2279,6 @@ export default {
         balance: 'Balance',
         concurrency: 'Concurrency',
         subscription: 'Subscription',
-        invitation: 'Invitation',
         // Admin adjustment types (created when admin modifies user balance/concurrency)
         admin_balance: 'Balance (Admin)',
         admin_concurrency: 'Concurrency (Admin)'
@@ -2302,7 +2299,7 @@ export default {
     // Agents Management
     agents: {
       title: 'Agent Management',
-      description: 'Manage agents and their invite codes',
+      description: 'Manage agents and their referral codes',
       searchAgents: 'Search agents...',
       addAgent: 'Add Agent',
       noAgentsYet: 'No agents yet',
@@ -2310,7 +2307,7 @@ export default {
       columns: {
         email: 'Email',
         username: 'Username',
-        inviteCode: 'Invite Code',
+        inviteCode: 'Referral Code',
         parentAgent: 'Parent Agent',
         totalInvited: 'Total Invited',
         status: 'Status',
@@ -3223,20 +3220,14 @@ export default {
     // Settings
     settings: {
       title: 'System Settings',
-      description: 'Manage registration, email verification, default values, and SMTP settings',
+      description: 'Manage registration, default values, and site settings',
       registration: {
         title: 'Registration Settings',
         description: 'Control user registration and verification',
         enableRegistration: 'Enable Registration',
         enableRegistrationHint: 'Allow new users to register',
-        emailVerification: 'Email Verification',
-        emailVerificationHint: 'Require email verification for new registrations',
-        inviteRegistration: 'Invite Registration',
-        inviteRegistrationHint: 'Enable invite code registration',
-        invitationCode: 'Invitation Code Registration',
-        invitationCodeHint: 'When enabled, users must enter a valid invitation code to register',
-        passwordReset: 'Password Reset',
-        passwordResetHint: 'Allow users to reset their password via email',
+        inviteRegistration: 'Referral Registration',
+        inviteRegistrationHint: 'Enable referral code registration',
         totp: 'Two-Factor Authentication (2FA)',
         totpHint: 'Allow users to use authenticator apps like Google Authenticator',
         totpKeyNotConfigured:
@@ -3273,6 +3264,25 @@ export default {
         quickSetCopy: 'Generate & Copy (current site)',
         redirectUrlSetAndCopied: 'Redirect URL generated and copied to clipboard'
       },
+      wechat: {
+        title: 'WeChat Service Account',
+        description: 'Configure WeChat Service Account for registration verification and password reset',
+        enable: 'Enable WeChat Verification',
+        enableHint: 'Require WeChat verification during registration',
+        appId: 'AppID',
+        appIdPlaceholder: 'WeChat Service Account AppID',
+        appSecret: 'AppSecret',
+        appSecretPlaceholder: 'WeChat Service Account AppSecret',
+        appSecretHint: 'Used to call WeChat API (keep confidential)',
+        token: 'Token',
+        tokenPlaceholder: 'Server configuration Token',
+        tokenHint: 'Token from WeChat Official Account Platform → Basic Configuration → Server Configuration',
+        secretConfiguredPlaceholder: 'Configured, leave empty to keep current value',
+        secretConfiguredHint: 'Configured. Leave empty to keep the current value.',
+        accountName: 'Account Name',
+        accountNamePlaceholder: 'e.g. MyServiceAccount',
+        accountNameHint: 'Display name shown to users during registration verification'
+      },
       defaults: {
         title: 'Default User Settings',
         description: 'Default values for new users',
@@ -3281,9 +3291,9 @@ export default {
         defaultConcurrency: 'Default Concurrency',
         defaultConcurrencyHint: 'Maximum concurrent requests for new users',
         inviterBonus: 'Inviter Bonus',
-        inviterBonusHint: 'Bonus balance awarded to the inviter when a new user registers',
-        inviteeBonus: 'Invitee Bonus',
-        inviteeBonusHint: 'Bonus balance awarded to the new user when registering with an invite code'
+        inviterBonusHint: 'Bonus balance awarded to the referrer when a new user registers',
+        inviteeBonus: 'Referree Bonus',
+        inviteeBonusHint: 'Bonus balance awarded to the new user when registering with a referral code'
       },
       site: {
         title: 'Site Settings',
@@ -3325,38 +3335,6 @@ export default {
         urlHint: 'Must be an absolute http(s) URL',
         iframeWarning:
           '⚠️ iframe note: Some websites block embedding via X-Frame-Options or CSP (frame-ancestors). If the page is blank, provide an "Open in new tab" alternative.'
-      },
-      smtp: {
-        title: 'SMTP Settings',
-        description: 'Configure email sending for verification codes',
-        testConnection: 'Test Connection',
-        testing: 'Testing...',
-        host: 'SMTP Host',
-        hostPlaceholder: 'smtp.gmail.com',
-        port: 'SMTP Port',
-        portPlaceholder: '587',
-        username: 'SMTP Username',
-        usernamePlaceholder: "your-email{'@'}gmail.com",
-        password: 'SMTP Password',
-        passwordPlaceholder: '********',
-        passwordHint: 'Leave empty to keep existing password',
-        passwordConfiguredPlaceholder: '********',
-        passwordConfiguredHint: 'Password configured. Leave empty to keep the current value.',
-        fromEmail: 'From Email',
-        fromEmailPlaceholder: "noreply{'@'}example.com",
-        fromName: 'From Name',
-        fromNamePlaceholder: 'Sub2API',
-        useTls: 'Use TLS',
-        useTlsHint: 'Enable TLS encryption for SMTP connection'
-      },
-      testEmail: {
-        title: 'Send Test Email',
-        description: 'Send a test email to verify your SMTP configuration',
-        recipientEmail: 'Recipient Email',
-        recipientEmailPlaceholder: "test{'@'}example.com",
-        sendTestEmail: 'Send Test Email',
-        sending: 'Sending...',
-        enterRecipientHint: 'Please enter a recipient email address'
       },
       opsMonitoring: {
         title: 'Ops Monitoring',
@@ -3421,12 +3399,8 @@ export default {
       saveSettings: 'Save Settings',
       saving: 'Saving...',
       settingsSaved: 'Settings saved successfully',
-      smtpConnectionSuccess: 'SMTP connection successful',
-      testEmailSent: 'Test email sent successfully',
       failedToLoad: 'Failed to load settings',
-      failedToSave: 'Failed to save settings',
-      failedToTestSmtp: 'SMTP connection test failed',
-      failedToSendTestEmail: 'Failed to send test email'
+      failedToSave: 'Failed to save settings'
     },
 
     // Error Passthrough Rules

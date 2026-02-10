@@ -3,20 +3,9 @@ package dto
 // SystemSettings represents the admin settings API response payload.
 type SystemSettings struct {
 	RegistrationEnabled         bool `json:"registration_enabled"`
-	EmailVerifyEnabled          bool `json:"email_verify_enabled"`
 	InviteRegistrationEnabled   bool `json:"invite_registration_enabled"`
-	PasswordResetEnabled        bool `json:"password_reset_enabled"`
-	InvitationCodeEnabled       bool `json:"invitation_code_enabled"`
 	TotpEnabled                 bool `json:"totp_enabled"`                   // TOTP 双因素认证
 	TotpEncryptionKeyConfigured bool `json:"totp_encryption_key_configured"` // TOTP 加密密钥是否已配置
-
-	SMTPHost               string `json:"smtp_host"`
-	SMTPPort               int    `json:"smtp_port"`
-	SMTPUsername           string `json:"smtp_username"`
-	SMTPPasswordConfigured bool   `json:"smtp_password_configured"`
-	SMTPFrom               string `json:"smtp_from_email"`
-	SMTPFromName           string `json:"smtp_from_name"`
-	SMTPUseTLS             bool   `json:"smtp_use_tls"`
 
 	TurnstileEnabled             bool   `json:"turnstile_enabled"`
 	TurnstileSiteKey             string `json:"turnstile_site_key"`
@@ -58,14 +47,18 @@ type SystemSettings struct {
 	OpsRealtimeMonitoringEnabled bool   `json:"ops_realtime_monitoring_enabled"`
 	OpsQueryModeDefault          string `json:"ops_query_mode_default"`
 	OpsMetricsIntervalSeconds    int    `json:"ops_metrics_interval_seconds"`
+
+	// WeChat Service Account
+	WeChatEnabled             bool   `json:"wechat_enabled"`
+	WeChatAppID               string `json:"wechat_app_id"`
+	WeChatAppSecretConfigured bool   `json:"wechat_app_secret_configured"`
+	WeChatTokenConfigured     bool   `json:"wechat_token_configured"`
+	WeChatAccountName         string `json:"wechat_account_name"`
 }
 
 type PublicSettings struct {
-	RegistrationEnabled         bool   `json:"registration_enabled"`
-	EmailVerifyEnabled          bool   `json:"email_verify_enabled"`
-	InviteRegistrationEnabled   bool   `json:"invite_registration_enabled"`
-	PasswordResetEnabled        bool   `json:"password_reset_enabled"`
-	InvitationCodeEnabled       bool   `json:"invitation_code_enabled"`
+	RegistrationEnabled       bool `json:"registration_enabled"`
+	InviteRegistrationEnabled bool `json:"invite_registration_enabled"`
 	TotpEnabled                 bool   `json:"totp_enabled"` // TOTP 双因素认证
 	TurnstileEnabled            bool   `json:"turnstile_enabled"`
 	TurnstileSiteKey            string `json:"turnstile_site_key"`
@@ -83,6 +76,9 @@ type PublicSettings struct {
 	// Invite bonus settings
 	InviterBonus float64 `json:"inviter_bonus"` // 邀请人奖励余额
 	InviteeBonus float64 `json:"invitee_bonus"` // 被邀请人奖励余额
+
+	WeChatEnabled     bool   `json:"wechat_enabled"`
+	WeChatAccountName string `json:"wechat_account_name"`
 }
 
 // StreamTimeoutSettings 流超时处理配置 DTO

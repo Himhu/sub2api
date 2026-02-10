@@ -11,12 +11,9 @@ import { apiClient } from '../client'
 export interface SystemSettings {
   // Registration settings
   registration_enabled: boolean
-  email_verify_enabled: boolean
   invite_registration_enabled: boolean
-  password_reset_enabled: boolean
-  invitation_code_enabled: boolean
-  totp_enabled: boolean // TOTP 双因素认证
-  totp_encryption_key_configured: boolean // TOTP 加密密钥是否已配置
+  totp_enabled: boolean
+  totp_encryption_key_configured: boolean
   // Default settings
   default_balance: number
   default_concurrency: number
@@ -32,14 +29,6 @@ export interface SystemSettings {
   hide_ccs_import_button: boolean
   purchase_subscription_enabled: boolean
   purchase_subscription_url: string
-  // SMTP settings
-  smtp_host: string
-  smtp_port: number
-  smtp_username: string
-  smtp_password_configured: boolean
-  smtp_from_email: string
-  smtp_from_name: string
-  smtp_use_tls: boolean
   // Cloudflare Turnstile settings
   turnstile_enabled: boolean
   turnstile_site_key: string
@@ -67,15 +56,19 @@ export interface SystemSettings {
   ops_realtime_monitoring_enabled: boolean
   ops_query_mode_default: 'auto' | 'raw' | 'preagg' | string
   ops_metrics_interval_seconds: number
+
+  // WeChat Service Account
+  wechat_enabled: boolean
+  wechat_app_id: string
+  wechat_app_secret_configured: boolean
+  wechat_token_configured: boolean
+  wechat_account_name: string
 }
 
 export interface UpdateSettingsRequest {
   registration_enabled?: boolean
-  email_verify_enabled?: boolean
   invite_registration_enabled?: boolean
-  password_reset_enabled?: boolean
-  invitation_code_enabled?: boolean
-  totp_enabled?: boolean // TOTP 双因素认证
+  totp_enabled?: boolean
   default_balance?: number
   default_concurrency?: number
   inviter_bonus?: number  // 邀请人奖励余额
@@ -89,13 +82,6 @@ export interface UpdateSettingsRequest {
   hide_ccs_import_button?: boolean
   purchase_subscription_enabled?: boolean
   purchase_subscription_url?: string
-  smtp_host?: string
-  smtp_port?: number
-  smtp_username?: string
-  smtp_password?: string
-  smtp_from_email?: string
-  smtp_from_name?: string
-  smtp_use_tls?: boolean
   turnstile_enabled?: boolean
   turnstile_site_key?: string
   turnstile_secret_key?: string
@@ -114,6 +100,13 @@ export interface UpdateSettingsRequest {
   ops_realtime_monitoring_enabled?: boolean
   ops_query_mode_default?: 'auto' | 'raw' | 'preagg' | string
   ops_metrics_interval_seconds?: number
+
+  // WeChat Service Account
+  wechat_enabled?: boolean
+  wechat_app_id?: string
+  wechat_app_secret?: string
+  wechat_token?: string
+  wechat_account_name?: string
 }
 
 /**
@@ -132,54 +125,6 @@ export async function getSettings(): Promise<SystemSettings> {
  */
 export async function updateSettings(settings: UpdateSettingsRequest): Promise<SystemSettings> {
   const { data } = await apiClient.put<SystemSettings>('/admin/settings', settings)
-  return data
-}
-
-/**
- * Test SMTP connection request
- */
-export interface TestSmtpRequest {
-  smtp_host: string
-  smtp_port: number
-  smtp_username: string
-  smtp_password: string
-  smtp_use_tls: boolean
-}
-
-/**
- * Test SMTP connection with provided config
- * @param config - SMTP configuration to test
- * @returns Test result message
- */
-export async function testSmtpConnection(config: TestSmtpRequest): Promise<{ message: string }> {
-  const { data } = await apiClient.post<{ message: string }>('/admin/settings/test-smtp', config)
-  return data
-}
-
-/**
- * Send test email request
- */
-export interface SendTestEmailRequest {
-  email: string
-  smtp_host: string
-  smtp_port: number
-  smtp_username: string
-  smtp_password: string
-  smtp_from_email: string
-  smtp_from_name: string
-  smtp_use_tls: boolean
-}
-
-/**
- * Send test email with provided SMTP config
- * @param request - Email address and SMTP config
- * @returns Test result message
- */
-export async function sendTestEmail(request: SendTestEmailRequest): Promise<{ message: string }> {
-  const { data } = await apiClient.post<{ message: string }>(
-    '/admin/settings/send-test-email',
-    request
-  )
   return data
 }
 
@@ -256,8 +201,6 @@ export async function updateStreamTimeoutSettings(
 export const settingsAPI = {
   getSettings,
   updateSettings,
-  testSmtpConnection,
-  sendTestEmail,
   getAdminApiKey,
   regenerateAdminApiKey,
   deleteAdminApiKey,

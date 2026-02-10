@@ -16,6 +16,7 @@ export { userAPI, type UserAttributeDefinition } from './user'
 export { redeemAPI, type RedeemHistoryItem } from './redeem'
 export { userGroupsAPI } from './groups'
 export { totpAPI } from './totp'
+export { wechatAPI } from './wechat'
 export { default as announcementsAPI } from './announcements'
 
 // Admin APIs

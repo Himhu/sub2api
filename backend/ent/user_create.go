@@ -19,6 +19,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -411,6 +412,21 @@ func (_c *UserCreate) AddAttributeValues(v ...*UserAttributeValue) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddAttributeValueIDs(ids...)
+}
+
+// AddWechatBindingIDs adds the "wechat_bindings" edge to the WeChatBinding entity by IDs.
+func (_c *UserCreate) AddWechatBindingIDs(ids ...int64) *UserCreate {
+	_c.mutation.AddWechatBindingIDs(ids...)
+	return _c
+}
+
+// AddWechatBindings adds the "wechat_bindings" edges to the WeChatBinding entity.
+func (_c *UserCreate) AddWechatBindings(v ...*WeChatBinding) *UserCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddWechatBindingIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -806,6 +822,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userattributevalue.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.WechatBindingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WechatBindingsTable,
+			Columns: []string{user.WechatBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(wechatbinding.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {

@@ -213,6 +213,30 @@ func (f UserSubscriptionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserSubscriptionMutation", m)
 }
 
+// The WeChatBindingFunc type is an adapter to allow the use of ordinary
+// function as WeChatBinding mutator.
+type WeChatBindingFunc func(context.Context, *ent.WeChatBindingMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WeChatBindingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WeChatBindingMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WeChatBindingMutation", m)
+}
+
+// The WeChatBindingHistoryFunc type is an adapter to allow the use of ordinary
+// function as WeChatBindingHistory mutator.
+type WeChatBindingHistoryFunc func(context.Context, *ent.WeChatBindingHistoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WeChatBindingHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WeChatBindingHistoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WeChatBindingHistoryMutation", m)
+}
+
 // Condition is a hook condition function.
 type Condition func(context.Context, ent.Mutation) bool
 

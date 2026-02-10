@@ -32,11 +32,8 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 	}
 
 	response.Success(c, dto.PublicSettings{
-		RegistrationEnabled:         settings.RegistrationEnabled,
-		EmailVerifyEnabled:          settings.EmailVerifyEnabled,
-		InviteRegistrationEnabled:   settings.InviteRegistrationEnabled,
-		PasswordResetEnabled:        settings.PasswordResetEnabled,
-		InvitationCodeEnabled:       settings.InvitationCodeEnabled,
+		RegistrationEnabled:       settings.RegistrationEnabled,
+		InviteRegistrationEnabled: settings.InviteRegistrationEnabled,
 		TotpEnabled:                 settings.TotpEnabled,
 		TurnstileEnabled:            settings.TurnstileEnabled,
 		TurnstileSiteKey:            settings.TurnstileSiteKey,
@@ -53,5 +50,7 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 		Version:                     h.version,
 		InviterBonus:                settings.InviterBonus,
 		InviteeBonus:                settings.InviteeBonus,
+		WeChatEnabled:               settings.WeChatEnabled,
+		WeChatAccountName:           settings.WeChatAccountName,
 	})
 }

@@ -309,21 +309,6 @@
               <Toggle v-model="form.registration_enabled" />
             </div>
 
-            <!-- Email Verification -->
-            <div
-              class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
-            >
-              <div>
-                <label class="font-medium text-gray-900 dark:text-white">{{
-                  t('admin.settings.registration.emailVerification')
-                }}</label>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.settings.registration.emailVerificationHint') }}
-                </p>
-              </div>
-              <Toggle v-model="form.email_verify_enabled" />
-            </div>
-
             <!-- Invite Registration - Only show when registration is enabled -->
             <div
               v-if="form.registration_enabled"
@@ -338,36 +323,6 @@
                 </p>
               </div>
               <Toggle v-model="form.invite_registration_enabled" />
-            </div>
-
-            <!-- Invitation Code -->
-            <div
-              class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
-            >
-              <div>
-                <label class="font-medium text-gray-900 dark:text-white">{{
-                  t('admin.settings.registration.invitationCode')
-                }}</label>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.settings.registration.invitationCodeHint') }}
-                </p>
-              </div>
-              <Toggle v-model="form.invitation_code_enabled" />
-            </div>
-            <!-- Password Reset - Only show when email verification is enabled -->
-            <div
-              v-if="form.email_verify_enabled"
-              class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
-            >
-              <div>
-                <label class="font-medium text-gray-900 dark:text-white">{{
-                  t('admin.settings.registration.passwordReset')
-                }}</label>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.settings.registration.passwordResetHint') }}
-                </p>
-              </div>
-              <Toggle v-model="form.password_reset_enabled" />
             </div>
 
             <!-- TOTP 2FA -->
@@ -563,6 +518,111 @@
                   </div>
                   <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {{ t('admin.settings.linuxdo.redirectUrlHint') }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WeChat Service Account -->
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('admin.settings.wechat.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('admin.settings.wechat.description') }}
+            </p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">{{
+                  t('admin.settings.wechat.enable')
+                }}</label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ t('admin.settings.wechat.enableHint') }}
+                </p>
+              </div>
+              <Toggle v-model="form.wechat_enabled" />
+            </div>
+
+            <div
+              v-if="form.wechat_enabled"
+              class="border-t border-gray-100 pt-4 dark:border-dark-700"
+            >
+              <div class="grid grid-cols-1 gap-6">
+                <!-- AppID -->
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.wechat.appId') }}
+                  </label>
+                  <input
+                    v-model="form.wechat_app_id"
+                    type="text"
+                    class="input font-mono text-sm"
+                    :placeholder="t('admin.settings.wechat.appIdPlaceholder')"
+                  />
+                </div>
+
+                <!-- AppSecret -->
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.wechat.appSecret') }}
+                  </label>
+                  <input
+                    v-model="form.wechat_app_secret"
+                    type="password"
+                    class="input font-mono text-sm"
+                    :placeholder="
+                      form.wechat_app_secret_configured
+                        ? t('admin.settings.wechat.secretConfiguredPlaceholder')
+                        : t('admin.settings.wechat.appSecretPlaceholder')
+                    "
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      form.wechat_app_secret_configured
+                        ? t('admin.settings.wechat.secretConfiguredHint')
+                        : t('admin.settings.wechat.appSecretHint')
+                    }}
+                  </p>
+                </div>
+
+                <!-- Token -->
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.wechat.token') }}
+                  </label>
+                  <input
+                    v-model="form.wechat_token"
+                    type="password"
+                    class="input font-mono text-sm"
+                    :placeholder="
+                      form.wechat_token_configured
+                        ? t('admin.settings.wechat.secretConfiguredPlaceholder')
+                        : t('admin.settings.wechat.tokenPlaceholder')
+                    "
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t('admin.settings.wechat.tokenHint') }}
+                  </p>
+                </div>
+
+                <!-- WeChat Account Name -->
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('admin.settings.wechat.accountName') }}
+                  </label>
+                  <input
+                    v-model="form.wechat_account_name"
+                    type="text"
+                    class="input text-sm"
+                    :placeholder="t('admin.settings.wechat.accountNamePlaceholder')"
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ t('admin.settings.wechat.accountNameHint') }}
                   </p>
                 </div>
               </div>
@@ -825,147 +885,6 @@
           </div>
         </div>
 
-        <!-- SMTP Settings - Only show when email verification is enabled -->
-        <div v-if="form.email_verify_enabled" class="card">
-          <div
-            class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-700"
-          >
-            <div>
-              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                {{ t('admin.settings.smtp.title') }}
-              </h2>
-              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ t('admin.settings.smtp.description') }}
-              </p>
-            </div>
-            <button
-              type="button"
-              @click="testSmtpConnection"
-              :disabled="testingSmtp"
-              class="btn btn-secondary btn-sm"
-            >
-              <svg v-if="testingSmtp" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              {{
-                testingSmtp
-                  ? t('admin.settings.smtp.testing')
-                  : t('admin.settings.smtp.testConnection')
-              }}
-            </button>
-          </div>
-          <div class="space-y-6 p-6">
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.smtp.host') }}
-                </label>
-                <input
-                  v-model="form.smtp_host"
-                  type="text"
-                  class="input"
-                  :placeholder="t('admin.settings.smtp.hostPlaceholder')"
-                />
-              </div>
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.smtp.port') }}
-                </label>
-                <input
-                  v-model.number="form.smtp_port"
-                  type="number"
-                  min="1"
-                  max="65535"
-                  class="input"
-                  :placeholder="t('admin.settings.smtp.portPlaceholder')"
-                />
-              </div>
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.smtp.username') }}
-                </label>
-                <input
-                  v-model="form.smtp_username"
-                  type="text"
-                  class="input"
-                  :placeholder="t('admin.settings.smtp.usernamePlaceholder')"
-                />
-              </div>
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.smtp.password') }}
-                </label>
-                <input
-                  v-model="form.smtp_password"
-                  type="password"
-                  class="input"
-                  :placeholder="
-                    form.smtp_password_configured
-                      ? t('admin.settings.smtp.passwordConfiguredPlaceholder')
-                      : t('admin.settings.smtp.passwordPlaceholder')
-                  "
-                />
-                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  {{
-                    form.smtp_password_configured
-                      ? t('admin.settings.smtp.passwordConfiguredHint')
-                      : t('admin.settings.smtp.passwordHint')
-                  }}
-                </p>
-              </div>
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.smtp.fromEmail') }}
-                </label>
-                <input
-                  v-model="form.smtp_from_email"
-                  type="email"
-                  class="input"
-                  :placeholder="t('admin.settings.smtp.fromEmailPlaceholder')"
-                />
-              </div>
-              <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.smtp.fromName') }}
-                </label>
-                <input
-                  v-model="form.smtp_from_name"
-                  type="text"
-                  class="input"
-                  :placeholder="t('admin.settings.smtp.fromNamePlaceholder')"
-                />
-              </div>
-            </div>
-
-            <!-- Use TLS Toggle -->
-            <div
-              class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
-            >
-              <div>
-                <label class="font-medium text-gray-900 dark:text-white">{{
-                  t('admin.settings.smtp.useTls')
-                }}</label>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.settings.smtp.useTlsHint') }}
-                </p>
-              </div>
-              <Toggle v-model="form.smtp_use_tls" />
-            </div>
-          </div>
-        </div>
-
         <!-- Purchase Subscription Page -->
         <div class="card">
           <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
@@ -1007,65 +926,6 @@
               <p class="mt-2 text-xs text-amber-600 dark:text-amber-400">
                 {{ t('admin.settings.purchase.iframeWarning') }}
               </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Send Test Email - Only show when email verification is enabled -->
-        <div v-if="form.email_verify_enabled" class="card">
-          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('admin.settings.testEmail.title') }}
-            </h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {{ t('admin.settings.testEmail.description') }}
-            </p>
-          </div>
-          <div class="p-6">
-            <div class="flex items-end gap-4">
-              <div class="flex-1">
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {{ t('admin.settings.testEmail.recipientEmail') }}
-                </label>
-                <input
-                  v-model="testEmailAddress"
-                  type="email"
-                  class="input"
-                  :placeholder="t('admin.settings.testEmail.recipientEmailPlaceholder')"
-                />
-              </div>
-              <button
-                type="button"
-                @click="sendTestEmail"
-                :disabled="sendingTestEmail || !testEmailAddress"
-                class="btn btn-secondary"
-              >
-                <svg
-                  v-if="sendingTestEmail"
-                  class="h-4 w-4 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                {{
-                  sendingTestEmail
-                    ? t('admin.settings.testEmail.sending')
-                    : t('admin.settings.testEmail.sendTestEmail')
-                }}
-              </button>
             </div>
           </div>
         </div>
@@ -1113,9 +973,6 @@ const { copyToClipboard } = useClipboard()
 
 const loading = ref(true)
 const saving = ref(false)
-const testingSmtp = ref(false)
-const sendingTestEmail = ref(false)
-const testEmailAddress = ref('')
 const logoError = ref('')
 
 // Admin API Key 状态
@@ -1137,17 +994,15 @@ const streamTimeoutForm = reactive({
 })
 
 type SettingsForm = SystemSettings & {
-  smtp_password: string
   turnstile_secret_key: string
   linuxdo_connect_client_secret: string
+  wechat_app_secret: string
+  wechat_token: string
 }
 
 const form = reactive<SettingsForm>({
   registration_enabled: true,
-  email_verify_enabled: false,
   invite_registration_enabled: true,
-  invitation_code_enabled: false,
-  password_reset_enabled: false,
   totp_enabled: false,
   totp_encryption_key_configured: false,
   default_balance: 0,
@@ -1163,14 +1018,6 @@ const form = reactive<SettingsForm>({
   hide_ccs_import_button: false,
   purchase_subscription_enabled: false,
   purchase_subscription_url: '',
-  smtp_host: '',
-  smtp_port: 587,
-  smtp_username: '',
-  smtp_password: '',
-  smtp_password_configured: false,
-  smtp_from_email: '',
-  smtp_from_name: '',
-  smtp_use_tls: true,
   // Cloudflare Turnstile
   turnstile_enabled: false,
   turnstile_site_key: '',
@@ -1195,7 +1042,15 @@ const form = reactive<SettingsForm>({
   ops_monitoring_enabled: true,
   ops_realtime_monitoring_enabled: true,
   ops_query_mode_default: 'auto',
-  ops_metrics_interval_seconds: 60
+  ops_metrics_interval_seconds: 60,
+  // WeChat Service Account
+  wechat_enabled: false,
+  wechat_app_id: '',
+  wechat_app_secret: '',
+  wechat_app_secret_configured: false,
+  wechat_token: '',
+  wechat_token_configured: false,
+  wechat_account_name: ''
 })
 
 // LinuxDo OAuth redirect URL suggestion
@@ -1257,9 +1112,10 @@ async function loadSettings() {
   try {
     const settings = await adminAPI.settings.getSettings()
     Object.assign(form, settings)
-    form.smtp_password = ''
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
+    form.wechat_app_secret = ''
+    form.wechat_token = ''
   } catch (error: any) {
     appStore.showError(
       t('admin.settings.failedToLoad') + ': ' + (error.message || t('common.unknownError'))
@@ -1274,10 +1130,7 @@ async function saveSettings() {
   try {
     const payload: UpdateSettingsRequest = {
       registration_enabled: form.registration_enabled,
-      email_verify_enabled: form.email_verify_enabled,
       invite_registration_enabled: form.invite_registration_enabled,
-      invitation_code_enabled: form.invitation_code_enabled,
-      password_reset_enabled: form.password_reset_enabled,
       totp_enabled: form.totp_enabled,
       default_balance: form.default_balance,
       default_concurrency: form.default_concurrency,
@@ -1292,13 +1145,6 @@ async function saveSettings() {
       hide_ccs_import_button: form.hide_ccs_import_button,
       purchase_subscription_enabled: form.purchase_subscription_enabled,
       purchase_subscription_url: form.purchase_subscription_url,
-      smtp_host: form.smtp_host,
-      smtp_port: form.smtp_port,
-      smtp_username: form.smtp_username,
-      smtp_password: form.smtp_password || undefined,
-      smtp_from_email: form.smtp_from_email,
-      smtp_from_name: form.smtp_from_name,
-      smtp_use_tls: form.smtp_use_tls,
       turnstile_enabled: form.turnstile_enabled,
       turnstile_site_key: form.turnstile_site_key,
       turnstile_secret_key: form.turnstile_secret_key || undefined,
@@ -1312,13 +1158,20 @@ async function saveSettings() {
       fallback_model_gemini: form.fallback_model_gemini,
       fallback_model_antigravity: form.fallback_model_antigravity,
       enable_identity_patch: form.enable_identity_patch,
-      identity_patch_prompt: form.identity_patch_prompt
+      identity_patch_prompt: form.identity_patch_prompt,
+      // WeChat Service Account
+      wechat_enabled: form.wechat_enabled,
+      wechat_app_id: form.wechat_app_id,
+      wechat_app_secret: form.wechat_app_secret || undefined,
+      wechat_token: form.wechat_token || undefined,
+      wechat_account_name: form.wechat_account_name
     }
     const updated = await adminAPI.settings.updateSettings(payload)
     Object.assign(form, updated)
-    form.smtp_password = ''
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
+    form.wechat_app_secret = ''
+    form.wechat_token = ''
     // Refresh cached public settings so sidebar/header update immediately
     await appStore.fetchPublicSettings(true)
     appStore.showSuccess(t('admin.settings.settingsSaved'))
@@ -1328,56 +1181,6 @@ async function saveSettings() {
     )
   } finally {
     saving.value = false
-  }
-}
-
-async function testSmtpConnection() {
-  testingSmtp.value = true
-  try {
-    const result = await adminAPI.settings.testSmtpConnection({
-      smtp_host: form.smtp_host,
-      smtp_port: form.smtp_port,
-      smtp_username: form.smtp_username,
-      smtp_password: form.smtp_password,
-      smtp_use_tls: form.smtp_use_tls
-    })
-    // API returns { message: "..." } on success, errors are thrown as exceptions
-    appStore.showSuccess(result.message || t('admin.settings.smtpConnectionSuccess'))
-  } catch (error: any) {
-    appStore.showError(
-      t('admin.settings.failedToTestSmtp') + ': ' + (error.message || t('common.unknownError'))
-    )
-  } finally {
-    testingSmtp.value = false
-  }
-}
-
-async function sendTestEmail() {
-  if (!testEmailAddress.value) {
-    appStore.showError(t('admin.settings.testEmail.enterRecipientHint'))
-    return
-  }
-
-  sendingTestEmail.value = true
-  try {
-    const result = await adminAPI.settings.sendTestEmail({
-      email: testEmailAddress.value,
-      smtp_host: form.smtp_host,
-      smtp_port: form.smtp_port,
-      smtp_username: form.smtp_username,
-      smtp_password: form.smtp_password,
-      smtp_from_email: form.smtp_from_email,
-      smtp_from_name: form.smtp_from_name,
-      smtp_use_tls: form.smtp_use_tls
-    })
-    // API returns { message: "..." } on success, errors are thrown as exceptions
-    appStore.showSuccess(result.message || t('admin.settings.testEmailSent'))
-  } catch (error: any) {
-    appStore.showError(
-      t('admin.settings.failedToSendTestEmail') + ': ' + (error.message || t('common.unknownError'))
-    )
-  } finally {
-    sendingTestEmail.value = false
   }
 }
 

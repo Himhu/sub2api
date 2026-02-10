@@ -17,16 +17,14 @@ import (
 // SettingHandler 系统设置处理器
 type SettingHandler struct {
 	settingService   *service.SettingService
-	emailService     *service.EmailService
 	turnstileService *service.TurnstileService
 	opsService       *service.OpsService
 }
 
 // NewSettingHandler 创建系统设置处理器
-func NewSettingHandler(settingService *service.SettingService, emailService *service.EmailService, turnstileService *service.TurnstileService, opsService *service.OpsService) *SettingHandler {
+func NewSettingHandler(settingService *service.SettingService, turnstileService *service.TurnstileService, opsService *service.OpsService) *SettingHandler {
 	return &SettingHandler{
 		settingService:   settingService,
-		emailService:     emailService,
 		turnstileService: turnstileService,
 		opsService:       opsService,
 	}
@@ -46,19 +44,9 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  settings.RegistrationEnabled,
-		EmailVerifyEnabled:                   settings.EmailVerifyEnabled,
 		InviteRegistrationEnabled:            settings.InviteRegistrationEnabled,
-		PasswordResetEnabled:                 settings.PasswordResetEnabled,
-		InvitationCodeEnabled:                settings.InvitationCodeEnabled,
 		TotpEnabled:                          settings.TotpEnabled,
 		TotpEncryptionKeyConfigured:          h.settingService.IsTotpEncryptionKeyConfigured(),
-		SMTPHost:                             settings.SMTPHost,
-		SMTPPort:                             settings.SMTPPort,
-		SMTPUsername:                         settings.SMTPUsername,
-		SMTPPasswordConfigured:               settings.SMTPPasswordConfigured,
-		SMTPFrom:                             settings.SMTPFrom,
-		SMTPFromName:                         settings.SMTPFromName,
-		SMTPUseTLS:                           settings.SMTPUseTLS,
 		TurnstileEnabled:                     settings.TurnstileEnabled,
 		TurnstileSiteKey:                     settings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:         settings.TurnstileSecretKeyConfigured,
@@ -90,6 +78,11 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		OpsRealtimeMonitoringEnabled:         settings.OpsRealtimeMonitoringEnabled,
 		OpsQueryModeDefault:                  settings.OpsQueryModeDefault,
 		OpsMetricsIntervalSeconds:            settings.OpsMetricsIntervalSeconds,
+		WeChatEnabled:             settings.WeChatEnabled,
+		WeChatAppID:               settings.WeChatAppID,
+		WeChatAppSecretConfigured: settings.WeChatAppSecretConfigured,
+		WeChatTokenConfigured:     settings.WeChatTokenConfigured,
+		WeChatAccountName:         settings.WeChatAccountName,
 	})
 }
 
@@ -97,20 +90,8 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 type UpdateSettingsRequest struct {
 	// 注册设置
 	RegistrationEnabled       bool `json:"registration_enabled"`
-	EmailVerifyEnabled        bool `json:"email_verify_enabled"`
 	InviteRegistrationEnabled bool `json:"invite_registration_enabled"`
-	PasswordResetEnabled      bool `json:"password_reset_enabled"`
-	InvitationCodeEnabled     bool `json:"invitation_code_enabled"`
 	TotpEnabled               bool `json:"totp_enabled"` // TOTP 双因素认证
-
-	// 邮件服务设置
-	SMTPHost     string `json:"smtp_host"`
-	SMTPPort     int    `json:"smtp_port"`
-	SMTPUsername string `json:"smtp_username"`
-	SMTPPassword string `json:"smtp_password"`
-	SMTPFrom     string `json:"smtp_from_email"`
-	SMTPFromName string `json:"smtp_from_name"`
-	SMTPUseTLS   bool   `json:"smtp_use_tls"`
 
 	// Cloudflare Turnstile 设置
 	TurnstileEnabled   bool   `json:"turnstile_enabled"`
@@ -156,6 +137,13 @@ type UpdateSettingsRequest struct {
 	OpsRealtimeMonitoringEnabled *bool   `json:"ops_realtime_monitoring_enabled"`
 	OpsQueryModeDefault          *string `json:"ops_query_mode_default"`
 	OpsMetricsIntervalSeconds    *int    `json:"ops_metrics_interval_seconds"`
+
+	// WeChat Service Account
+	WeChatEnabled   bool   `json:"wechat_enabled"`
+	WeChatAppID     string `json:"wechat_app_id"`
+	WeChatAppSecret   string `json:"wechat_app_secret"`
+	WeChatToken       string `json:"wechat_token"`
+	WeChatAccountName string `json:"wechat_account_name"`
 }
 
 // UpdateSettings 更新系统设置
@@ -186,10 +174,6 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	if req.InviteeBonus < 0 {
 		req.InviteeBonus = 0
 	}
-	if req.SMTPPort <= 0 {
-		req.SMTPPort = 587
-	}
-
 	// Turnstile 参数验证
 	if req.TurnstileEnabled {
 		// 检查必填字段
@@ -284,6 +268,30 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		}
 	}
 
+	// WeChat Service Account 参数验证
+	if req.WeChatEnabled {
+		req.WeChatAppID = strings.TrimSpace(req.WeChatAppID)
+		if req.WeChatAppID == "" {
+			response.BadRequest(c, "WeChat AppID is required when enabled")
+			return
+		}
+		// 敏感字段：空值 = 保留现有
+		if strings.TrimSpace(req.WeChatAppSecret) == "" {
+			if previousSettings.WeChatAppSecret == "" {
+				response.BadRequest(c, "WeChat AppSecret is required when enabled")
+				return
+			}
+			req.WeChatAppSecret = previousSettings.WeChatAppSecret
+		}
+		if strings.TrimSpace(req.WeChatToken) == "" {
+			if previousSettings.WeChatToken == "" {
+				response.BadRequest(c, "WeChat Token is required when enabled")
+				return
+			}
+			req.WeChatToken = previousSettings.WeChatToken
+		}
+	}
+
 	// Ops metrics collector interval validation (seconds).
 	if req.OpsMetricsIntervalSeconds != nil {
 		v := *req.OpsMetricsIntervalSeconds
@@ -297,19 +305,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	}
 
 	settings := &service.SystemSettings{
-		RegistrationEnabled:         req.RegistrationEnabled,
-		EmailVerifyEnabled:          req.EmailVerifyEnabled,
-		InviteRegistrationEnabled:   req.InviteRegistrationEnabled,
-		PasswordResetEnabled:        req.PasswordResetEnabled,
-		InvitationCodeEnabled:       req.InvitationCodeEnabled,
-		TotpEnabled:                 req.TotpEnabled,
-		SMTPHost:                    req.SMTPHost,
-		SMTPPort:                    req.SMTPPort,
-		SMTPUsername:                req.SMTPUsername,
-		SMTPPassword:                req.SMTPPassword,
-		SMTPFrom:                    req.SMTPFrom,
-		SMTPFromName:                req.SMTPFromName,
-		SMTPUseTLS:                  req.SMTPUseTLS,
+		RegistrationEnabled:       req.RegistrationEnabled,
+		InviteRegistrationEnabled: req.InviteRegistrationEnabled,
+		TotpEnabled:               req.TotpEnabled,
 		TurnstileEnabled:            req.TurnstileEnabled,
 		TurnstileSiteKey:            req.TurnstileSiteKey,
 		TurnstileSecretKey:          req.TurnstileSecretKey,
@@ -361,6 +359,11 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.OpsMetricsIntervalSeconds
 		}(),
+		WeChatEnabled:     req.WeChatEnabled,
+		WeChatAppID:       req.WeChatAppID,
+		WeChatAppSecret:   req.WeChatAppSecret,
+		WeChatToken:       req.WeChatToken,
+		WeChatAccountName: req.WeChatAccountName,
 	}
 
 	if err := h.settingService.UpdateSettings(c.Request.Context(), settings); err != nil {
@@ -379,19 +382,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  updatedSettings.RegistrationEnabled,
-		EmailVerifyEnabled:                   updatedSettings.EmailVerifyEnabled,
 		InviteRegistrationEnabled:            updatedSettings.InviteRegistrationEnabled,
-		PasswordResetEnabled:                 updatedSettings.PasswordResetEnabled,
-		InvitationCodeEnabled:                updatedSettings.InvitationCodeEnabled,
 		TotpEnabled:                          updatedSettings.TotpEnabled,
 		TotpEncryptionKeyConfigured:          h.settingService.IsTotpEncryptionKeyConfigured(),
-		SMTPHost:                             updatedSettings.SMTPHost,
-		SMTPPort:                             updatedSettings.SMTPPort,
-		SMTPUsername:                         updatedSettings.SMTPUsername,
-		SMTPPasswordConfigured:               updatedSettings.SMTPPasswordConfigured,
-		SMTPFrom:                             updatedSettings.SMTPFrom,
-		SMTPFromName:                         updatedSettings.SMTPFromName,
-		SMTPUseTLS:                           updatedSettings.SMTPUseTLS,
 		TurnstileEnabled:                     updatedSettings.TurnstileEnabled,
 		TurnstileSiteKey:                     updatedSettings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:         updatedSettings.TurnstileSecretKeyConfigured,
@@ -423,6 +416,11 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		OpsRealtimeMonitoringEnabled:         updatedSettings.OpsRealtimeMonitoringEnabled,
 		OpsQueryModeDefault:                  updatedSettings.OpsQueryModeDefault,
 		OpsMetricsIntervalSeconds:            updatedSettings.OpsMetricsIntervalSeconds,
+		WeChatEnabled:             updatedSettings.WeChatEnabled,
+		WeChatAppID:               updatedSettings.WeChatAppID,
+		WeChatAppSecretConfigured: updatedSettings.WeChatAppSecretConfigured,
+		WeChatTokenConfigured:     updatedSettings.WeChatTokenConfigured,
+		WeChatAccountName:         updatedSettings.WeChatAccountName,
 	})
 }
 
@@ -451,35 +449,8 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	if before.RegistrationEnabled != after.RegistrationEnabled {
 		changed = append(changed, "registration_enabled")
 	}
-	if before.EmailVerifyEnabled != after.EmailVerifyEnabled {
-		changed = append(changed, "email_verify_enabled")
-	}
-	if before.PasswordResetEnabled != after.PasswordResetEnabled {
-		changed = append(changed, "password_reset_enabled")
-	}
 	if before.TotpEnabled != after.TotpEnabled {
 		changed = append(changed, "totp_enabled")
-	}
-	if before.SMTPHost != after.SMTPHost {
-		changed = append(changed, "smtp_host")
-	}
-	if before.SMTPPort != after.SMTPPort {
-		changed = append(changed, "smtp_port")
-	}
-	if before.SMTPUsername != after.SMTPUsername {
-		changed = append(changed, "smtp_username")
-	}
-	if req.SMTPPassword != "" {
-		changed = append(changed, "smtp_password")
-	}
-	if before.SMTPFrom != after.SMTPFrom {
-		changed = append(changed, "smtp_from_email")
-	}
-	if before.SMTPFromName != after.SMTPFromName {
-		changed = append(changed, "smtp_from_name")
-	}
-	if before.SMTPUseTLS != after.SMTPUseTLS {
-		changed = append(changed, "smtp_use_tls")
 	}
 	if before.TurnstileEnabled != after.TurnstileEnabled {
 		changed = append(changed, "turnstile_enabled")
@@ -568,141 +539,22 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	if before.OpsMetricsIntervalSeconds != after.OpsMetricsIntervalSeconds {
 		changed = append(changed, "ops_metrics_interval_seconds")
 	}
+	if before.WeChatEnabled != after.WeChatEnabled {
+		changed = append(changed, "wechat_enabled")
+	}
+	if before.WeChatAppID != after.WeChatAppID {
+		changed = append(changed, "wechat_app_id")
+	}
+	if req.WeChatAppSecret != "" {
+		changed = append(changed, "wechat_app_secret")
+	}
+	if req.WeChatToken != "" {
+		changed = append(changed, "wechat_token")
+	}
+	if before.WeChatAccountName != after.WeChatAccountName {
+		changed = append(changed, "wechat_account_name")
+	}
 	return changed
-}
-
-// TestSMTPRequest 测试SMTP连接请求
-type TestSMTPRequest struct {
-	SMTPHost     string `json:"smtp_host" binding:"required"`
-	SMTPPort     int    `json:"smtp_port"`
-	SMTPUsername string `json:"smtp_username"`
-	SMTPPassword string `json:"smtp_password"`
-	SMTPUseTLS   bool   `json:"smtp_use_tls"`
-}
-
-// TestSMTPConnection 测试SMTP连接
-// POST /api/v1/admin/settings/test-smtp
-func (h *SettingHandler) TestSMTPConnection(c *gin.Context) {
-	var req TestSMTPRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "Invalid request: "+err.Error())
-		return
-	}
-
-	if req.SMTPPort <= 0 {
-		req.SMTPPort = 587
-	}
-
-	// 如果未提供密码，从数据库获取已保存的密码
-	password := req.SMTPPassword
-	if password == "" {
-		savedConfig, err := h.emailService.GetSMTPConfig(c.Request.Context())
-		if err == nil && savedConfig != nil {
-			password = savedConfig.Password
-		}
-	}
-
-	config := &service.SMTPConfig{
-		Host:     req.SMTPHost,
-		Port:     req.SMTPPort,
-		Username: req.SMTPUsername,
-		Password: password,
-		UseTLS:   req.SMTPUseTLS,
-	}
-
-	err := h.emailService.TestSMTPConnectionWithConfig(config)
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-	}
-
-	response.Success(c, gin.H{"message": "SMTP connection successful"})
-}
-
-// SendTestEmailRequest 发送测试邮件请求
-type SendTestEmailRequest struct {
-	Email        string `json:"email" binding:"required,email"`
-	SMTPHost     string `json:"smtp_host" binding:"required"`
-	SMTPPort     int    `json:"smtp_port"`
-	SMTPUsername string `json:"smtp_username"`
-	SMTPPassword string `json:"smtp_password"`
-	SMTPFrom     string `json:"smtp_from_email"`
-	SMTPFromName string `json:"smtp_from_name"`
-	SMTPUseTLS   bool   `json:"smtp_use_tls"`
-}
-
-// SendTestEmail 发送测试邮件
-// POST /api/v1/admin/settings/send-test-email
-func (h *SettingHandler) SendTestEmail(c *gin.Context) {
-	var req SendTestEmailRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "Invalid request: "+err.Error())
-		return
-	}
-
-	if req.SMTPPort <= 0 {
-		req.SMTPPort = 587
-	}
-
-	// 如果未提供密码，从数据库获取已保存的密码
-	password := req.SMTPPassword
-	if password == "" {
-		savedConfig, err := h.emailService.GetSMTPConfig(c.Request.Context())
-		if err == nil && savedConfig != nil {
-			password = savedConfig.Password
-		}
-	}
-
-	config := &service.SMTPConfig{
-		Host:     req.SMTPHost,
-		Port:     req.SMTPPort,
-		Username: req.SMTPUsername,
-		Password: password,
-		From:     req.SMTPFrom,
-		FromName: req.SMTPFromName,
-		UseTLS:   req.SMTPUseTLS,
-	}
-
-	siteName := h.settingService.GetSiteName(c.Request.Context())
-	subject := "[" + siteName + "] Test Email"
-	body := `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-        .content { padding: 40px 30px; text-align: center; }
-        .success { color: #10b981; font-size: 48px; margin-bottom: 20px; }
-        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #999; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>` + siteName + `</h1>
-        </div>
-        <div class="content">
-            <div class="success">✓</div>
-            <h2>Email Configuration Successful!</h2>
-            <p>This is a test email to verify your SMTP settings are working correctly.</p>
-        </div>
-        <div class="footer">
-            <p>This is an automated test message.</p>
-        </div>
-    </div>
-</body>
-</html>
-`
-
-	if err := h.emailService.SendEmailWithConfig(config, req.Email, subject, body); err != nil {
-		response.ErrorFrom(c, err)
-		return
-	}
-
-	response.Success(c, gin.H{"message": "Test email sent successfully"})
 }
 
 // GetAdminAPIKey 获取管理员 API Key 状态

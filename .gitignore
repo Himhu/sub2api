@@ -130,3 +130,7 @@ deploy/docker-compose.override.yml
 vite.config.js
 docs/*
 .serena/
+
+# 本地设计/规划文档（不入库）
+微信服务号对接方案.md
+扣费逻辑说明.md

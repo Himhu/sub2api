@@ -33,14 +33,14 @@ var (
 	ErrRefreshTokenInvalid    = infraerrors.Unauthorized("REFRESH_TOKEN_INVALID", "invalid refresh token")
 	ErrRefreshTokenExpired    = infraerrors.Unauthorized("REFRESH_TOKEN_EXPIRED", "refresh token has expired")
 	ErrRefreshTokenReused     = infraerrors.Unauthorized("REFRESH_TOKEN_REUSED", "refresh token has been reused")
-	ErrEmailVerifyRequired    = infraerrors.BadRequest("EMAIL_VERIFY_REQUIRED", "email verification is required")
 	ErrInviteCodeRequired     = infraerrors.BadRequest("INVITE_CODE_REQUIRED", "invite code is required")
 	ErrInviteCodeInvalid      = infraerrors.BadRequest("INVITE_CODE_INVALID", "invite code is invalid")
 	ErrInviteCodeFormat       = infraerrors.BadRequest("INVITE_CODE_INVALID_FORMAT", "invite code must be 16 hex characters")
 	ErrRegDisabled            = infraerrors.Forbidden("REGISTRATION_DISABLED", "registration is currently disabled")
 	ErrServiceUnavailable     = infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "service temporarily unavailable")
-	ErrInvitationCodeRequired = infraerrors.BadRequest("INVITATION_CODE_REQUIRED", "invitation code is required")
-	ErrInvitationCodeInvalid  = infraerrors.BadRequest("INVITATION_CODE_INVALID", "invalid or used invitation code")
+	ErrWeChatAlreadyBound     = infraerrors.Conflict("WECHAT_ALREADY_BOUND", "this wechat account is already bound to another user")
+	ErrWeChatBindingNotFound  = infraerrors.BadRequest("WECHAT_BINDING_NOT_FOUND", "no wechat binding found for this account")
+	ErrPasswordResetFailed    = infraerrors.BadRequest("PASSWORD_RESET_FAILED", "password reset failed")
 )
 
 // maxTokenLength 限制 token 大小，避免超长 header 触发解析时的异常内存分配。
@@ -76,14 +76,15 @@ type JWTClaims struct {
 
 // AuthService 认证服务
 type AuthService struct {
-	userRepo          UserRepository
-	redeemRepo        RedeemCodeRepository
-	refreshTokenCache RefreshTokenCache
-	cfg               *config.Config
-	settingService    *SettingService
-	emailService      *EmailService
-	turnstileService  *TurnstileService
-	emailQueueService *EmailQueueService
+	userRepo               UserRepository
+	redeemRepo             RedeemCodeRepository
+	refreshTokenCache      RefreshTokenCache
+	cfg                    *config.Config
+	settingService         *SettingService
+	turnstileService       *TurnstileService
+	wechatVerifService     *WeChatVerificationService
+	wechatBindingRepo      WeChatBindingRepository
+	wechatBindingHistoryRepo WeChatBindingHistoryRepository
 }
 
 // NewAuthService 创建认证服务实例
@@ -93,29 +94,31 @@ func NewAuthService(
 	refreshTokenCache RefreshTokenCache,
 	cfg *config.Config,
 	settingService *SettingService,
-	emailService *EmailService,
 	turnstileService *TurnstileService,
-	emailQueueService *EmailQueueService,
+	wechatVerifService *WeChatVerificationService,
+	wechatBindingRepo WeChatBindingRepository,
+	wechatBindingHistoryRepo WeChatBindingHistoryRepository,
 ) *AuthService {
 	return &AuthService{
-		userRepo:          userRepo,
-		redeemRepo:        redeemRepo,
-		refreshTokenCache: refreshTokenCache,
-		cfg:               cfg,
-		settingService:    settingService,
-		emailService:      emailService,
-		turnstileService:  turnstileService,
-		emailQueueService: emailQueueService,
+		userRepo:                 userRepo,
+		redeemRepo:               redeemRepo,
+		refreshTokenCache:        refreshTokenCache,
+		cfg:                      cfg,
+		settingService:           settingService,
+		turnstileService:         turnstileService,
+		wechatVerifService:       wechatVerifService,
+		wechatBindingRepo:        wechatBindingRepo,
+		wechatBindingHistoryRepo: wechatBindingHistoryRepo,
 	}
 }
 
 // Register 用户注册，返回token和用户
 func (s *AuthService) Register(ctx context.Context, email, password string) (string, *User, error) {
-	return s.RegisterWithVerification(ctx, email, password, "", "", "")
+	return s.RegisterWithVerification(ctx, email, password, "", "")
 }
 
-// RegisterWithVerification 用户注册（支持邮件验证和邀请码），返回token和用户
-func (s *AuthService) RegisterWithVerification(ctx context.Context, email, password, verifyCode, promoCode, invitationCode string) (string, *User, error) {
+// RegisterWithVerification 用户注册（支持推荐码），返回token和用户
+func (s *AuthService) RegisterWithVerification(ctx context.Context, email, password, verifyCode, promoCode string) (string, *User, error) {
 	// 检查是否开放注册（默认关闭：settingService 未配置时不允许注册）
 	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
 		return "", nil, ErrRegDisabled
@@ -126,43 +129,7 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		return "", nil, ErrEmailReserved
 	}
 
-	// 检查是否需要邀请码
-	var invitationRedeemCode *RedeemCode
-	if s.settingService != nil && s.settingService.IsInvitationCodeEnabled(ctx) {
-		if invitationCode == "" {
-			return "", nil, ErrInvitationCodeRequired
-		}
-		// 验证邀请码
-		redeemCode, err := s.redeemRepo.GetByCode(ctx, invitationCode)
-		if err != nil {
-			log.Printf("[Auth] Invalid invitation code: %s, error: %v", invitationCode, err)
-			return "", nil, ErrInvitationCodeInvalid
-		}
-		// 检查类型和状态
-		if redeemCode.Type != RedeemTypeInvitation || redeemCode.Status != StatusUnused {
-			log.Printf("[Auth] Invitation code invalid: type=%s, status=%s", redeemCode.Type, redeemCode.Status)
-			return "", nil, ErrInvitationCodeInvalid
-		}
-		invitationRedeemCode = redeemCode
-	}
-	// 检查是否需要邮件验证
-	if s.settingService != nil && s.settingService.IsEmailVerifyEnabled(ctx) {
-		// 如果邮件验证已开启但邮件服务未配置，拒绝注册
-		// 这是一个配置错误，不应该允许绕过验证
-		if s.emailService == nil {
-			log.Println("[Auth] Email verification enabled but email service not configured, rejecting registration")
-			return "", nil, ErrServiceUnavailable
-		}
-		if verifyCode == "" {
-			return "", nil, ErrEmailVerifyRequired
-		}
-		// 验证邮箱验证码
-		if err := s.emailService.VerifyCode(ctx, email, verifyCode); err != nil {
-			return "", nil, fmt.Errorf("verify code: %w", err)
-		}
-	}
-
-	// 邀请注册启用时，校验邀请码
+	// 邀请注册启用时，校验推荐码
 	var inviter *User
 	if s.settingService != nil && s.settingService.IsInviteRegistrationEnabled(ctx) {
 		inviteCode := strings.ToUpper(strings.TrimSpace(promoCode))
@@ -273,13 +240,6 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 		}
 	}
 
-	// 标记邀请码为已使用（如果使用了邀请码）
-	if invitationRedeemCode != nil {
-		if err := s.redeemRepo.Use(ctx, invitationRedeemCode.ID, user.ID); err != nil {
-			log.Printf("[Auth] Failed to mark invitation code as used for user %d: %v", user.ID, err)
-		}
-	}
-
 	// 生成token
 	token, err := s.GenerateToken(user)
 	if err != nil {
@@ -289,94 +249,152 @@ func (s *AuthService) RegisterWithVerification(ctx context.Context, email, passw
 	return token, user, nil
 }
 
-// SendVerifyCodeResult 发送验证码返回结果
-type SendVerifyCodeResult struct {
-	Countdown int `json:"countdown"` // 倒计时秒数
-}
-
-// SendVerifyCode 发送邮箱验证码（同步方式）
-func (s *AuthService) SendVerifyCode(ctx context.Context, email string) error {
-	// 检查是否开放注册（默认关闭）
+// RegisterWithWeChatVerification 用户注册（微信验证码），返回token和用户
+func (s *AuthService) RegisterWithWeChatVerification(ctx context.Context, email, password, sceneID, verifyCode string, promoCode string) (string, *User, error) {
 	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
-		return ErrRegDisabled
+		return "", nil, ErrRegDisabled
 	}
-
 	if isReservedEmail(email) {
-		return ErrEmailReserved
+		return "", nil, ErrEmailReserved
+	}
+	if s.wechatVerifService == nil || s.wechatBindingRepo == nil || s.wechatBindingHistoryRepo == nil {
+		log.Println("[Auth] WeChat verification not configured")
+		return "", nil, ErrServiceUnavailable
 	}
 
-	// 检查邮箱是否已存在
+	// 校验微信验证码 → 获取 openid
+	openid, err := s.wechatVerifService.ValidateAndConsumeCode(ctx, sceneID, verifyCode)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// 获取 appID
+	cfg, err := s.settingService.GetWeChatConfig(ctx)
+	if err != nil {
+		log.Printf("[Auth] Failed to get wechat config: %v", err)
+		return "", nil, ErrServiceUnavailable
+	}
+	if cfg.AppID == "" {
+		return "", nil, ErrServiceUnavailable
+	}
+
+	// 检查 openid 是否已绑定
+	binding, err := s.wechatBindingRepo.GetByOpenID(ctx, cfg.AppID, openid)
+	if err != nil {
+		log.Printf("[Auth] Database error checking wechat binding: %v", err)
+		return "", nil, ErrServiceUnavailable
+	}
+	if binding != nil {
+		return "", nil, ErrWeChatAlreadyBound
+	}
+	// Tombstone check: block OpenID that was previously bound to any account
+	if history, err := s.wechatBindingHistoryRepo.GetByOpenID(ctx, cfg.AppID, openid); err != nil {
+		log.Printf("[Auth] Database error checking wechat binding history: %v", err)
+		return "", nil, ErrServiceUnavailable
+	} else if history != nil {
+		return "", nil, ErrWeChatAlreadyBound
+	}
+
+	// 检查推荐码（invite registration 系统）
+	var inviter *User
+	if s.settingService.IsInviteRegistrationEnabled(ctx) {
+		inviteCode := strings.ToUpper(strings.TrimSpace(promoCode))
+		if inviteCode == "" {
+			return "", nil, ErrInviteCodeRequired
+		}
+		if !IsValidInviteCodeFormat(inviteCode) {
+			return "", nil, ErrInviteCodeFormat
+		}
+		inviter, err = s.userRepo.GetByInviteCode(ctx, inviteCode)
+		if err != nil {
+			if errors.Is(err, ErrUserNotFound) {
+				return "", nil, ErrInviteCodeInvalid
+			}
+			return "", nil, ErrServiceUnavailable
+		}
+		if inviter == nil || !inviter.IsActive() {
+			return "", nil, ErrInviteCodeInvalid
+		}
+	}
+
+	// 检查邮箱
 	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
-		log.Printf("[Auth] Database error checking email exists: %v", err)
-		return ErrServiceUnavailable
+		return "", nil, ErrServiceUnavailable
 	}
 	if existsEmail {
-		return ErrEmailExists
+		return "", nil, ErrEmailExists
 	}
 
-	// 发送验证码
-	if s.emailService == nil {
-		return errors.New("email service not configured")
-	}
-
-	// 获取网站名称
-	siteName := "Sub2API"
-	if s.settingService != nil {
-		siteName = s.settingService.GetSiteName(ctx)
-	}
-
-	return s.emailService.SendVerifyCode(ctx, email, siteName)
-}
-
-// SendVerifyCodeAsync 异步发送邮箱验证码并返回倒计时
-func (s *AuthService) SendVerifyCodeAsync(ctx context.Context, email string) (*SendVerifyCodeResult, error) {
-	log.Printf("[Auth] SendVerifyCodeAsync called for email: %s", email)
-
-	// 检查是否开放注册（默认关闭）
-	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
-		log.Println("[Auth] Registration is disabled")
-		return nil, ErrRegDisabled
-	}
-
-	if isReservedEmail(email) {
-		return nil, ErrEmailReserved
-	}
-
-	// 检查邮箱是否已存在
-	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
+	// 创建用户
+	hashedPassword, err := s.HashPassword(password)
 	if err != nil {
-		log.Printf("[Auth] Database error checking email exists: %v", err)
-		return nil, ErrServiceUnavailable
-	}
-	if existsEmail {
-		log.Printf("[Auth] Email already exists: %s", email)
-		return nil, ErrEmailExists
+		return "", nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	// 检查邮件队列服务是否配置
-	if s.emailQueueService == nil {
-		log.Println("[Auth] Email queue service not configured")
-		return nil, errors.New("email queue service not configured")
+	defaultBalance := s.settingService.GetDefaultBalance(ctx)
+	defaultConcurrency := s.settingService.GetDefaultConcurrency(ctx)
+
+	newInviteCode, err := s.generateUniqueInviteCode(ctx)
+	if err != nil {
+		return "", nil, ErrServiceUnavailable
 	}
 
-	// 获取网站名称
-	siteName := "Sub2API"
-	if s.settingService != nil {
-		siteName = s.settingService.GetSiteName(ctx)
+	user := &User{
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         RoleUser,
+		Balance:      defaultBalance,
+		Concurrency:  defaultConcurrency,
+		Status:       StatusActive,
+		InviteCode:   &newInviteCode,
+	}
+	if inviter != nil {
+		inviterID := inviter.ID
+		user.InvitedByUserID = &inviterID
+		if inviter.IsAgent {
+			user.BelongAgentID = &inviterID
+		} else if inviter.BelongAgentID != nil {
+			user.BelongAgentID = inviter.BelongAgentID
+		}
 	}
 
-	// 异步发送
-	log.Printf("[Auth] Enqueueing verify code for: %s", email)
-	if err := s.emailQueueService.EnqueueVerifyCode(email, siteName); err != nil {
-		log.Printf("[Auth] Failed to enqueue: %v", err)
-		return nil, fmt.Errorf("enqueue verify code: %w", err)
+	if err := s.createUserWithInviteCodeRetry(ctx, user); err != nil {
+		if errors.Is(err, ErrEmailExists) {
+			return "", nil, ErrEmailExists
+		}
+		return "", nil, ErrServiceUnavailable
 	}
 
-	log.Printf("[Auth] Verify code enqueued successfully for: %s", email)
-	return &SendVerifyCodeResult{
-		Countdown: 60, // 60秒倒计时
-	}, nil
+	// 创建微信绑定
+	if err := s.wechatBindingRepo.Create(ctx, user.ID, cfg.AppID, openid); err != nil {
+		log.Printf("[Auth] Failed to create wechat binding for user %d: %v", user.ID, err)
+		// 回滚：删除已创建的用户，避免无绑定的孤立账号
+		if delErr := s.userRepo.Delete(ctx, user.ID); delErr != nil {
+			log.Printf("[Auth] Failed to rollback user %d after binding failure: %v", user.ID, delErr)
+		}
+		return "", nil, ErrServiceUnavailable
+	}
+
+	// 邀请奖励
+	if inviter != nil {
+		if !inviter.IsAgent {
+			if bonus := s.settingService.GetInviterBonus(ctx); bonus > 0 {
+				_ = s.userRepo.AddPoints(ctx, inviter.ID, bonus)
+			}
+		}
+		if bonus := s.settingService.GetInviteeBonus(ctx); bonus > 0 {
+			if err := s.userRepo.AddPoints(ctx, user.ID, bonus); err == nil {
+				user.Points += bonus
+			}
+		}
+	}
+
+	token, err := s.GenerateToken(user)
+	if err != nil {
+		return "", nil, fmt.Errorf("generate token: %w", err)
+	}
+	return token, user, nil
 }
 
 // VerifyTurnstile 验证Turnstile token
@@ -425,14 +443,6 @@ func (s *AuthService) IsRegistrationEnabled(ctx context.Context) bool {
 		return false // 安全默认：settingService 未配置时关闭注册
 	}
 	return s.settingService.IsRegistrationEnabled(ctx)
-}
-
-// IsEmailVerifyEnabled 检查是否开启邮件验证
-func (s *AuthService) IsEmailVerifyEnabled(ctx context.Context) bool {
-	if s.settingService == nil {
-		return false
-	}
-	return s.settingService.IsEmailVerifyEnabled(ctx)
 }
 
 // Login 用户登录，返回JWT token
@@ -811,158 +821,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, oldTokenString string) (
 
 	// 生成新token
 	return s.GenerateToken(user)
-}
-
-// IsPasswordResetEnabled 检查是否启用密码重置功能
-// 要求：必须同时开启邮件验证且 SMTP 配置正确
-func (s *AuthService) IsPasswordResetEnabled(ctx context.Context) bool {
-	if s.settingService == nil {
-		return false
-	}
-	// Must have email verification enabled and SMTP configured
-	if !s.settingService.IsEmailVerifyEnabled(ctx) {
-		return false
-	}
-	return s.settingService.IsPasswordResetEnabled(ctx)
-}
-
-// preparePasswordReset validates the password reset request and returns necessary data
-// Returns (siteName, resetURL, shouldProceed)
-// shouldProceed is false when we should silently return success (to prevent enumeration)
-func (s *AuthService) preparePasswordReset(ctx context.Context, email, frontendBaseURL string) (string, string, bool) {
-	// Check if user exists (but don't reveal this to the caller)
-	user, err := s.userRepo.GetByEmail(ctx, email)
-	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			// Security: Log but don't reveal that user doesn't exist
-			log.Printf("[Auth] Password reset requested for non-existent email: %s", email)
-			return "", "", false
-		}
-		log.Printf("[Auth] Database error checking email for password reset: %v", err)
-		return "", "", false
-	}
-
-	// Check if user is active
-	if !user.IsActive() {
-		log.Printf("[Auth] Password reset requested for inactive user: %s", email)
-		return "", "", false
-	}
-
-	// Get site name
-	siteName := "Sub2API"
-	if s.settingService != nil {
-		siteName = s.settingService.GetSiteName(ctx)
-	}
-
-	// Build reset URL base
-	resetURL := fmt.Sprintf("%s/reset-password", strings.TrimSuffix(frontendBaseURL, "/"))
-
-	return siteName, resetURL, true
-}
-
-// RequestPasswordReset 请求密码重置（同步发送）
-// Security: Returns the same response regardless of whether the email exists (prevent user enumeration)
-func (s *AuthService) RequestPasswordReset(ctx context.Context, email, frontendBaseURL string) error {
-	if !s.IsPasswordResetEnabled(ctx) {
-		return infraerrors.Forbidden("PASSWORD_RESET_DISABLED", "password reset is not enabled")
-	}
-	if s.emailService == nil {
-		return ErrServiceUnavailable
-	}
-
-	siteName, resetURL, shouldProceed := s.preparePasswordReset(ctx, email, frontendBaseURL)
-	if !shouldProceed {
-		return nil // Silent success to prevent enumeration
-	}
-
-	if err := s.emailService.SendPasswordResetEmail(ctx, email, siteName, resetURL); err != nil {
-		log.Printf("[Auth] Failed to send password reset email to %s: %v", email, err)
-		return nil // Silent success to prevent enumeration
-	}
-
-	log.Printf("[Auth] Password reset email sent to: %s", email)
-	return nil
-}
-
-// RequestPasswordResetAsync 异步请求密码重置（队列发送）
-// Security: Returns the same response regardless of whether the email exists (prevent user enumeration)
-func (s *AuthService) RequestPasswordResetAsync(ctx context.Context, email, frontendBaseURL string) error {
-	if !s.IsPasswordResetEnabled(ctx) {
-		return infraerrors.Forbidden("PASSWORD_RESET_DISABLED", "password reset is not enabled")
-	}
-	if s.emailQueueService == nil {
-		return ErrServiceUnavailable
-	}
-
-	siteName, resetURL, shouldProceed := s.preparePasswordReset(ctx, email, frontendBaseURL)
-	if !shouldProceed {
-		return nil // Silent success to prevent enumeration
-	}
-
-	if err := s.emailQueueService.EnqueuePasswordReset(email, siteName, resetURL); err != nil {
-		log.Printf("[Auth] Failed to enqueue password reset email for %s: %v", email, err)
-		return nil // Silent success to prevent enumeration
-	}
-
-	log.Printf("[Auth] Password reset email enqueued for: %s", email)
-	return nil
-}
-
-// ResetPassword 重置密码
-// Security: Increments TokenVersion to invalidate all existing JWT tokens
-func (s *AuthService) ResetPassword(ctx context.Context, email, token, newPassword string) error {
-	// Check if password reset is enabled
-	if !s.IsPasswordResetEnabled(ctx) {
-		return infraerrors.Forbidden("PASSWORD_RESET_DISABLED", "password reset is not enabled")
-	}
-
-	if s.emailService == nil {
-		return ErrServiceUnavailable
-	}
-
-	// Verify and consume the reset token (one-time use)
-	if err := s.emailService.ConsumePasswordResetToken(ctx, email, token); err != nil {
-		return err
-	}
-
-	// Get user
-	user, err := s.userRepo.GetByEmail(ctx, email)
-	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			return ErrInvalidResetToken // Token was valid but user was deleted
-		}
-		log.Printf("[Auth] Database error getting user for password reset: %v", err)
-		return ErrServiceUnavailable
-	}
-
-	// Check if user is active
-	if !user.IsActive() {
-		return ErrUserNotActive
-	}
-
-	// Hash new password
-	hashedPassword, err := s.HashPassword(newPassword)
-	if err != nil {
-		return fmt.Errorf("hash password: %w", err)
-	}
-
-	// Update password and increment TokenVersion
-	user.PasswordHash = hashedPassword
-	user.TokenVersion++ // Invalidate all existing tokens
-
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		log.Printf("[Auth] Database error updating password for user %d: %v", user.ID, err)
-		return ErrServiceUnavailable
-	}
-
-	// Also revoke all refresh tokens for this user
-	if err := s.RevokeAllUserSessions(ctx, user.ID); err != nil {
-		log.Printf("[Auth] Failed to revoke refresh tokens for user %d: %v", user.ID, err)
-		// Don't return error - password was already changed successfully
-	}
-
-	log.Printf("[Auth] Password reset successful for user: %s", email)
-	return nil
 }
 
 // createUserWithInviteCodeRetry 创建用户，遇到 invite_code 碰撞时自动重试。

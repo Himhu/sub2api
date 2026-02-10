@@ -26,6 +26,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbindinghistory"
 )
 
 // The Query interface represents an operation that queries a graph.
@@ -543,6 +545,60 @@ func (f TraverseUserSubscription) Traverse(ctx context.Context, q ent.Query) err
 	return fmt.Errorf("unexpected query type %T. expect *ent.UserSubscriptionQuery", q)
 }
 
+// The WeChatBindingFunc type is an adapter to allow the use of ordinary function as a Querier.
+type WeChatBindingFunc func(context.Context, *ent.WeChatBindingQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f WeChatBindingFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.WeChatBindingQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.WeChatBindingQuery", q)
+}
+
+// The TraverseWeChatBinding type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseWeChatBinding func(context.Context, *ent.WeChatBindingQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseWeChatBinding) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseWeChatBinding) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.WeChatBindingQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.WeChatBindingQuery", q)
+}
+
+// The WeChatBindingHistoryFunc type is an adapter to allow the use of ordinary function as a Querier.
+type WeChatBindingHistoryFunc func(context.Context, *ent.WeChatBindingHistoryQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f WeChatBindingHistoryFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.WeChatBindingHistoryQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.WeChatBindingHistoryQuery", q)
+}
+
+// The TraverseWeChatBindingHistory type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseWeChatBindingHistory func(context.Context, *ent.WeChatBindingHistoryQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseWeChatBindingHistory) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseWeChatBindingHistory) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.WeChatBindingHistoryQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.WeChatBindingHistoryQuery", q)
+}
+
 // NewQuery returns the generic Query interface for the given typed query.
 func NewQuery(q ent.Query) (Query, error) {
 	switch q := q.(type) {
@@ -580,6 +636,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.UserAttributeValueQuery, predicate.UserAttributeValue, userattributevalue.OrderOption]{typ: ent.TypeUserAttributeValue, tq: q}, nil
 	case *ent.UserSubscriptionQuery:
 		return &query[*ent.UserSubscriptionQuery, predicate.UserSubscription, usersubscription.OrderOption]{typ: ent.TypeUserSubscription, tq: q}, nil
+	case *ent.WeChatBindingQuery:
+		return &query[*ent.WeChatBindingQuery, predicate.WeChatBinding, wechatbinding.OrderOption]{typ: ent.TypeWeChatBinding, tq: q}, nil
+	case *ent.WeChatBindingHistoryQuery:
+		return &query[*ent.WeChatBindingHistoryQuery, predicate.WeChatBindingHistory, wechatbindinghistory.OrderOption]{typ: ent.TypeWeChatBindingHistory, tq: q}, nil
 	default:
 		return nil, fmt.Errorf("unknown query type %T", q)
 	}

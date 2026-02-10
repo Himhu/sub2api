@@ -64,25 +64,14 @@ export interface RegisterRequest {
   verify_code?: string
   turnstile_token?: string
   promo_code?: string
-  invitation_code?: string
-}
-
-export interface SendVerifyCodeRequest {
-  email: string
-  turnstile_token?: string
-}
-
-export interface SendVerifyCodeResponse {
-  message: string
-  countdown: number
+  // WeChat verification fields
+  wechat_verify_code?: string
+  scene_id?: string
 }
 
 export interface PublicSettings {
   registration_enabled: boolean
-  email_verify_enabled: boolean
   invite_registration_enabled: boolean
-  password_reset_enabled: boolean
-  invitation_code_enabled: boolean
   turnstile_enabled: boolean
   turnstile_site_key: string
   site_name: string
@@ -99,6 +88,9 @@ export interface PublicSettings {
   // Invite bonus settings
   inviter_bonus: number
   invitee_bonus: number
+  // WeChat
+  wechat_enabled: boolean
+  wechat_account_name: string
 }
 
 export interface AuthResponse {
@@ -1269,7 +1261,6 @@ export interface TotpStatus {
 }
 
 export interface TotpSetupRequest {
-  email_code?: string
   password?: string
 }
 
@@ -1290,12 +1281,7 @@ export interface TotpEnableResponse {
 }
 
 export interface TotpDisableRequest {
-  email_code?: string
   password?: string
-}
-
-export interface TotpVerificationMethod {
-  method: 'email' | 'password'
 }
 
 export interface TotpLoginResponse {

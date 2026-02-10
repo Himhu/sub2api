@@ -2,20 +2,8 @@ package service
 
 type SystemSettings struct {
 	RegistrationEnabled       bool
-	EmailVerifyEnabled        bool
 	InviteRegistrationEnabled bool
-	PasswordResetEnabled      bool
-	InvitationCodeEnabled     bool
 	TotpEnabled               bool // TOTP 双因素认证
-
-	SMTPHost               string
-	SMTPPort               int
-	SMTPUsername           string
-	SMTPPassword           string
-	SMTPPasswordConfigured bool
-	SMTPFrom               string
-	SMTPFromName           string
-	SMTPUseTLS             bool
 
 	TurnstileEnabled             bool
 	TurnstileSiteKey             string
@@ -60,14 +48,20 @@ type SystemSettings struct {
 	OpsRealtimeMonitoringEnabled bool
 	OpsQueryModeDefault          string
 	OpsMetricsIntervalSeconds    int
+
+	// WeChat Service Account
+	WeChatEnabled             bool
+	WeChatAppID               string
+	WeChatAppSecret           string
+	WeChatAppSecretConfigured bool
+	WeChatToken               string
+	WeChatTokenConfigured     bool
+	WeChatAccountName         string
 }
 
 type PublicSettings struct {
 	RegistrationEnabled       bool
-	EmailVerifyEnabled        bool
 	InviteRegistrationEnabled bool
-	PasswordResetEnabled      bool
-	InvitationCodeEnabled     bool
 	TotpEnabled               bool // TOTP 双因素认证
 	TurnstileEnabled          bool
 	TurnstileSiteKey          string
@@ -89,6 +83,9 @@ type PublicSettings struct {
 	// Invite bonus settings
 	InviterBonus float64 // 邀请人奖励余额
 	InviteeBonus float64 // 被邀请人奖励余额
+
+	WeChatEnabled     bool
+	WeChatAccountName string
 }
 
 // StreamTimeoutSettings 流超时处理配置（仅控制超时后的处理方式，超时判定由网关配置控制）

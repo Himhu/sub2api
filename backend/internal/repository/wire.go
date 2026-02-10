@@ -78,7 +78,7 @@ var ProviderSet = wire.NewSet(
 	ProvideConcurrencyCache,
 	ProvideSessionLimitCache,
 	NewDashboardCache,
-	NewEmailCache,
+
 	NewIdentityCache,
 	NewRedeemCache,
 	NewUpdateCache,
@@ -89,6 +89,11 @@ var ProviderSet = wire.NewSet(
 	NewTotpCache,
 	NewRefreshTokenCache,
 	NewErrorPassthroughCache,
+	NewWeChatCache,
+
+	// WeChat binding repositories
+	NewWeChatBindingRepository,
+	NewWeChatBindingHistoryRepository,
 
 	// Encryptors
 	NewAESEncryptor,

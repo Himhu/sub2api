@@ -77,13 +77,11 @@
               {{ errors.password }}
             </p>
             <span v-else></span>
-            <router-link
-              v-if="passwordResetEnabled"
-              to="/forgot-password"
-              class="text-sm font-medium text-primary-600 transition-colors hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+            <span
+              class="text-sm text-gray-500 dark:text-dark-400"
             >
-              {{ t('auth.forgotPassword') }}
-            </router-link>
+              {{ t('auth.resetPasswordGuide') }}
+            </span>
           </div>
         </div>
 
@@ -206,7 +204,6 @@ const showPassword = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const linuxdoOAuthEnabled = ref<boolean>(false)
-const passwordResetEnabled = ref<boolean>(false)
 
 // Turnstile
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -245,7 +242,6 @@ onMounted(async () => {
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
-    passwordResetEnabled.value = settings.password_reset_enabled
   } catch (error) {
     console.error('Failed to load public settings:', error)
   }

@@ -56,3 +56,9 @@ type UserAttributeValue func(*sql.Selector)
 
 // UserSubscription is the predicate function for usersubscription builders.
 type UserSubscription func(*sql.Selector)
+
+// WeChatBinding is the predicate function for wechatbinding builders.
+type WeChatBinding func(*sql.Selector)
+
+// WeChatBindingHistory is the predicate function for wechatbindinghistory builders.
+type WeChatBindingHistory func(*sql.Selector)

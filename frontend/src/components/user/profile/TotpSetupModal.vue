@@ -16,69 +16,36 @@
 
         <!-- Step 0: Identity Verification -->
         <div v-if="step === 0" class="space-y-6">
-          <!-- Loading verification method -->
-          <div v-if="methodLoading" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+          <div class="space-y-4">
+            <div>
+              <label class="input-label">{{ t('profile.currentPassword') }}</label>
+              <input
+                v-model="verifyForm.password"
+                type="password"
+                autocomplete="current-password"
+                class="input"
+                :placeholder="t('profile.totp.enterPassword')"
+              />
+            </div>
           </div>
 
-          <template v-else>
-            <!-- Email verification -->
-            <div v-if="verificationMethod === 'email'" class="space-y-4">
-              <div>
-                <label class="input-label">{{ t('profile.totp.emailCode') }}</label>
-                <div class="flex gap-2">
-                  <input
-                    v-model="verifyForm.emailCode"
-                    type="text"
-                    maxlength="6"
-                    inputmode="numeric"
-                    class="input flex-1"
-                    :placeholder="t('profile.totp.enterEmailCode')"
-                  />
-                  <button
-                    type="button"
-                    class="btn btn-secondary whitespace-nowrap"
-                    :disabled="sendingCode || codeCooldown > 0"
-                    @click="handleSendCode"
-                  >
-                    {{ codeCooldown > 0 ? `${codeCooldown}s` : (sendingCode ? t('common.sending') : t('profile.totp.sendCode')) }}
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div v-if="verifyError" class="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            {{ verifyError }}
+          </div>
 
-            <!-- Password verification -->
-            <div v-else class="space-y-4">
-              <div>
-                <label class="input-label">{{ t('profile.currentPassword') }}</label>
-                <input
-                  v-model="verifyForm.password"
-                  type="password"
-                  autocomplete="current-password"
-                  class="input"
-                  :placeholder="t('profile.totp.enterPassword')"
-                />
-              </div>
-            </div>
-
-            <div v-if="verifyError" class="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
-              {{ verifyError }}
-            </div>
-
-            <div class="flex justify-end gap-3 pt-4">
-              <button type="button" class="btn btn-secondary" @click="$emit('close')">
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                :disabled="!canProceedFromVerify || setupLoading"
-                @click="handleVerifyAndSetup"
-              >
-                {{ setupLoading ? t('common.loading') : t('common.next') }}
-              </button>
-            </div>
-          </template>
+          <div class="flex justify-end gap-3 pt-4">
+            <button type="button" class="btn btn-secondary" @click="$emit('close')">
+              {{ t('common.cancel') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="!canProceedFromVerify || setupLoading"
+              @click="handleVerifyAndSetup"
+            >
+              {{ setupLoading ? t('common.loading') : t('common.next') }}
+            </button>
+          </div>
         </div>
 
         <!-- Step 1: Show QR Code -->
@@ -175,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { ref, nextTick, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { totpAPI } from '@/api'
@@ -192,12 +159,8 @@ const appStore = useAppStore()
 
 // Step: 0 = verify identity, 1 = QR code, 2 = verify TOTP code
 const step = ref(0)
-const methodLoading = ref(true)
-const verificationMethod = ref<'email' | 'password'>('password')
-const verifyForm = ref({ emailCode: '', password: '' })
+const verifyForm = ref({ password: '' })
 const verifyError = ref('')
-const sendingCode = ref(false)
-const codeCooldown = ref(0)
 
 const setupLoading = ref(false)
 const setupData = ref<TotpSetupResponse | null>(null)
@@ -210,9 +173,7 @@ const qrCodeDataUrl = ref('')
 const stepDescription = computed(() => {
   switch (step.value) {
     case 0:
-      return verificationMethod.value === 'email'
-        ? t('profile.totp.verifyEmailFirst')
-        : t('profile.totp.verifyPasswordFirst')
+      return t('profile.totp.verifyPasswordFirst')
     case 1:
       return t('profile.totp.setupStep1')
     case 2:
@@ -223,9 +184,6 @@ const stepDescription = computed(() => {
 })
 
 const canProceedFromVerify = computed(() => {
-  if (verificationMethod.value === 'email') {
-    return verifyForm.value.emailCode.length === 6
-  }
   return verifyForm.value.password.length > 0
 })
 
@@ -318,49 +276,12 @@ const copySecret = async () => {
   }
 }
 
-const loadVerificationMethod = async () => {
-  methodLoading.value = true
-  try {
-    const method = await totpAPI.getVerificationMethod()
-    verificationMethod.value = method.method
-  } catch (err: any) {
-    appStore.showError(err.response?.data?.message || t('common.error'))
-    emit('close')
-  } finally {
-    methodLoading.value = false
-  }
-}
-
-const handleSendCode = async () => {
-  sendingCode.value = true
-  try {
-    await totpAPI.sendVerifyCode()
-    appStore.showSuccess(t('profile.totp.codeSent'))
-    // Start cooldown
-    codeCooldown.value = 60
-    const timer = setInterval(() => {
-      codeCooldown.value--
-      if (codeCooldown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
-  } catch (err: any) {
-    appStore.showError(err.response?.data?.message || t('profile.totp.sendCodeFailed'))
-  } finally {
-    sendingCode.value = false
-  }
-}
-
 const handleVerifyAndSetup = async () => {
   setupLoading.value = true
   verifyError.value = ''
 
   try {
-    const request = verificationMethod.value === 'email'
-      ? { email_code: verifyForm.value.emailCode }
-      : { password: verifyForm.value.password }
-
-    setupData.value = await totpAPI.initiateSetup(request)
+    setupData.value = await totpAPI.initiateSetup({ password: verifyForm.value.password })
     step.value = 1
   } catch (err: any) {
     verifyError.value = err.response?.data?.message || t('profile.totp.setupFailed')
@@ -394,7 +315,4 @@ const handleVerify = async () => {
   }
 }
 
-onMounted(() => {
-  loadVerificationMethod()
-})
 </script>

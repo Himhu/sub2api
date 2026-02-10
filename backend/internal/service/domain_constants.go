@@ -80,22 +80,9 @@ const LinuxDoConnectSyntheticEmailDomain = "@linuxdo-connect.invalid"
 const (
 	// 注册设置
 	SettingKeyRegistrationEnabled       = "registration_enabled"        // 是否开放注册
-	SettingKeyEmailVerifyEnabled        = "email_verify_enabled"        // 是否开启邮件验证
 	SettingKeyInviteRegistrationEnabled = "invite_registration_enabled" // 是否启用邀请注册
 	SettingKeyInviterBonus              = "inviter_bonus"               // 邀请人奖励金额
 	SettingKeyInviteeBonus              = "invitee_bonus"               // 被邀请人奖励金额
-	SettingKeyPasswordResetEnabled = "password_reset_enabled" // 是否启用忘记密码功能（需要先开启邮件验证）
-	SettingKeyInvitationCodeEnabled     = "invitation_code_enabled"     // 是否启用邀请码注册
-
-	// 邮件服务设置
-	SettingKeySMTPHost     = "smtp_host"      // SMTP服务器地址
-	SettingKeySMTPPort     = "smtp_port"      // SMTP端口
-	SettingKeySMTPUsername = "smtp_username"  // SMTP用户名
-	SettingKeySMTPPassword = "smtp_password"  // SMTP密码（加密存储）
-	SettingKeySMTPFrom     = "smtp_from"      // 发件人地址
-	SettingKeySMTPFromName = "smtp_from_name" // 发件人名称
-	SettingKeySMTPUseTLS   = "smtp_use_tls"   // 是否使用TLS
-
 	// Cloudflare Turnstile 设置
 	SettingKeyTurnstileEnabled   = "turnstile_enabled"    // 是否启用 Turnstile 验证
 	SettingKeyTurnstileSiteKey   = "turnstile_site_key"   // Turnstile Site Key
@@ -109,6 +96,13 @@ const (
 	SettingKeyLinuxDoConnectClientID     = "linuxdo_connect_client_id"
 	SettingKeyLinuxDoConnectClientSecret = "linuxdo_connect_client_secret"
 	SettingKeyLinuxDoConnectRedirectURL  = "linuxdo_connect_redirect_url"
+
+	// WeChat Service Account settings
+	SettingKeyWeChatEnabled       = "wechat_enabled"
+	SettingKeyWeChatAppID         = "wechat_app_id"
+	SettingKeyWeChatAppSecret     = "wechat_app_secret"
+	SettingKeyWeChatToken         = "wechat_token"
+	SettingKeyWeChatAccountName   = "wechat_account_name"
 
 	// OEM设置
 	SettingKeySiteName                    = "site_name"                     // 网站名称
@@ -154,9 +148,6 @@ const (
 
 	// SettingKeyOpsQueryModeDefault controls the default query mode for ops dashboard (auto/raw/preagg).
 	SettingKeyOpsQueryModeDefault = "ops_query_mode_default"
-
-	// SettingKeyOpsEmailNotificationConfig stores JSON config for ops email notifications.
-	SettingKeyOpsEmailNotificationConfig = "ops_email_notification_config"
 
 	// SettingKeyOpsAlertRuntimeSettings stores JSON config for ops alert evaluator runtime settings.
 	SettingKeyOpsAlertRuntimeSettings = "ops_alert_runtime_settings"

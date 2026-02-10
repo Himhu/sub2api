@@ -23,6 +23,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/wechatbinding"
 )
 
 // UserQuery is the builder for querying User entities.
@@ -40,6 +41,7 @@ type UserQuery struct {
 	withAllowedGroups         *GroupQuery
 	withUsageLogs             *UsageLogQuery
 	withAttributeValues       *UserAttributeValueQuery
+	withWechatBindings        *WeChatBindingQuery
 	withUserAllowedGroups     *UserAllowedGroupQuery
 	modifiers                 []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -247,6 +249,28 @@ func (_q *UserQuery) QueryAttributeValues() *UserAttributeValueQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(userattributevalue.Table, userattributevalue.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.AttributeValuesTable, user.AttributeValuesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryWechatBindings chains the current query on the "wechat_bindings" edge.
+func (_q *UserQuery) QueryWechatBindings() *WeChatBindingQuery {
+	query := (&WeChatBindingClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(wechatbinding.Table, wechatbinding.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.WechatBindingsTable, user.WechatBindingsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -476,6 +500,7 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withAllowedGroups:         _q.withAllowedGroups.Clone(),
 		withUsageLogs:             _q.withUsageLogs.Clone(),
 		withAttributeValues:       _q.withAttributeValues.Clone(),
+		withWechatBindings:        _q.withWechatBindings.Clone(),
 		withUserAllowedGroups:     _q.withUserAllowedGroups.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -571,6 +596,17 @@ func (_q *UserQuery) WithAttributeValues(opts ...func(*UserAttributeValueQuery))
 	return _q
 }
 
+// WithWechatBindings tells the query-builder to eager-load the nodes that are connected to
+// the "wechat_bindings" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithWechatBindings(opts ...func(*WeChatBindingQuery)) *UserQuery {
+	query := (&WeChatBindingClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withWechatBindings = query
+	return _q
+}
+
 // WithUserAllowedGroups tells the query-builder to eager-load the nodes that are connected to
 // the "user_allowed_groups" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *UserQuery) WithUserAllowedGroups(opts ...func(*UserAllowedGroupQuery)) *UserQuery {
@@ -660,7 +696,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [10]bool{
 			_q.withAPIKeys != nil,
 			_q.withRedeemCodes != nil,
 			_q.withSubscriptions != nil,
@@ -669,6 +705,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			_q.withAllowedGroups != nil,
 			_q.withUsageLogs != nil,
 			_q.withAttributeValues != nil,
+			_q.withWechatBindings != nil,
 			_q.withUserAllowedGroups != nil,
 		}
 	)
@@ -748,6 +785,13 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadAttributeValues(ctx, query, nodes,
 			func(n *User) { n.Edges.AttributeValues = []*UserAttributeValue{} },
 			func(n *User, e *UserAttributeValue) { n.Edges.AttributeValues = append(n.Edges.AttributeValues, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withWechatBindings; query != nil {
+		if err := _q.loadWechatBindings(ctx, query, nodes,
+			func(n *User) { n.Edges.WechatBindings = []*WeChatBinding{} },
+			func(n *User, e *WeChatBinding) { n.Edges.WechatBindings = append(n.Edges.WechatBindings, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1023,6 +1067,36 @@ func (_q *UserQuery) loadAttributeValues(ctx context.Context, query *UserAttribu
 	}
 	query.Where(predicate.UserAttributeValue(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.AttributeValuesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadWechatBindings(ctx context.Context, query *WeChatBindingQuery, nodes []*User, init func(*User), assign func(*User, *WeChatBinding)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(wechatbinding.FieldUserID)
+	}
+	query.Where(predicate.WeChatBinding(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.WechatBindingsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
