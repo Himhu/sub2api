@@ -335,6 +335,14 @@
               >
                 {{ t('admin.users.deposit') }}
               </button>
+              <span
+                v-if="row.points > 0"
+                class="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                :title="t('admin.users.columns.points')"
+              >
+                <Icon name="sparkles" size="xs" />
+                {{ row.points }}
+              </span>
             </div>
           </template>
 
