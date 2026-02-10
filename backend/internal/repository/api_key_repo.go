@@ -468,10 +468,11 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 		MCPXMLInject:                    g.McpXMLInject,
 		SupportedModelScopes:            g.SupportedModelScopes,
 		ModelRouting:                    g.ModelRouting,
-		ModelRoutingEnabled: g.ModelRoutingEnabled,
-		IsPointsOnly:        g.IsPointsOnly,
-		CreatedAt:           g.CreatedAt,
-		UpdatedAt:           g.UpdatedAt,
+		ModelRoutingEnabled:             g.ModelRoutingEnabled,
+		IsPointsOnly:                    g.IsPointsOnly,
+		SortOrder:                       g.SortOrder,
+		CreatedAt:                       g.CreatedAt,
+		UpdatedAt:                       g.UpdatedAt,
 	}
 }
 

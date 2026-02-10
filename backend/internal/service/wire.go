@@ -255,4 +255,5 @@ var ProviderSet = wire.NewSet(
 	NewErrorPassthroughService,
 	NewWeChatService,
 	NewWeChatVerificationService,
+	NewDigestSessionStore,
 )

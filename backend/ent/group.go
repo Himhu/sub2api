@@ -68,6 +68,8 @@ type Group struct {
 	SupportedModelScopes []string `json:"supported_model_scopes,omitempty"`
 	// 是否为积分专用分组
 	IsPointsOnly bool `json:"is_points_only,omitempty"`
+	// 分组显示排序，数值越小越靠前
+	SortOrder int `json:"sort_order,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroupQuery when eager-loading is set.
 	Edges        GroupEdges `json:"edges"`
@@ -180,7 +182,7 @@ func (*Group) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case group.FieldRateMultiplier, group.FieldDailyLimitUsd, group.FieldWeeklyLimitUsd, group.FieldMonthlyLimitUsd, group.FieldImagePrice1k, group.FieldImagePrice2k, group.FieldImagePrice4k:
 			values[i] = new(sql.NullFloat64)
-		case group.FieldID, group.FieldDefaultValidityDays, group.FieldFallbackGroupID, group.FieldFallbackGroupIDOnInvalidRequest:
+		case group.FieldID, group.FieldDefaultValidityDays, group.FieldFallbackGroupID, group.FieldFallbackGroupIDOnInvalidRequest, group.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
 		case group.FieldName, group.FieldDescription, group.FieldStatus, group.FieldPlatform, group.FieldSubscriptionType:
 			values[i] = new(sql.NullString)
@@ -371,6 +373,12 @@ func (_m *Group) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.IsPointsOnly = value.Bool
 			}
+		case group.FieldSortOrder:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field sort_order", values[i])
+			} else if value.Valid {
+				_m.SortOrder = int(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -541,6 +549,9 @@ func (_m *Group) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_points_only=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsPointsOnly))
+	builder.WriteString(", ")
+	builder.WriteString("sort_order=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SortOrder))
 	builder.WriteByte(')')
 	return builder.String()
 }

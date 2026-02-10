@@ -2,9 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 
-	entsql "entgo.io/ent/dialect/sql"
 	"github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -110,45 +108,24 @@ var ProviderSet = wire.NewSet(
 	NewGeminiOAuthClient,
 	NewGeminiCliCodeAssistClient,
 
-	ProvideEnt,
-	ProvideSQLDB,
+	ProvideEntBundle,
+	wire.FieldsOf(new(*EntBundle), "Client", "DB"),
 	ProvideRedis,
 )
 
-// ProvideEnt 为依赖注入提供 Ent 客户端。
-//
-// 该函数是 InitEnt 的包装器，符合 Wire 的依赖提供函数签名要求。
-// Wire 会在编译时分析依赖关系，自动生成初始化代码。
-//
-// 依赖：config.Config
-// 提供：*ent.Client
-func ProvideEnt(cfg *config.Config) (*ent.Client, error) {
-	client, _, err := InitEnt(cfg)
-	return client, err
+// EntBundle 聚合 InitEnt 返回的 *ent.Client 和 *sql.DB，
+// 通过 wire.FieldsOf 拆分注入。
+type EntBundle struct {
+	Client *ent.Client
+	DB     *sql.DB
 }
 
-// ProvideSQLDB 从 Ent 客户端提取底层的 *sql.DB 连接。
-//
-// 某些 Repository 需要直接执行原生 SQL（如复杂的批量更新、聚合查询），
-// 此时需要访问底层的 sql.DB 而不是通过 Ent ORM。
-//
-// 设计说明：
-//   - Ent 底层使用 sql.DB，通过 Driver 接口可以访问
-//   - 这种设计允许在同一事务中混用 Ent 和原生 SQL
-//
-// 依赖：*ent.Client
-// 提供：*sql.DB
-func ProvideSQLDB(client *ent.Client) (*sql.DB, error) {
-	if client == nil {
-		return nil, errors.New("nil ent client")
+func ProvideEntBundle(cfg *config.Config) (*EntBundle, error) {
+	client, db, err := InitEnt(cfg)
+	if err != nil {
+		return nil, err
 	}
-	// 从 Ent 客户端获取底层驱动
-	drv, ok := client.Driver().(*entsql.Driver)
-	if !ok {
-		return nil, errors.New("ent driver does not expose *sql.DB")
-	}
-	// 返回驱动持有的 sql.DB 实例
-	return drv.DB(), nil
+	return &EntBundle{Client: client, DB: db}, nil
 }
 
 // ProvideRedis 为依赖注入提供 Redis 客户端。

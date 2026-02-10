@@ -65,6 +65,8 @@ const (
 	FieldSupportedModelScopes = "supported_model_scopes"
 	// FieldIsPointsOnly holds the string denoting the is_points_only field in the database.
 	FieldIsPointsOnly = "is_points_only"
+	// FieldSortOrder holds the string denoting the sort_order field in the database.
+	FieldSortOrder = "sort_order"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -165,6 +167,7 @@ var Columns = []string{
 	FieldMcpXMLInject,
 	FieldSupportedModelScopes,
 	FieldIsPointsOnly,
+	FieldSortOrder,
 }
 
 var (
@@ -230,6 +233,8 @@ var (
 	DefaultSupportedModelScopes []string
 	// DefaultIsPointsOnly holds the default value on creation for the "is_points_only" field.
 	DefaultIsPointsOnly bool
+	// DefaultSortOrder holds the default value on creation for the "sort_order" field.
+	DefaultSortOrder int
 )
 
 // OrderOption defines the ordering options for the Group queries.
@@ -353,6 +358,11 @@ func ByMcpXMLInject(opts ...sql.OrderTermOption) OrderOption {
 // ByIsPointsOnly orders the results by the is_points_only field.
 func ByIsPointsOnly(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsPointsOnly, opts...).ToFunc()
+}
+
+// BySortOrder orders the results by the sort_order field.
+func BySortOrder(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSortOrder, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.

@@ -413,6 +413,10 @@ func init() {
 	groupDescIsPointsOnly := groupFields[21].Descriptor()
 	// group.DefaultIsPointsOnly holds the default value on creation for the is_points_only field.
 	group.DefaultIsPointsOnly = groupDescIsPointsOnly.Default.(bool)
+	// groupDescSortOrder is the schema descriptor for sort_order field.
+	groupDescSortOrder := groupFields[22].Descriptor()
+	// group.DefaultSortOrder holds the default value on creation for the sort_order field.
+	group.DefaultSortOrder = groupDescSortOrder.Default.(int)
 	proxyMixin := schema.Proxy{}.Mixin()
 	proxyMixinHooks1 := proxyMixin[1].Hooks()
 	proxy.Hooks[0] = proxyMixinHooks1[0]

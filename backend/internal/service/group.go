@@ -45,6 +45,9 @@ type Group struct {
 	// 积分专用分组
 	IsPointsOnly bool
 
+	// 分组排序
+	SortOrder int
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 

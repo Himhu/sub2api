@@ -354,6 +354,20 @@ func (_c *GroupCreate) SetNillableIsPointsOnly(v *bool) *GroupCreate {
 	return _c
 }
 
+// SetSortOrder sets the "sort_order" field.
+func (_c *GroupCreate) SetSortOrder(v int) *GroupCreate {
+	_c.mutation.SetSortOrder(v)
+	return _c
+}
+
+// SetNillableSortOrder sets the "sort_order" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableSortOrder(v *int) *GroupCreate {
+	if v != nil {
+		_c.SetSortOrder(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -539,6 +553,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultIsPointsOnly
 		_c.mutation.SetIsPointsOnly(v)
 	}
+	if _, ok := _c.mutation.SortOrder(); !ok {
+		v := group.DefaultSortOrder
+		_c.mutation.SetSortOrder(v)
+	}
 	return nil
 }
 
@@ -605,6 +623,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsPointsOnly(); !ok {
 		return &ValidationError{Name: "is_points_only", err: errors.New(`ent: missing required field "Group.is_points_only"`)}
+	}
+	if _, ok := _c.mutation.SortOrder(); !ok {
+		return &ValidationError{Name: "sort_order", err: errors.New(`ent: missing required field "Group.sort_order"`)}
 	}
 	return nil
 }
@@ -732,6 +753,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.IsPointsOnly(); ok {
 		_spec.SetField(group.FieldIsPointsOnly, field.TypeBool, value)
 		_node.IsPointsOnly = value
+	}
+	if value, ok := _c.mutation.SortOrder(); ok {
+		_spec.SetField(group.FieldSortOrder, field.TypeInt, value)
+		_node.SortOrder = value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1303,6 +1328,24 @@ func (u *GroupUpsert) UpdateIsPointsOnly() *GroupUpsert {
 	return u
 }
 
+// SetSortOrder sets the "sort_order" field.
+func (u *GroupUpsert) SetSortOrder(v int) *GroupUpsert {
+	u.Set(group.FieldSortOrder, v)
+	return u
+}
+
+// UpdateSortOrder sets the "sort_order" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateSortOrder() *GroupUpsert {
+	u.SetExcluded(group.FieldSortOrder)
+	return u
+}
+
+// AddSortOrder adds v to the "sort_order" field.
+func (u *GroupUpsert) AddSortOrder(v int) *GroupUpsert {
+	u.Add(group.FieldSortOrder, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -1828,6 +1871,27 @@ func (u *GroupUpsertOne) SetIsPointsOnly(v bool) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateIsPointsOnly() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateIsPointsOnly()
+	})
+}
+
+// SetSortOrder sets the "sort_order" field.
+func (u *GroupUpsertOne) SetSortOrder(v int) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSortOrder(v)
+	})
+}
+
+// AddSortOrder adds v to the "sort_order" field.
+func (u *GroupUpsertOne) AddSortOrder(v int) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSortOrder(v)
+	})
+}
+
+// UpdateSortOrder sets the "sort_order" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateSortOrder() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSortOrder()
 	})
 }
 
@@ -2522,6 +2586,27 @@ func (u *GroupUpsertBulk) SetIsPointsOnly(v bool) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateIsPointsOnly() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateIsPointsOnly()
+	})
+}
+
+// SetSortOrder sets the "sort_order" field.
+func (u *GroupUpsertBulk) SetSortOrder(v int) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSortOrder(v)
+	})
+}
+
+// AddSortOrder adds v to the "sort_order" field.
+func (u *GroupUpsertBulk) AddSortOrder(v int) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSortOrder(v)
+	})
+}
+
+// UpdateSortOrder sets the "sort_order" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateSortOrder() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSortOrder()
 	})
 }
 

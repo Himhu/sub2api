@@ -39,7 +39,9 @@
                 ? 'https://api.openai.com'
                 : account.platform === 'gemini'
                   ? 'https://generativelanguage.googleapis.com'
-                  : 'https://api.anthropic.com'
+                  : account.platform === 'antigravity'
+                    ? 'https://cloudcode-pa.googleapis.com'
+                    : 'https://api.anthropic.com'
             "
           />
           <p class="input-hint">{{ baseUrlHint }}</p>
@@ -55,14 +57,16 @@
                 ? 'sk-proj-...'
                 : account.platform === 'gemini'
                   ? 'AIza...'
-                  : 'sk-ant-...'
+                  : account.platform === 'antigravity'
+                    ? 'sk-...'
+                    : 'sk-ant-...'
             "
           />
           <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
         </div>
 
-        <!-- Model Restriction Section (不适用于 Gemini) -->
-        <div v-if="account.platform !== 'gemini'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <!-- Model Restriction Section (不适用于 Gemini 和 Antigravity) -->
+        <div v-if="account.platform !== 'gemini' && account.platform !== 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
           <label class="input-label">{{ t('admin.accounts.modelRestriction') }}</label>
 
           <!-- Mode Toggle -->
@@ -361,6 +365,30 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Upstream fields (only for upstream type) -->
+      <div v-if="account.type === 'upstream'" class="space-y-4">
+        <div>
+          <label class="input-label">{{ t('admin.accounts.upstream.baseUrl') }}</label>
+          <input
+            v-model="editBaseUrl"
+            type="text"
+            class="input"
+            placeholder="https://cloudcode-pa.googleapis.com"
+          />
+          <p class="input-hint">{{ t('admin.accounts.upstream.baseUrlHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.upstream.apiKey') }}</label>
+          <input
+            v-model="editApiKey"
+            type="password"
+            class="input font-mono"
+            placeholder="sk-..."
+          />
+          <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
         </div>
       </div>
 
@@ -1244,6 +1272,9 @@ watch(
         } else {
           selectedErrorCodes.value = []
         }
+      } else if (newAccount.type === 'upstream' && newAccount.credentials) {
+        const credentials = newAccount.credentials as Record<string, unknown>
+        editBaseUrl.value = (credentials.base_url as string) || ''
       } else {
         const platformDefaultUrl =
           newAccount.platform === 'openai'
@@ -1579,6 +1610,22 @@ const handleSubmit = async () => {
       if (interceptWarmupRequests.value) {
         newCredentials.intercept_warmup_requests = true
       }
+      if (!applyTempUnschedConfig(newCredentials)) {
+        submitting.value = false
+        return
+      }
+
+      updatePayload.credentials = newCredentials
+    } else if (props.account.type === 'upstream') {
+      const currentCredentials = (props.account.credentials as Record<string, unknown>) || {}
+      const newCredentials: Record<string, unknown> = { ...currentCredentials }
+
+      newCredentials.base_url = editBaseUrl.value.trim()
+
+      if (editApiKey.value.trim()) {
+        newCredentials.api_key = editApiKey.value.trim()
+      }
+
       if (!applyTempUnschedConfig(newCredentials)) {
         submitting.value = false
         return

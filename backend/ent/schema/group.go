@@ -126,6 +126,11 @@ func (Group) Fields() []ent.Field {
 		field.Bool("is_points_only").
 			Default(false).
 			Comment("是否为积分专用分组"),
+
+		// 分组排序 (added by migration 052)
+		field.Int("sort_order").
+			Default(0).
+			Comment("分组显示排序，数值越小越靠前"),
 	}
 }
 
@@ -154,5 +159,6 @@ func (Group) Indexes() []ent.Index {
 		index.Fields("subscription_type"),
 		index.Fields("is_exclusive"),
 		index.Fields("deleted_at"),
+		index.Fields("sort_order"),
 	}
 }
