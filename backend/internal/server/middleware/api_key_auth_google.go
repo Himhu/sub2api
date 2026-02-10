@@ -68,9 +68,41 @@ func APIKeyAuthWithSubscriptionGoogle(apiKeyService *service.APIKeyService, subs
 			return
 		}
 
-		isSubscriptionType := apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
 		subscriptionValidated := false
-		if isSubscriptionType && subscriptionService != nil {
+
+		if apiKey.SubscriptionID != nil && subscriptionService != nil {
+			// 跨平台订阅模式：按 subscription_id 直接加载订阅
+			subscription, err := subscriptionService.GetByID(c.Request.Context(), *apiKey.SubscriptionID)
+			if err != nil {
+				abortWithGoogleError(c, 403, "Bound subscription not found")
+				return
+			}
+			if subscription.UserID != apiKey.User.ID {
+				abortWithGoogleError(c, 403, "Subscription does not belong to this user")
+				return
+			}
+			if err := subscriptionService.ValidateSubscription(c.Request.Context(), subscription); err != nil {
+				abortWithGoogleError(c, 403, err.Error())
+				return
+			}
+			subscriptionValidated = true
+			_ = subscriptionService.CheckAndActivateWindow(c.Request.Context(), subscription)
+			_ = subscriptionService.CheckAndResetWindows(c.Request.Context(), subscription)
+
+			limitGroup := subscription.Group
+			if limitGroup == nil {
+				abortWithGoogleError(c, 500, "Subscription group not loaded")
+				return
+			}
+			if err := subscriptionService.CheckUsageLimits(c.Request.Context(), subscription, limitGroup, 0); err != nil {
+				if apiKey.User.Points <= 0 {
+					abortWithGoogleError(c, 429, err.Error())
+					return
+				}
+			}
+			c.Set(string(ContextKeySubscription), subscription)
+		} else if apiKey.Group != nil && apiKey.Group.IsSubscriptionType() && subscriptionService != nil {
+			// 向后兼容：按 (user_id, group_id) 查找订阅
 			subscription, err := subscriptionService.GetActiveSubscription(
 				c.Request.Context(),
 				apiKey.User.ID,

@@ -582,9 +582,17 @@ func (s *BillingCacheService) CheckBillingEligibilityDecision(ctx context.Contex
 		return BillingDecision{}, ErrInsufficientPoints
 	}
 
-	isSubscriptionMode := group != nil && group.IsSubscriptionType() && subscription != nil
+	isSubscriptionMode := subscription != nil && ((group != nil && group.IsSubscriptionType()) || apiKey.SubscriptionID != nil)
 	if isSubscriptionMode {
-		return s.checkSubscriptionEligibilityDecision(ctx, user.ID, group, subscription)
+		// 跨平台订阅：限额检查使用订阅所属分组
+		limitGroup := group
+		if apiKey.SubscriptionID != nil && subscription.Group != nil {
+			limitGroup = subscription.Group
+		}
+		if limitGroup == nil {
+			return BillingDecision{}, ErrSubscriptionInvalid
+		}
+		return s.checkSubscriptionEligibilityDecision(ctx, user.ID, limitGroup, subscription)
 	}
 	return s.checkBalanceEligibilityDecision(ctx, user.ID)
 }

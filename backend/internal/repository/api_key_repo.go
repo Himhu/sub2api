@@ -33,7 +33,8 @@ func (r *apiKeyRepository) Create(ctx context.Context, key *service.APIKey) erro
 		SetKey(key.Key).
 		SetName(key.Name).
 		SetStatus(key.Status).
-		SetNillableGroupID(key.GroupID)
+		SetNillableGroupID(key.GroupID).
+		SetNillableSubscriptionID(key.SubscriptionID)
 
 	if len(key.IPWhitelist) > 0 {
 		builder.SetIPWhitelist(key.IPWhitelist)
@@ -107,6 +108,7 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 			apikey.FieldID,
 			apikey.FieldUserID,
 			apikey.FieldGroupID,
+			apikey.FieldSubscriptionID,
 			apikey.FieldStatus,
 			apikey.FieldIPWhitelist,
 			apikey.FieldIPBlacklist,
@@ -168,6 +170,11 @@ func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey) erro
 		builder.SetGroupID(*key.GroupID)
 	} else {
 		builder.ClearGroupID()
+	}
+	if key.SubscriptionID != nil {
+		builder.SetSubscriptionID(*key.SubscriptionID)
+	} else {
+		builder.ClearSubscriptionID()
 	}
 
 	// IP 限制字段
@@ -402,7 +409,8 @@ func apiKeyEntityToService(m *dbent.APIKey) *service.APIKey {
 		IPBlacklist: m.IPBlacklist,
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
-		GroupID:     m.GroupID,
+		GroupID:        m.GroupID,
+		SubscriptionID: m.SubscriptionID,
 	}
 	if m.Edges.User != nil {
 		out.User = userEntityToService(m.Edges.User)

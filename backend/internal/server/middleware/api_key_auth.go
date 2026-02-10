@@ -130,12 +130,48 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 			return
 		}
 
-		// 判断计费方式：订阅模式 vs 余额模式
-		isSubscriptionType := apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
 		subscriptionValidated := false
 
-		if isSubscriptionType && subscriptionService != nil {
-			// 订阅模式：验证订阅
+		if apiKey.SubscriptionID != nil && subscriptionService != nil {
+			// 跨平台订阅模式：按 subscription_id 直接加载订阅，共享额度池
+			subscription, err := subscriptionService.GetByID(c.Request.Context(), *apiKey.SubscriptionID)
+			if err != nil {
+				AbortWithError(c, 403, "SUBSCRIPTION_NOT_FOUND", "Bound subscription not found")
+				return
+			}
+			if subscription.UserID != apiKey.User.ID {
+				AbortWithError(c, 403, "SUBSCRIPTION_INVALID", "Subscription does not belong to this user")
+				return
+			}
+			if err := subscriptionService.ValidateSubscription(c.Request.Context(), subscription); err != nil {
+				AbortWithError(c, 403, "SUBSCRIPTION_INVALID", err.Error())
+				return
+			}
+			subscriptionValidated = true
+
+			if err := subscriptionService.CheckAndActivateWindow(c.Request.Context(), subscription); err != nil {
+				log.Printf("Failed to activate subscription windows: %v", err)
+			}
+			if err := subscriptionService.CheckAndResetWindows(c.Request.Context(), subscription); err != nil {
+				log.Printf("Failed to reset subscription windows: %v", err)
+			}
+
+			// 限额检查使用订阅所属分组的限额配置（非 API Key 的分组）
+			limitGroup := subscription.Group
+			if limitGroup == nil {
+				AbortWithError(c, 500, "INTERNAL_ERROR", "Subscription group not loaded")
+				return
+			}
+			if err := subscriptionService.CheckUsageLimits(c.Request.Context(), subscription, limitGroup, 0); err != nil {
+				if apiKey.User.Points <= 0 {
+					AbortWithError(c, 429, "USAGE_LIMIT_EXCEEDED", err.Error())
+					return
+				}
+			}
+
+			c.Set(string(ContextKeySubscription), subscription)
+		} else if apiKey.Group != nil && apiKey.Group.IsSubscriptionType() && subscriptionService != nil {
+			// 向后兼容：按 (user_id, group_id) 查找订阅
 			subscription, err := subscriptionService.GetActiveSubscription(
 				c.Request.Context(),
 				apiKey.User.ID,
@@ -145,34 +181,25 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 				AbortWithError(c, 403, "SUBSCRIPTION_NOT_FOUND", "No active subscription found for this group")
 				return
 			}
-
-			// 验证订阅状态（是否过期、暂停等）
 			if err := subscriptionService.ValidateSubscription(c.Request.Context(), subscription); err != nil {
 				AbortWithError(c, 403, "SUBSCRIPTION_INVALID", err.Error())
 				return
 			}
 			subscriptionValidated = true
 
-			// 激活滑动窗口（首次使用时）
 			if err := subscriptionService.CheckAndActivateWindow(c.Request.Context(), subscription); err != nil {
 				log.Printf("Failed to activate subscription windows: %v", err)
 			}
-
-			// 检查并重置过期窗口
 			if err := subscriptionService.CheckAndResetWindows(c.Request.Context(), subscription); err != nil {
 				log.Printf("Failed to reset subscription windows: %v", err)
 			}
-
-			// 预检查用量限制（使用0作为额外费用进行预检查）
 			if err := subscriptionService.CheckUsageLimits(c.Request.Context(), subscription, apiKey.Group, 0); err != nil {
-				// 超限时检查积分回退
 				if apiKey.User.Points <= 0 {
 					AbortWithError(c, 429, "USAGE_LIMIT_EXCEEDED", err.Error())
 					return
 				}
 			}
 
-			// 将订阅信息存入上下文
 			c.Set(string(ContextKeySubscription), subscription)
 		} else {
 			// 余额模式：检查用户余额和积分

@@ -25,6 +25,7 @@ var (
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "group_id", Type: field.TypeInt64, Nullable: true},
 		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "subscription_id", Type: field.TypeInt64, Nullable: true},
 	}
 	// APIKeysTable holds the schema information for the "api_keys" table.
 	APIKeysTable = &schema.Table{
@@ -44,6 +45,12 @@ var (
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
+			{
+				Symbol:     "api_keys_user_subscriptions_api_keys",
+				Columns:    []*schema.Column{APIKeysColumns[14]},
+				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
 		},
 		Indexes: []*schema.Index{
 			{
@@ -55,6 +62,11 @@ var (
 				Name:    "apikey_group_id",
 				Unique:  false,
 				Columns: []*schema.Column{APIKeysColumns[12]},
+			},
+			{
+				Name:    "apikey_subscription_id",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[14]},
 			},
 			{
 				Name:    "apikey_status",
@@ -1011,6 +1023,7 @@ var (
 func init() {
 	APIKeysTable.ForeignKeys[0].RefTable = GroupsTable
 	APIKeysTable.ForeignKeys[1].RefTable = UsersTable
+	APIKeysTable.ForeignKeys[2].RefTable = UserSubscriptionsTable
 	APIKeysTable.Annotation = &entsql.Annotation{
 		Table: "api_keys",
 	}

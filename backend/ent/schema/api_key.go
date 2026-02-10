@@ -44,6 +44,10 @@ func (APIKey) Fields() []ent.Field {
 		field.Int64("group_id").
 			Optional().
 			Nillable(),
+		field.Int64("subscription_id").
+			Optional().
+			Nillable().
+			Comment("Cross-platform subscription binding (null = use group-based lookup)"),
 		field.String("status").
 			MaxLen(20).
 			Default(domain.StatusActive),
@@ -84,6 +88,10 @@ func (APIKey) Edges() []ent.Edge {
 			Ref("api_keys").
 			Field("group_id").
 			Unique(),
+		edge.From("subscription", UserSubscription.Type).
+			Ref("api_keys").
+			Field("subscription_id").
+			Unique(),
 		edge.To("usage_logs", UsageLog.Type),
 	}
 }
@@ -93,6 +101,7 @@ func (APIKey) Indexes() []ent.Index {
 		// key 字段已在 Fields() 中声明 Unique()，无需重复索引
 		index.Fields("user_id"),
 		index.Fields("group_id"),
+		index.Fields("subscription_id"),
 		index.Fields("status"),
 		index.Fields("deleted_at"),
 		// Index for quota queries

@@ -35,25 +35,28 @@ func NewAPIKeyHandler(apiKeyService *service.APIKeyService, gatewayService *serv
 
 // CreateAPIKeyRequest represents the create API key request payload
 type CreateAPIKeyRequest struct {
-	Name          string   `json:"name" binding:"required"`
-	GroupID       *int64   `json:"group_id"`        // nullable
-	CustomKey     *string  `json:"custom_key"`      // 可选的自定义key
-	IPWhitelist   []string `json:"ip_whitelist"`    // IP 白名单
-	IPBlacklist   []string `json:"ip_blacklist"`    // IP 黑名单
-	Quota         *float64 `json:"quota"`           // 配额限制 (USD)
-	ExpiresInDays *int     `json:"expires_in_days"` // 过期天数
+	Name           string   `json:"name" binding:"required"`
+	GroupID        *int64   `json:"group_id"`
+	SubscriptionID *int64   `json:"subscription_id"`
+	CustomKey      *string  `json:"custom_key"`
+	IPWhitelist    []string `json:"ip_whitelist"`
+	IPBlacklist    []string `json:"ip_blacklist"`
+	Quota          *float64 `json:"quota"`
+	ExpiresInDays  *int     `json:"expires_in_days"`
 }
 
 // UpdateAPIKeyRequest represents the update API key request payload
 type UpdateAPIKeyRequest struct {
-	Name        string   `json:"name"`
-	GroupID     *int64   `json:"group_id"`
-	Status      string   `json:"status" binding:"omitempty,oneof=active inactive"`
-	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单
-	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单
-	Quota       *float64 `json:"quota"`        // 配额限制 (USD), 0=无限制
-	ExpiresAt   *string  `json:"expires_at"`   // 过期时间 (ISO 8601)
-	ResetQuota  *bool    `json:"reset_quota"`  // 重置已用配额
+	Name              string   `json:"name"`
+	GroupID           *int64   `json:"group_id"`
+	SubscriptionID    *int64   `json:"subscription_id"`
+	ClearSubscription *bool    `json:"clear_subscription"`
+	Status            string   `json:"status" binding:"omitempty,oneof=active inactive"`
+	IPWhitelist       []string `json:"ip_whitelist"`
+	IPBlacklist       []string `json:"ip_blacklist"`
+	Quota             *float64 `json:"quota"`
+	ExpiresAt         *string  `json:"expires_at"`
+	ResetQuota        *bool    `json:"reset_quota"`
 }
 
 // List handles listing user's API keys with pagination
@@ -127,12 +130,13 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 	}
 
 	svcReq := service.CreateAPIKeyRequest{
-		Name:          req.Name,
-		GroupID:       req.GroupID,
-		CustomKey:     req.CustomKey,
-		IPWhitelist:   req.IPWhitelist,
-		IPBlacklist:   req.IPBlacklist,
-		ExpiresInDays: req.ExpiresInDays,
+		Name:           req.Name,
+		GroupID:        req.GroupID,
+		SubscriptionID: req.SubscriptionID,
+		CustomKey:      req.CustomKey,
+		IPWhitelist:    req.IPWhitelist,
+		IPBlacklist:    req.IPBlacklist,
+		ExpiresInDays:  req.ExpiresInDays,
 	}
 	if req.Quota != nil {
 		svcReq.Quota = *req.Quota
@@ -168,10 +172,14 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 	}
 
 	svcReq := service.UpdateAPIKeyRequest{
-		IPWhitelist: req.IPWhitelist,
-		IPBlacklist: req.IPBlacklist,
-		Quota:       req.Quota,
-		ResetQuota:  req.ResetQuota,
+		SubscriptionID: req.SubscriptionID,
+		IPWhitelist:    req.IPWhitelist,
+		IPBlacklist:    req.IPBlacklist,
+		Quota:          req.Quota,
+		ResetQuota:     req.ResetQuota,
+	}
+	if req.ClearSubscription != nil && *req.ClearSubscription {
+		svcReq.ClearSubscription = true
 	}
 	if req.Name != "" {
 		svcReq.Name = &req.Name

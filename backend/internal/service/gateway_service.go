@@ -4644,7 +4644,7 @@ func (s *GatewayService) RecordUsage(ctx context.Context, input *RecordUsageInpu
 			if err := s.userSubRepo.IncrementUsage(ctx, subscription.ID, cost.TotalCost); err != nil {
 				log.Printf("Increment subscription usage failed: %v", err)
 			}
-			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, *apiKey.GroupID, cost.TotalCost)
+			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, subscription.GroupID, cost.TotalCost)
 		}
 	case BillingTypePoints:
 		if shouldBill && cost.ActualCost > 0 {
@@ -4836,7 +4836,7 @@ func (s *GatewayService) RecordUsageWithLongContext(ctx context.Context, input *
 			if err := s.userSubRepo.IncrementUsage(ctx, subscription.ID, cost.TotalCost); err != nil {
 				log.Printf("Increment subscription usage failed: %v", err)
 			}
-			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, *apiKey.GroupID, cost.TotalCost)
+			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, subscription.GroupID, cost.TotalCost)
 		}
 	case BillingTypePoints:
 		if shouldBill && cost.ActualCost > 0 {

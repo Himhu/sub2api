@@ -87,11 +87,12 @@ type APIKeyAuthCacheInvalidator interface {
 
 // CreateAPIKeyRequest 创建API Key请求
 type CreateAPIKeyRequest struct {
-	Name        string   `json:"name"`
-	GroupID     *int64   `json:"group_id"`
-	CustomKey   *string  `json:"custom_key"`   // 可选的自定义key
-	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单
-	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单
+	Name           string   `json:"name"`
+	GroupID        *int64   `json:"group_id"`
+	SubscriptionID *int64   `json:"subscription_id"` // 跨平台订阅绑定
+	CustomKey      *string  `json:"custom_key"`      // 可选的自定义key
+	IPWhitelist    []string `json:"ip_whitelist"`    // IP 白名单
+	IPBlacklist    []string `json:"ip_blacklist"`    // IP 黑名单
 
 	// Quota fields
 	Quota         float64 `json:"quota"`           // Quota limit in USD (0 = unlimited)
@@ -100,11 +101,13 @@ type CreateAPIKeyRequest struct {
 
 // UpdateAPIKeyRequest 更新API Key请求
 type UpdateAPIKeyRequest struct {
-	Name        *string  `json:"name"`
-	GroupID     *int64   `json:"group_id"`
-	Status      *string  `json:"status"`
-	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单（空数组清空）
-	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单（空数组清空）
+	Name           *string  `json:"name"`
+	GroupID        *int64   `json:"group_id"`
+	SubscriptionID *int64   `json:"subscription_id"` // 跨平台订阅绑定
+	ClearSubscription bool  `json:"-"`               // 清除订阅绑定（内部使用）
+	Status         *string  `json:"status"`
+	IPWhitelist    []string `json:"ip_whitelist"` // IP 白名单（空数组清空）
+	IPBlacklist    []string `json:"ip_blacklist"` // IP 黑名单（空数组清空）
 
 	// Quota fields
 	Quota           *float64   `json:"quota"`       // Quota limit in USD (nil = no change, 0 = unlimited)
@@ -284,6 +287,20 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 		}
 	}
 
+	// 验证订阅绑定（如果指定了 subscription_id）
+	if req.SubscriptionID != nil {
+		sub, err := s.userSubRepo.GetByID(ctx, *req.SubscriptionID)
+		if err != nil {
+			return nil, fmt.Errorf("subscription not found: %w", err)
+		}
+		if sub.UserID != userID {
+			return nil, fmt.Errorf("subscription does not belong to this user")
+		}
+		if !sub.IsActive() {
+			return nil, fmt.Errorf("subscription is not active")
+		}
+	}
+
 	var key string
 
 	// 判断是否使用自定义Key
@@ -321,11 +338,12 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 
 	// 创建API Key记录
 	apiKey := &APIKey{
-		UserID:      userID,
-		Key:         key,
-		Name:        req.Name,
-		GroupID:     req.GroupID,
-		Status:      StatusActive,
+		UserID:         userID,
+		Key:            key,
+		Name:           req.Name,
+		GroupID:        req.GroupID,
+		SubscriptionID: req.SubscriptionID,
+		Status:         StatusActive,
 		IPWhitelist: req.IPWhitelist,
 		IPBlacklist: req.IPBlacklist,
 		Quota:       req.Quota,
@@ -473,6 +491,23 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 		}
 
 		apiKey.GroupID = req.GroupID
+	}
+
+	// 更新订阅绑定
+	if req.ClearSubscription {
+		apiKey.SubscriptionID = nil
+	} else if req.SubscriptionID != nil {
+		sub, err := s.userSubRepo.GetByID(ctx, *req.SubscriptionID)
+		if err != nil {
+			return nil, fmt.Errorf("subscription not found: %w", err)
+		}
+		if sub.UserID != userID {
+			return nil, fmt.Errorf("subscription does not belong to this user")
+		}
+		if !sub.IsActive() {
+			return nil, fmt.Errorf("subscription is not active")
+		}
+		apiKey.SubscriptionID = req.SubscriptionID
 	}
 
 	if req.Status != nil {

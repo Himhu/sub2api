@@ -207,10 +207,11 @@ func (s *APIKeyService) snapshotFromAPIKey(apiKey *APIKey) *APIKeyAuthSnapshot {
 		return nil
 	}
 	snapshot := &APIKeyAuthSnapshot{
-		APIKeyID:    apiKey.ID,
-		UserID:      apiKey.UserID,
-		GroupID:     apiKey.GroupID,
-		Status:      apiKey.Status,
+		APIKeyID:       apiKey.ID,
+		UserID:         apiKey.UserID,
+		GroupID:        apiKey.GroupID,
+		SubscriptionID: apiKey.SubscriptionID,
+		Status:         apiKey.Status,
 		IPWhitelist: apiKey.IPWhitelist,
 		IPBlacklist: apiKey.IPBlacklist,
 		User: APIKeyAuthUserSnapshot{
@@ -251,10 +252,11 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 		return nil
 	}
 	apiKey := &APIKey{
-		ID:          snapshot.APIKeyID,
-		UserID:      snapshot.UserID,
-		GroupID:     snapshot.GroupID,
-		Key:         key,
+		ID:             snapshot.APIKeyID,
+		UserID:         snapshot.UserID,
+		GroupID:        snapshot.GroupID,
+		SubscriptionID: snapshot.SubscriptionID,
+		Key:            key,
 		Status:      snapshot.Status,
 		IPWhitelist: snapshot.IPWhitelist,
 		IPBlacklist: snapshot.IPBlacklist,
