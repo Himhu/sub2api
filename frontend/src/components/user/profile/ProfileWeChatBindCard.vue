@@ -79,10 +79,26 @@
 
         <!-- Step 2: Show short code -->
         <div v-else-if="bindStep === 'code_display'">
+          <div class="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-3 dark:border-primary-800/50 dark:bg-primary-900/20">
+            <div class="space-y-2">
+              <template v-if="wechatAccountName">
+                <p class="text-center text-sm text-primary-700 dark:text-primary-300">
+                  {{ t('auth.wechat.followAccount') }}
+                  <span class="font-bold text-red-600 dark:text-red-400">{{ wechatAccountName }}</span>
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded bg-white/60 px-3 py-1.5 text-xs text-gray-600 dark:bg-gray-800/40 dark:text-gray-400">
+                  <span>{{ t('auth.wechat.searchFollow', { account: wechatAccountName }) }}</span>
+                </div>
+              </template>
+              <p v-else class="text-center text-sm text-primary-700 dark:text-primary-300">
+                {{ t('auth.wechat.followAccountGeneric') }}
+              </p>
+            </div>
+          </div>
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
             {{ t('profile.wechat.bindStep1') }}
           </p>
-          <div class="flex justify-center my-6">
+          <div class="flex justify-center my-4">
             <div class="bg-gray-100 dark:bg-dark-700 rounded-lg px-6 py-4 text-center">
               <p class="text-3xl font-mono font-bold tracking-wider text-primary-600 dark:text-primary-400">
                 {{ shortCode }}
@@ -169,9 +185,11 @@ import { wechatAPI } from '@/api/wechat'
 import type { WeChatBindStatus } from '@/api/wechat'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useAppStore } from '@/stores'
+import { getPublicSettings } from '@/api/auth'
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const wechatAccountName = ref('')
 
 const loading = ref(true)
 const status = ref<WeChatBindStatus | null>(null)
@@ -203,7 +221,11 @@ const loadStatus = async () => {
   }
 }
 
-const startBindFlow = () => {
+const startBindFlow = async () => {
+  try {
+    const settings = await getPublicSettings()
+    wechatAccountName.value = settings.wechat_account_name || ''
+  } catch { /* use fallback */ }
   showBindModal.value = true
   bindStep.value = 'password'
   bindPassword.value = ''
