@@ -595,6 +595,10 @@ export default {
     description: 'View and analyze your API usage history',
     costDetails: 'Cost Breakdown',
     tokenDetails: 'Token Breakdown',
+    cacheTtlOverriddenHint: 'Cache TTL Override enabled',
+    cacheTtlOverriddenLabel: 'TTL Override',
+    cacheTtlOverridden5m: 'Billed as 5m',
+    cacheTtlOverridden1h: 'Billed as 1h',
     totalRequests: 'Total Requests',
     totalTokens: 'Total Tokens',
     totalCost: 'Total Cost',
@@ -943,7 +947,7 @@ export default {
       createUser: 'Create User',
       editUser: 'Edit User',
       deleteUser: 'Delete User',
-      searchUsers: 'Search users...',
+      searchUsers: 'Search by email, username, notes, or API key...',
       allRoles: 'All Roles',
       allStatus: 'All Status',
       admin: 'Admin',
@@ -1455,6 +1459,7 @@ export default {
       allPlatforms: 'All Platforms',
       allTypes: 'All Types',
       allStatus: 'All Status',
+      allGroups: 'All Groups',
       oauthType: 'OAuth',
       setupToken: 'Setup Token',
       apiKey: 'API Key',
@@ -1464,7 +1469,7 @@ export default {
       schedulableEnabled: 'Scheduling enabled',
       schedulableDisabled: 'Scheduling disabled',
       failedToToggleSchedulable: 'Failed to toggle scheduling status',
-      allGroups: '{count} groups total',
+      groupCountTotal: '{count} groups total',
       platforms: {
         anthropic: 'Anthropic',
         claude: 'Claude',
@@ -1714,6 +1719,12 @@ export default {
         sessionIdMasking: {
           label: 'Session ID Masking',
           hint: 'When enabled, fixes the session ID in metadata.user_id for 15 minutes, making upstream think requests come from the same session'
+        },
+        cacheTTLOverride: {
+          label: 'Cache TTL Override',
+          hint: 'Force all cache creation tokens to be billed as the selected TTL tier (5m or 1h)',
+          target: 'Target TTL',
+          targetHint: 'Select the TTL tier for billing'
         }
       },
       expired: 'Expired',
@@ -1894,13 +1905,20 @@ export default {
           authCode: 'Authorization URL or Code',
           authCodePlaceholder:
             'Option 1: Copy the complete URL\n(http://localhost:xxx/auth/callback?code=...)\nOption 2: Copy only the code parameter value',
-          authCodeHint: 'You can copy the entire URL or just the code parameter value, the system will auto-detect',
-          failedToGenerateUrl: 'Failed to generate Antigravity auth URL',
-          missingExchangeParams: 'Missing code, session ID, or state',
-          failedToExchangeCode: 'Failed to exchange Antigravity auth code'
-        }
-	      },
-      // Gemini specific (platform-wide)
+                    authCodeHint: 'You can copy the entire URL or just the code parameter value, the system will auto-detect',
+                    failedToGenerateUrl: 'Failed to generate Antigravity auth URL',
+                    missingExchangeParams: 'Missing code, session ID, or state',
+                    failedToExchangeCode: 'Failed to exchange Antigravity auth code',
+                    // Refresh Token auth
+                    refreshTokenAuth: 'Manual RT',
+                    refreshTokenDesc: 'Enter your existing Antigravity Refresh Token. Supports batch input (one per line). The system will automatically validate and create accounts.',
+                    refreshTokenPlaceholder: 'Paste your Antigravity Refresh Token...\nSupports multiple tokens, one per line',
+                    validating: 'Validating...',
+                    validateAndCreate: 'Validate & Create',
+                    pleaseEnterRefreshToken: 'Please enter Refresh Token',
+                    failedToValidateRT: 'Failed to validate Refresh Token'
+                  }
+                },      // Gemini specific (platform-wide)
       gemini: {
         helpButton: 'Help',
         helpDialog: {
@@ -2249,7 +2267,7 @@ export default {
       title: 'Redeem Code Management',
       description: 'Generate and manage redeem codes',
       generateCodes: 'Generate Codes',
-      searchCodes: 'Search codes...',
+      searchCodes: 'Search codes or email...',
       allTypes: 'All Types',
       allStatus: 'All Status',
       balance: 'Balance',
@@ -2464,6 +2482,8 @@ export default {
       inputTokens: 'Input Tokens',
       outputTokens: 'Output Tokens',
       cacheCreationTokens: 'Cache Creation Tokens',
+      cacheCreation5mTokens: 'Cache Write',
+      cacheCreation1hTokens: 'Cache Write',
       cacheReadTokens: 'Cache Read Tokens',
       failedToLoad: 'Failed to load usage records',
       billingType: 'Billing Type',
