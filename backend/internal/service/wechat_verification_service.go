@@ -485,16 +485,19 @@ func (s *WeChatVerificationService) handleTextMessage(ctx context.Context, openi
 	if user == nil || user.Email == "" {
 		return s.buildTextReply(openid, toUserName, "未找到绑定账号，请联系管理员")
 	}
+	if !user.IsActive() {
+		return s.buildTextReply(openid, toUserName, "账号已被禁用，无法重置密码")
+	}
 
-	code, err := s.preparePasswordResetCode(ctx, user.Email)
+	password, err := s.resetPasswordDirectly(ctx, user)
 	if err != nil {
 		if errors.Is(err, ErrWeChatPwdResetCooldown) {
-			return s.buildTextReply(openid, toUserName, "验证码发送过于频繁，请稍后再试")
+			return s.buildTextReply(openid, toUserName, "密码重置过于频繁，请稍后再试")
 		}
 		return "", err
 	}
 
-	return s.buildTextReply(openid, toUserName, fmt.Sprintf("密码重置验证码：%s，15分钟内有效。", code))
+	return s.buildTextReply(openid, toUserName, fmt.Sprintf("您的密码已重置为：%s\n请登录后在个人资料中尽快修改密码。", password))
 }
 
 // tryShortCodeVerification checks if the message is a valid short code and processes registration verification.
@@ -587,6 +590,27 @@ func (s *WeChatVerificationService) preparePasswordResetCode(ctx context.Context
 	return code, nil
 }
 
+func (s *WeChatVerificationService) resetPasswordDirectly(ctx context.Context, user *User) (string, error) {
+	if s.cache.IsPasswordResetInCooldown(ctx, user.Email) {
+		return "", ErrWeChatPwdResetCooldown
+	}
+
+	password, err := generateRandomPassword()
+	if err != nil {
+		return "", fmt.Errorf("generate reset password: %w", err)
+	}
+	if err := user.SetPassword(password); err != nil {
+		return "", fmt.Errorf("set password: %w", err)
+	}
+	user.TokenVersion++
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return "", fmt.Errorf("update user: %w", err)
+	}
+
+	_ = s.cache.SetPasswordResetCooldown(ctx, user.Email, wechatCooldownDuration)
+	return password, nil
+}
+
 func (s *WeChatVerificationService) buildTextReply(toUser, fromUser, content string) (string, error) {
 	reply := WeChatTextReply{
 		ToUserName:   toUser,
@@ -605,7 +629,7 @@ func (s *WeChatVerificationService) buildTextReply(toUser, fromUser, content str
 func isPasswordResetKeyword(content string) bool {
 	s := strings.TrimSpace(strings.ToLower(content))
 	switch s {
-	case "验证码", "重置密码", "reset", "reset password":
+	case "验证码", "重置密码", "修改密码", "reset", "reset password":
 		return true
 	default:
 		return false
@@ -657,4 +681,18 @@ func generateSixDigitCode() (string, error) {
 		return "", fmt.Errorf("generate random code: %w", err)
 	}
 	return fmt.Sprintf("%06d", n.Int64()), nil
+}
+
+func generateRandomPassword() (string, error) {
+	const length = 12
+	buf := make([]byte, length)
+	max := big.NewInt(int64(len(wechatShortCodeCharset)))
+	for i := range buf {
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return "", fmt.Errorf("generate random password: %w", err)
+		}
+		buf[i] = wechatShortCodeCharset[n.Int64()]
+	}
+	return string(buf), nil
 }
